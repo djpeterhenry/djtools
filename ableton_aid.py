@@ -40,18 +40,18 @@ def get_int(prompt_string):
     ui = raw_input(prompt_string)
     try: return int(ui)
     except ValueError: return None
-    
+
 def get_ableton_files_old():
     result = glob.glob('*.alc')
-    result.extend(glob.glob('*.als')) 
+    result.extend(glob.glob('*.als'))
     result.extend(glob.glob('*.mp3'))
     return result
-    
+
 def is_ableton_file(filename):
     valid_ext = ['.alc', '.als', '.mp3']
     ext = os.path.splitext(filename)[1]
     return ext in valid_ext
-    
+
 def get_ableton_files_new():
     walk_result = os.walk('.')
     result = []
@@ -62,10 +62,10 @@ def get_ableton_files_new():
             if is_ableton_file(filename):
                 result.append(filename)
     return result
-    
+
 def get_ableton_files():
     return get_ableton_files_new()
-    
+
 
 def string_by_type(x_list):
     s_list = []
@@ -75,12 +75,12 @@ def string_by_type(x_list):
         else:
             s_list.append('[%s]' % x)
     return ' '.join(s_list)
-    
+
 def get_ts_list(record):
     try: ts_list = record['ts_list']
-    except: ts_list = []    
+    except: ts_list = []
     return ts_list
-    
+
 def get_base_filename(filename, record):
     pre_padding = ' ' * 2;
     divider = ' - '
@@ -105,9 +105,9 @@ def get_base_filename(filename, record):
 def get_base_filename_with_bpm_and_key(filename, record):
     base = get_base_filename(filename, record)
     return '%s [%s] [%s]' % (base, record['bpm'], record['key'])
-    
 
-def read_db_file(db_filename):    
+
+def read_db_file(db_filename):
     db_dict = None
     if os.path.exists(db_filename):
         db_file = open(db_filename)
@@ -121,8 +121,8 @@ def read_db_file(db_filename):
         print ("Will create new: " + db_filename)
         db_dict = {}
     return db_dict
-    
-    
+
+
 def write_db_file(db_filename, db_dict):
     db_file = open(db_filename, 'w')
     cPickle.dump(db_dict, db_file)
@@ -169,14 +169,14 @@ def action_add(db_filename):
                     tag_list[index] = tag_shorthand[tag]
             ui = raw_input("Key: ")
             key = ui
-            
+
         # record the result in the database
         new_record = {'bpm':bpm, 'tags':[], 'key':''}
         db_dict[filename] = new_record
         print ("Inserted: " + str(new_record))
     write_db_file(db_filename, db_dict)
 
-    
+
 def action_edit(db_filename, edit_filename):
     if not os.path.exists(edit_filename):
         print ("File does not exist")
@@ -211,20 +211,20 @@ def action_edit(db_filename, edit_filename):
     db_dict[edit_filename] = new_record
     print ("Inserted: " + str(new_record))
     write_db_file(db_filename, db_dict)
-    
-        
+
+
 def action_print(db_filename):
     db_dict = read_db_file(db_filename)
     for filename, record in db_dict.iteritems():
         print (filename + " " + str(record))
-        
+
 def action_merge_db(db_filename, db_source):
     db_dict_target = read_db_file(db_filename)
     db_dict_source = read_db_file(db_source)
     for key, value in db_dict_source.iteritems():
         db_dict_target[key] = value
     write_db_file(db_filename, db_dict_target)
-    
+
 def get_valid_db_dict(db_filename):
     db_dict = read_db_file(db_filename)
     alc_file_set = set(get_ableton_files())
@@ -235,19 +235,19 @@ def get_valid_db_dict(db_filename):
         if 'x' in record['tags']: continue
         result[filename] = record
     return result
-    
+
 def print_pretty_files(file_list, db_dict):
     for filename in file_list:
         record = db_dict[filename]
         pretty_name = get_base_filename_with_bpm_and_key(filename, record)
         print (pretty_name)
-                        
+
 def action_list_by_name(db_filename):
     valid_dict = get_valid_db_dict(db_filename)
     valid_names = sorted(valid_dict.keys(), key=str.lower)
     print_pretty_files(valid_names, valid_dict)
-    
-    
+
+
 ############ convert to new style
 def action_write_new_style_db(db_filename, new_db_filename):
     db_dict = read_db_file(db_filename)
@@ -260,7 +260,7 @@ def action_write_new_style_db(db_filename, new_db_filename):
         new_record['key'] = key
         result[filename] = new_record
     write_db_file(new_db_filename, result)
-    
+
 def action_write_old_style_db(db_filename, new_db_filename):
     db_dict = read_db_file(db_filename)
     result = {}
@@ -268,7 +268,7 @@ def action_write_old_style_db(db_filename, new_db_filename):
         new_tuple = (record['bpm'], record['tags'], record['key'])
         result[filename] = new_tuple
     write_db_file(new_db_filename, result)
-    
+
 def alc_to_xml(alc_filename):
     f = gzip.open(alc_filename, 'rb')
     file_content = f.read()
@@ -276,11 +276,9 @@ def alc_to_xml(alc_filename):
     # tree = ET.parse('country_data.xml')
     root = ET.fromstring(file_content)
     return root
-    
+
 def get_sample_from_xml(xml_root):
-    #print xml_root
     sample_refs = xml_root.findall('.//SampleRef')
-    #print sample_refs
     # right now, just the first
     sample_ref = sample_refs[0]
     sample_filename = sample_ref.find('FileRef/Name').attrib['Value']
@@ -288,16 +286,17 @@ def get_sample_from_xml(xml_root):
     sample_file_folder = os.path.join('/', *sample_path_list)
     sample_file_fullpath = os.path.join(sample_file_folder, sample_filename)
     if os.path.exists(sample_file_fullpath): return sample_file_fullpath
-    # try default location instead when fail?
-    sample_file_folder = '/Users/peter/Library/Application Support/Ableton/Live8Library/Samples/Imported'
+    # for some reason, files can have an invalid path and still work??
+    # it's just PathHints after all
+    sample_file_folder = '/Users/peter/Music/Ableton/djpeterhenry/Samples/Imported'
     sample_file_fullpath = os.path.join(sample_file_folder, sample_filename)
     if os.path.exists(sample_file_fullpath): return sample_file_fullpath
     return None
-    
-    
+
+
 def get_sample_from_alc_file(alc_filename):
     return get_sample_from_xml(alc_to_xml(alc_filename))
-    
+
 """
 Sort of. Call the executable with the command line arguments -f filepath to have the key estimate printed to stdout (and/or any errors to stderr). If you also use the switch -w it will try and write to tags. Preferences from the GUI are used to determine the exact operation of the CLI.
 
@@ -310,7 +309,7 @@ def get_key_from_sample(sample_fullpath):
     #subprocess.call(command, shell=True)
     result = subprocess.check_output(command, shell=True)
     return result
-    
+
 def get_key_from_alc(alc_filename):
     sample_file = get_sample_from_alc_file(alc_filename)
     return get_key_from_sample(sample_file)
@@ -318,7 +317,7 @@ def get_key_from_alc(alc_filename):
 def action_test_xml(alc_filename):
     key = get_key_from_alc(alc_filename)
     print ("key: " + key)
-    
+
 def action_add_missing_keys(db_filename):
     db_dict = read_db_file(db_filename)
     alc_file_set = set(get_ableton_files())
@@ -344,7 +343,7 @@ def action_add_missing_keys(db_filename):
         except subprocess.CalledProcessError as e:
             print ('CalledProcessError (probably KeyFinder): ' + str(e))
 
-            
+
 def action_check_bitrate(db_filename):
     # you do these next four lines a lot
     db_dict = read_db_file(db_filename)
@@ -372,7 +371,7 @@ def action_check_bitrate(db_filename):
             print (line_to_print)
         except UnicodeDecodeError as e:
             print ('unicode error')
-            
+
 
 def get_clips_from_als(als_filename):
     xml_root = alc_to_xml(als_filename)
@@ -393,8 +392,8 @@ def get_clips_from_als(als_filename):
         if previous_name is None or n != previous_name:
             unique_result.append((t, n))
         previous_name = n
-    return unique_result    
-         
+    return unique_result
+
 def action_test_als(db_filename, als_filename):
     # do I need these?
     db_dict = read_db_file(db_filename)
@@ -406,7 +405,7 @@ def action_test_als(db_filename, als_filename):
         print (clip)
     for clip in clips:
         print (clip[1])
-        
+
 def action_print_date_alc(db_filename):
     date_file_tuples = []
     db_dict = read_db_file(db_filename)
@@ -421,7 +420,7 @@ def action_print_date_alc(db_filename):
             #print e
     for time, filename in date_file_tuples:
         print (str(time) + " " + filename)
-        
+
 def action_print_date_sample(db_filename):
     date_file_tuples = []
     db_dict = read_db_file(db_filename)
@@ -439,7 +438,7 @@ def action_print_date_sample(db_filename):
             print ('IOError: ' + str(e), file=sys.stderr)
     for time, filename in date_file_tuples:
         print (str(time) + " " + filename)
-        
+
 def date_list_to_dict(date_file):
     result = {}
     try:
@@ -450,11 +449,11 @@ def date_list_to_dict(date_file):
         time, file = line.split(None, 1)
         result[file.strip()] = float(time)
     return result
-    
+
 def action_test_date_list_to_dict(date_file):
     d = date_list_to_dict(date_file)
     print (d)
-    
+
 def action_key_frequency(db_filename):
     date_file_tuples = []
     db_dict = read_db_file(db_filename)
@@ -475,7 +474,7 @@ def action_key_frequency(db_filename):
     by_count.sort()
     for count, key in by_count:
         print ('%4s - %3s: %d' % (key, get_camelot_key(key), count))
-        
+
 def generate_camelot_dict():
     camelot_list = ['Ab','B','Eb','Gb','Bb','Db','F','Ab',
         'C','Eb','G','Bb','D','F','A','C',
@@ -501,7 +500,7 @@ def generate_camelot_dict():
             sharp_dict_entry = str(sharp_key) + '#' + minor_str
             full_dict[sharp_dict_entry] = c
     return full_dict, reverse_dict
-    
+
 # create global
 camelot_dict, reverse_camelot_dict = generate_camelot_dict()
 
@@ -511,7 +510,7 @@ def get_camelot_key(key):
     if key[-1] == '?': key = key[:-1]
     if camelot_dict.has_key(key): return camelot_dict[key]
     else: return None
-    
+
 
 def action_list_fields(db_filename):
     db_dict = read_db_file(db_filename)
@@ -536,7 +535,7 @@ def action_remove_old_fields(db_filename, new_db_filename):
         delete_key(record, 'select_last')
         delete_key(record, 'select_count')
     write_db_file(new_db_filename, db_dict)
-    
+
 def action_print_date_als(db_filename, als_filename):
     # do I need these?
     db_dict = read_db_file(db_filename)
@@ -548,7 +547,7 @@ def action_print_date_als(db_filename, als_filename):
     # also without time
     for _, filename in clips:
         print (filename)
-        
+
 def summarize_als(als_filename, overwrite=True):
     base_filename, _ = os.path.splitext(als_filename)
     output_filename = base_filename + '.txt'
@@ -561,7 +560,7 @@ def summarize_als(als_filename, overwrite=True):
     except IOError as e:
         print ('IOError: ' + str(e))
         return
-    
+
 
 def summarize_all_als(folder, overwrite):
     als_files = glob.glob(os.path.join(folder, '*.als'))
@@ -575,7 +574,7 @@ def get_ts_for_file(file):
     except OSError as e:
         print (e)
         return None
-                
+
 def update_db_from_summaries(db_filename, folder):
     als_files = glob.glob(os.path.join(folder, '*.als'))
     db_dict = read_db_file(db_filename)
@@ -591,12 +590,12 @@ def update_db_from_summaries(db_filename, folder):
         if not clips: continue
         ts_file = get_ts_for_file(f)
         ts_max = max([clip[0] for clip in clips])
-        
+
         for clip in clips:
             alc_file = clip[1] + '.alc'
             print (alc_file)
             try: record = db_dict[alc_file]
-            except KeyError: 
+            except KeyError:
                 print ("key error:", alc_file)
                 continue
             ts_clip = ts_file - ts_max + clip[0]
@@ -609,7 +608,7 @@ def update_db_from_summaries(db_filename, folder):
                 record['ts_list'] = ts_list
             print ('ts_list after:',ts_list)
     write_db_file(db_filename, db_dict)
-    
+
 def action_remove_tag(db_filename, tag):
     db_dict = read_db_file(db_filename)
     for filename, record in iter(sorted(db_dict.iteritems())):
@@ -617,7 +616,7 @@ def action_remove_tag(db_filename, tag):
         try: tags.remove(tag)
         except ValueError: pass
     write_db_file(db_filename, db_dict)
-    
+
 def action_rename_tag(db_filename, tag_old, tag_new):
     db_dict = read_db_file(db_filename)
     for filename, record in iter(sorted(db_dict.iteritems())):
@@ -625,12 +624,12 @@ def action_rename_tag(db_filename, tag_old, tag_new):
         tags = [x if (x != tag_old) else tag_new for x in tags]
         record['tags'] = tags
     write_db_file(db_filename, db_dict)
-    
+
 def reveal_file(filename):
     command = 'open -R "%s"' % filename
     subprocess.call(command, shell=True)
-    
-    
+
+
 def get_missing(db_filename):
     db_dict = read_db_file(db_filename)
     alc_file_set = set(get_ableton_files())
@@ -659,16 +658,16 @@ def test_edit_distance(db_filename):
         ts_list = get_ts_list(record)
         ts_len = len(ts_list)
         if ts_len == 0: continue
-        
+
         print (f, "plays:", ts_len)
-        
+
         e = os.path.splitext(f)[1]
-        
+
         # cutoff=0.4, n=10
         close = difflib.get_close_matches(f, alc_file_list, cutoff=0.3, n=10)
         for index, other in enumerate(close):
             print (index, ":", other)
-            
+
         choice = get_int("Choice:")
         if choice is not None:
             if choice == -1:
@@ -698,7 +697,7 @@ def get_db_by_ts(db_dict):
         for ts in ts_list:
             result[ts].append(f)
     return result
-    
+
 # todo: just return a list with dividers, damn it!!!
 def action_list_sets(db_filename):
     db_dict = read_db_file(db_filename)
@@ -714,14 +713,14 @@ def action_list_sets(db_filename):
         files = ts_db_dict[ts]
         for f in files:
             print (f)
-            
+
 import urllib
 def get_google_query(f):
     s = os.path.splitext(f)[0]
     s_url = urllib.quote(s)
     link = 'http://www.google.com/search?q=%s' % s_url
     return link
-    
+
 def get_html_line(f, link):
     return '<a href=%s target="_blank">%s</a><br>' % (link, f)
 
@@ -759,7 +758,7 @@ def action_html_sets(db_filename):
             print (line)
             count += 1
             if count > max_count: return
-            
+
 def action_html_list(db_filename):
     valid_dict = get_valid_db_dict(db_filename)
     for f in sorted(valid_dict.iterkeys()):
@@ -768,7 +767,7 @@ def action_html_list(db_filename):
         with_bpm_key = get_base_filename_with_bpm_and_key(f, record)
         line = get_html_line(with_bpm_key, link)
         print (line)
-        
+
 def get_files_by_num(files, db_dict):
     num_file_tuples = []
     for file in files:
@@ -777,7 +776,7 @@ def get_files_by_num(files, db_dict):
         num_file_tuples.append( (num, file) )
     num_file_tuples.sort()
     return [file for _, file in num_file_tuples]
-    
+
 def action_html_list_by_num(db_filename):
     valid_dict = get_valid_db_dict(db_filename)
     files = get_files_by_num(valid_dict.iterkeys(), valid_dict)
@@ -787,7 +786,7 @@ def action_html_list_by_num(db_filename):
         with_bpm_key = get_base_filename_with_bpm_and_key(f, record)
         line = get_html_line(with_bpm_key, link)
         print (line)
-        
+
 
 def update_and_get_cache_values(filename):
     cache_filename = filename + '.cache.txt'
@@ -805,8 +804,10 @@ def update_and_get_cache_values(filename):
         if cache_m_time_alc == m_time_alc:
             return cache_dict
     # must update file
+    print (u'updating: {}'.format(filename))
     m_time_alc = os.path.getmtime(filename)
     sample_file = get_sample_from_alc_file(filename)
+    print (u'sample_file: {}'.format(sample_file))
     m_time_sample = os.path.getmtime(sample_file)
     cache_dict['m_time_alc'] = m_time_alc
     cache_dict['sample_file'] = sample_file
@@ -822,7 +823,7 @@ def action_update_cache(db_filename):
         if filename not in alc_file_set: continue
         cache_dict = update_and_get_cache_values(filename)
         print (cache_dict)
-        
+
 def action_check_for_fuckups(db_filename):
     db_dict = read_db_file(db_filename)
     alc_file_set = set(get_ableton_files())
@@ -855,7 +856,7 @@ def get_dict_date_sample(valid_alc_files, dict_file_cache):
         cache_dict = dict_file_cache[file]
         dict_date_sample[file] = cache_dict['m_time_sample']
     return dict_date_sample
-    
+
 def generate_sample(valid_alc_files, dict_date_sample):
     date_file_tuples = []
     for file in valid_alc_files:
@@ -864,7 +865,7 @@ def generate_sample(valid_alc_files, dict_date_sample):
     date_file_tuples.sort()
     date_file_tuples.reverse()
     return [file for _, file in date_file_tuples]
-    
+
 def action_html_list_by_sample(db_filename):
     db_dict = read_db_file(db_filename)
     valid_alc_files = get_valid_alc_files(db_dict)
@@ -879,7 +880,7 @@ def get_dict_date_alc(valid_alc_files, dict_file_cache):
     # so if alc time is before magic_date, use the date_alc.txt value
     magic_date = datetime.date(2014, 4, 5)
     magic_ts = time.mktime(magic_date.timetuple())
-    
+
     date_alc_txt = 'date_alc.txt'
     dict_date_alc = date_list_to_dict(date_alc_txt)
     for file in valid_alc_files:
@@ -888,7 +889,7 @@ def get_dict_date_alc(valid_alc_files, dict_file_cache):
         if m_time_alc < magic_ts: continue
         dict_date_alc[file] = m_time_alc
     return dict_date_alc
-    
+
 def generate_alc(valid_alc_files, dict_date_alc):
     date_file_tuples = []
     for file in valid_alc_files:
@@ -915,17 +916,17 @@ def print_html_files(files, db_dict):
         line = get_html_line(with_bpm_key, link)
         print (line)
 
-    
-        
+
+
 ########################################################################
 if __name__ == '__main__':
     argv_iter = iter(sys.argv)
     _ = argv_iter.next()
-    
+
     db_filename = argv_iter.next()
     # can't do this until you can save as well, fool
     #db_dict = read_db_file(db_filename)
-    
+
     command_opt = argv_iter.next()
     if command_opt == '-a':
         action_add(db_filename)
@@ -944,7 +945,7 @@ if __name__ == '__main__':
         action_write_new_style_db(db_filename, new_db_filename)
     elif command_opt == '-oldstyle':
         new_db_filename = argv_iter.next()
-        action_write_old_style_db(db_filename, new_db_filename)    
+        action_write_old_style_db(db_filename, new_db_filename)
     elif command_opt == '-test':
         filename = argv_iter.next()
         action_test_xml(filename)
