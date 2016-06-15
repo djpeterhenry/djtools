@@ -4,4 +4,4 @@
 # except when DST starts again!
 
 # --delete was brutal when you targeted home folder, say
-#rsync -av --modify-window=3601 --delete "/Users/peter/Music/Ableton/User Library" $1
+#rsync -av --modify-window=3601 --delete "${PROJECT_PATH}" $1
