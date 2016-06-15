@@ -17,6 +17,7 @@ import gzip
 import xml.etree.ElementTree as ET
 import json
 import time
+import unicodedata
 
 # import mutagen
 from mutagen.mp3 import MP3
@@ -804,7 +805,8 @@ def update_and_get_cache_values(filename):
         if cache_m_time_alc == m_time_alc:
             return cache_dict
     # must update file
-    print (u'updating: {}'.format(filename))
+    # NOTE: this breaks when trying to print to terminal but works thereafter
+#    print (u'updating: {}'.format(filename))
     m_time_alc = os.path.getmtime(filename)
     sample_file = get_sample_from_alc_file(filename)
     print (u'sample_file: {}'.format(sample_file))
@@ -916,6 +918,25 @@ def print_html_files(files, db_dict):
         line = get_html_line(with_bpm_key, link)
         print (line)
 
+def normalize_hfs_filename(filename):
+    filename = unicodedata.normalize('NFC', unicode(filename, 'utf-8')).encode('utf-8')
+    return filename
+
+def generate_date(valid_alc_files, db_dict):
+        date_file_tuples = []
+        for file in valid_alc_files:
+            record = db_dict[file]
+            # get last ts if any exist
+            # otherwise we don't care and use 0
+            ts_list = get_ts_list(record)
+            try:
+                ts = ts_list[-1]
+            except IndexError:
+                ts = 0
+            date_file_tuples.append((ts, file))
+        date_file_tuples.sort()
+        date_file_tuples.reverse()
+        return [file for _, file in date_file_tuples]
 
 
 ########################################################################

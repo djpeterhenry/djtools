@@ -866,27 +866,8 @@ class App:
         random.shuffle(files)
         return files
 
-    # ts, or dict_date_alc, or finally m_time (shouldn't happen)
     def generate_date(self):
-        date_file_tuples = []
-        for file in self.valid_alc_files:
-            record = self.db_dict[file]
-            # use ts_list if available
-            ts = None
-            ts_list = ableton_aid.get_ts_list(record)
-            try:
-                ts = ts_list[-1]
-            except IndexError:
-                pass
-            if not ts and file in self.dict_date_alc:
-                ts = self.dict_date_alc[file]
-            if not ts:
-                print ("this shouldn't happen")
-                ts = os.path.getmtime(file)
-            date_file_tuples.append((ts, file))
-        date_file_tuples.sort()
-        date_file_tuples.reverse()
-        return [file for _, file in date_file_tuples]
+        return ableton_aid.generate_date(self.valid_alc_files, self.db_dict)
 
     def generate_alc(self):
         return ableton_aid.generate_alc(self.valid_alc_files, self.dict_date_alc)
