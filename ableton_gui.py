@@ -27,8 +27,10 @@ class App:
     add_tag_string = 'add...'
     skip_key_check_string = 'ALL KEYS'
     skip_bpm_check_string = 'ALL BPM'
-    extra_tag_list = ['x', 'vocal', 'SS', '-NN', skip_key_check_string, skip_bpm_check_string, '-gc pre', '-gc special',
-                      '-gc dinner', '-gc boathouse', '-gc beach']
+    extra_tag_list = ['x', 'vocal', 'SS', '-NN',
+        skip_key_check_string, skip_bpm_check_string,
+        '-ji old', '-ji new', '-ji dubstep', '-ji special',
+        '-ji extra fast', '-ji extra classic', '-ji extra slow', '-ji dinner']
     hidden_tag_list = []
 
     def get_order_list(self):
@@ -72,7 +74,7 @@ class App:
         ########
         # gui
 
-        # aux class for text    
+        # aux class for text
         class EntryText:
             def __init__(self, root, initial_value='', text_width=8, take_focus=False, int_only=False, int_min=0,
                          int_max=999, update_fun=lambda: None):

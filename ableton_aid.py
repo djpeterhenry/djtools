@@ -935,9 +935,6 @@ if __name__ == '__main__':
         action_edit(db_filename, edit_filename)
     elif command_opt == '-p':
         action_print(db_filename)
-    elif command_opt == '-m':
-        db_source = argv_iter.next()
-        action_merge_db(db_filename, db_source)
     elif command_opt == '-ls':
         action_list_by_name(db_filename)
     elif command_opt == '-newstyle':
