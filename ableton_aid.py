@@ -922,6 +922,21 @@ def normalize_hfs_filename(filename):
     filename = unicodedata.normalize('NFC', unicode(filename, 'utf-8')).encode('utf-8')
     return filename
 
+def generate_date(valid_alc_files, db_dict):
+        date_file_tuples = []
+        for file in valid_alc_files:
+            record = db_dict[file]
+            # get last ts if any exist
+            # otherwise we don't care and use 0
+            ts_list = get_ts_list(record)
+            try:
+                ts = ts_list[-1]
+            except IndexError:
+                ts = 0
+            date_file_tuples.append((ts, file))
+        date_file_tuples.sort()
+        date_file_tuples.reverse()
+        return [file for _, file in date_file_tuples]
 
 
 ########################################################################
