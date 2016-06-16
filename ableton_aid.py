@@ -892,14 +892,21 @@ def get_dict_date_alc(valid_alc_files, dict_file_cache):
         dict_date_alc[file] = m_time_alc
     return dict_date_alc
 
-def generate_alc(valid_alc_files, dict_date_alc):
+def get_files_from_pairs(pairs):
+    return [file for _, file in pairs]
+
+def generate_alc_pairs(valid_alc_files, dict_date_alc):
     date_file_tuples = []
     for file in valid_alc_files:
         m_time_alc = dict_date_alc[file]
         date_file_tuples.append((m_time_alc, file))
     date_file_tuples.sort()
     date_file_tuples.reverse()
+    return date_file_tuples
     return [file for _, file in date_file_tuples]
+
+def generate_alc(valid_alc_files, dict_date_alc):
+    return get_files_from_pairs(generate_alc_pairs(valid_alc_files, dict_date_alc))
 
 def action_html_list_by_alc(db_filename):
     # TODO: dup with action_html_list_by_sample at least
