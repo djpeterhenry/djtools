@@ -901,6 +901,9 @@ def generate_alc(valid_alc_files, dict_date_alc):
     date_file_tuples.reverse()
     return [file for _, file in date_file_tuples]
 
+def generate_alc_2(valid_alc_files, json_path=None):
+    pass
+
 def action_html_list_by_alc(db_filename):
     # TODO: dup with action_html_list_by_sample at least
     db_dict = read_db_file(db_filename)
@@ -949,7 +952,7 @@ if __name__ == '__main__':
     #db_dict = read_db_file(db_filename)
 
     command_opt = argv_iter.next()
-    if command_opt == '-a':
+    if command_opt == '-addbpm':
         action_add(db_filename)
     elif command_opt == '-e':
         edit_filename = argv_iter.next()
@@ -967,7 +970,7 @@ if __name__ == '__main__':
     elif command_opt == '-test':
         filename = argv_iter.next()
         action_test_xml(filename)
-    elif command_opt == '-addkeys':
+    elif command_opt == '-addkey':
         action_add_missing_keys(db_filename)
     elif command_opt == '-check':
         action_check_bitrate(db_filename)
