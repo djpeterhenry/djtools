@@ -876,6 +876,7 @@ def action_html_list_by_sample(db_filename):
     by_sample = generate_sample(valid_alc_files, dict_date_sample)
     print_html_files(by_sample, db_dict)
 
+# TODO(peter): the thing to do is modify this to use the json file instead
 def get_dict_date_alc(valid_alc_files, dict_file_cache):
     # this holds old alc m_time values before live 9
     # the magic value is April 4, 2014
@@ -907,9 +908,6 @@ def generate_alc_pairs(valid_alc_files, dict_date_alc):
 
 def generate_alc(valid_alc_files, dict_date_alc):
     return get_files_from_pairs(generate_alc_pairs(valid_alc_files, dict_date_alc))
-
-def generate_alc_2(valid_alc_files, json_path=None):
-    pass
 
 def action_html_list_by_alc(db_filename):
     # TODO: dup with action_html_list_by_sample at least
