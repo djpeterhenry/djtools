@@ -876,10 +876,9 @@ def action_html_list_by_sample(db_filename):
     by_sample = generate_sample(valid_alc_files, dict_date_sample)
     print_html_files(by_sample, db_dict)
 
-# TODO(peter): the thing to do is modify this to use the json file instead
-def get_dict_date_alc(valid_alc_files, dict_file_cache):
+def get_dict_date_alc_old(valid_alc_files, dict_file_cache):
     # this holds old alc m_time values before live 9
-    # the magic value is April 4, 2014
+    # the magic value is April 5, 2014
     # so if alc time is before magic_date, use the date_alc.txt value
     magic_date = datetime.date(2014, 4, 5)
     magic_ts = time.mktime(magic_date.timetuple())
@@ -892,6 +891,32 @@ def get_dict_date_alc(valid_alc_files, dict_file_cache):
         if m_time_alc < magic_ts: continue
         dict_date_alc[file] = m_time_alc
     return dict_date_alc
+
+def json_list_to_dict(json_filename):
+    result = {}
+    with open(json_filename) as json_file:
+        json_list = json.load(json_file)
+        for ts, filename in json_list:
+            # filename is in unicode here...gotta encode it
+            result[filename.encode('utf-8')] = ts
+    return result
+
+def get_dict_date_alc_json(valid_alc_files, dict_file_cache):
+    # would like to use file date, but it's wrong and too new
+    # examining filesystem, june 11 was when they all got updated
+    magic_date = datetime.date(2016, 6, 12)
+    magic_ts = time.mktime(magic_date.timetuple())
+    json_filename = 'alc_dates.json'
+    dict_date_alc = json_list_to_dict(json_filename)
+    for file in valid_alc_files:
+        cache_dict = dict_file_cache[file]
+        m_time_alc = cache_dict['m_time_alc']
+        if m_time_alc < magic_ts: continue
+        dict_date_alc[file] = m_time_alc
+    return dict_date_alc
+
+def get_dict_date_alc(valid_alc_files, dict_file_cache):
+    return get_dict_date_alc_json(valid_alc_files, dict_file_cache)
 
 def get_files_from_pairs(pairs):
     return [file for _, file in pairs]
