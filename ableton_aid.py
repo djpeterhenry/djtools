@@ -18,6 +18,7 @@ import xml.etree.ElementTree as ET
 import json
 import time
 import unicodedata
+import datetime
 
 # import mutagen
 from mutagen.mp3 import MP3
@@ -298,12 +299,13 @@ def get_sample_from_xml(xml_root):
 def get_sample_from_alc_file(alc_filename):
     return get_sample_from_xml(alc_to_xml(alc_filename))
 
-"""
-Sort of. Call the executable with the command line arguments -f filepath to have the key estimate printed to stdout (and/or any errors to stderr). If you also use the switch -w it will try and write to tags. Preferences from the GUI are used to determine the exact operation of the CLI.
 
-Don't forget that the Mac binary is buried in the .app bundle, so your command line will look something like: ./KeyFinder.app/Contents/MacOS/KeyFinder -f ~/Music/my_track.mp3 [-w]
-"""
 def get_key_from_sample(sample_fullpath):
+    """
+    Sort of. Call the executable with the command line arguments -f filepath to have the key estimate printed to stdout (and/or any errors to stderr). If you also use the switch -w it will try and write to tags. Preferences from the GUI are used to determine the exact operation of the CLI.
+
+    Don't forget that the Mac binary is buried in the .app bundle, so your command line will look something like: ./KeyFinder.app/Contents/MacOS/KeyFinder -f ~/Music/my_track.mp3 [-w]
+    """
     if sample_fullpath is None: return None
     keyfinder_app = '/Applications/KeyFinder.app/Contents/MacOS/KeyFinder'
     command = '"%s" -f "%s"' % (keyfinder_app, sample_fullpath)
@@ -726,7 +728,6 @@ def get_html_line(f, link):
     return '<a href=%s target="_blank">%s</a><br>' % (link, f)
 
 
-import datetime
 def action_html_sets(db_filename):
     db_dict = read_db_file(db_filename)
     ts_db_dict = get_db_by_ts(db_dict)
@@ -826,17 +827,6 @@ def action_update_cache(db_filename):
         cache_dict = update_and_get_cache_values(filename)
         print (cache_dict)
 
-def action_check_for_fuckups(db_filename):
-    db_dict = read_db_file(db_filename)
-    alc_file_set = set(get_ableton_files())
-    for filename, _ in iter(sorted(db_dict.iteritems())):
-        if filename not in alc_file_set: continue
-        if '.als' not in filename: continue
-        cache_dict = update_and_get_cache_values(filename)
-        sample = cache_dict['sample_file']
-        print ('----')
-        print (filename)
-        print (sample)
 
 # new stuff here:
 def get_valid_alc_files(db_dict):
@@ -931,9 +921,6 @@ def generate_alc_pairs(valid_alc_files, dict_date_alc):
     return date_file_tuples
     return [file for _, file in date_file_tuples]
 
-def generate_alc(valid_alc_files, dict_date_alc):
-    return get_files_from_pairs(generate_alc_pairs(valid_alc_files, dict_date_alc))
-
 def action_html_list_by_alc(db_filename):
     # TODO: dup with action_html_list_by_sample at least
     db_dict = read_db_file(db_filename)
@@ -952,24 +939,34 @@ def print_html_files(files, db_dict):
         print (line)
 
 def normalize_hfs_filename(filename):
+    """
+    This was a bit of advice that I don't currently use anywhere...
+    """
     filename = unicodedata.normalize('NFC', unicode(filename, 'utf-8')).encode('utf-8')
     return filename
 
+def generate_date_pairs(valid_alc_files, db_dict):
+    date_file_tuples = []
+    for file in valid_alc_files:
+        record = db_dict[file]
+        # get last ts if any exist
+        # otherwise we don't care and use 0
+        ts_list = get_ts_list(record)
+        try:
+            ts = ts_list[-1]
+        except IndexError:
+            ts = 0
+        date_file_tuples.append((ts, file))
+    date_file_tuples.sort()
+    date_file_tuples.reverse()
+    return date_file_tuples
+
+def generate_alc(valid_alc_files, dict_date_alc):
+    return get_files_from_pairs(generate_alc_pairs(valid_alc_files, dict_date_alc))
+
 def generate_date(valid_alc_files, db_dict):
-        date_file_tuples = []
-        for file in valid_alc_files:
-            record = db_dict[file]
-            # get last ts if any exist
-            # otherwise we don't care and use 0
-            ts_list = get_ts_list(record)
-            try:
-                ts = ts_list[-1]
-            except IndexError:
-                ts = 0
-            date_file_tuples.append((ts, file))
-        date_file_tuples.sort()
-        date_file_tuples.reverse()
-        return [file for _, file in date_file_tuples]
+    return get_files_from_pairs(generate_date_pairs(valid_alc_files, db_dict))
+
 
 
 ########################################################################
@@ -1058,8 +1055,6 @@ if __name__ == '__main__':
         action_html_list_by_alc(db_filename)
     elif command_opt == '-update_cache':
         action_update_cache(db_filename)
-    elif command_opt == '-fuckups':
-        action_check_for_fuckups(db_filename)
     else:
         print ('Unknown command')
         sys.exit(1)
