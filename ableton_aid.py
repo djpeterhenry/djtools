@@ -25,8 +25,6 @@ from mutagen.mp3 import MP3
 from mutagen.easyid3 import EasyID3
 
 
-
-
 tag_shorthand = {
 'c':'classic',
 'p':'pop',
@@ -162,15 +160,6 @@ def action_add(db_filename):
             except ValueError:
                 print ("Stopping and saving...")
                 break
-        # don't take tags or key from command line anymore
-        if False:
-            ui = raw_input("Tags: ")
-            tag_list = ui.split()
-            for index, tag in enumerate(tag_list):
-                if tag_shorthand.has_key(tag):
-                    tag_list[index] = tag_shorthand[tag]
-            ui = raw_input("Key: ")
-            key = ui
 
         # record the result in the database
         new_record = {'bpm':bpm, 'tags':[], 'key':''}
@@ -197,17 +186,6 @@ def action_edit(db_filename, edit_filename):
         except ValueError:
             print ("Aborting single edit")
             sys.exit(1)
-    # old style
-    if False:
-        ui = raw_input("Tags %s: " % tag_list)
-        if ui:
-            tag_list = ui.split()
-            for index, tag in enumerate(tag_list):
-                if tag_shorthand.has_key(tag):
-                    tag_list[index] = tag_shorthand[tag]
-        ui = raw_input("Key %s: " % key)
-        if ui:
-            key = ui
     new_record = record
     new_record['bpm'] = bpm
     db_dict[edit_filename] = new_record
