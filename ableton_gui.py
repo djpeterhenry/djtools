@@ -30,27 +30,32 @@ class App:
     skip_bpm_check_string = 'ALL BPM'
     extra_tag_list = ['x', 'vocal', 'SS', '-NN',
         skip_key_check_string, skip_bpm_check_string,
-        '-ji old', '-ji new', '-ji dubstep', '-ji special',
-        '-ji extra fast', '-ji extra classic', '-ji extra slow', '-ji dinner']
+        'NEW']
     hidden_tag_list = []
 
     def get_order_list(self):
-        # REMEMBER 'sets'
-        return ['name', 'bpm', 'key', 'alc', 'sample', 'date', 'num', 'random']
+        # Supported?: 'sets' 'key'
+        return ['name', 'bpm', 'alc', 'sample', 'date', 'num', 'random']
 
     def __init__(self, master, db_filename, include_extra):
+        # window position
         window_x = 0
         window_y = 170
-        listbox_width = 70  # was 70 before courier
-        listbox_height = 16  # was 13 for consolas
-        listbox_font = None
-        listbox_font = ('courier', 16)
-        # listbox_font = ('consolas', 16)
+        # window size (note that 1 is different than 0.  So very very true.)
+        listbox_width = 1
+        listbox_height = 16
+
+        # other dimensions
         search_width = 8
         tag_filter_width = 5
         init_bpm_range = 3
         init_key_range = 0
 
+        # font (you dream of 'consolas')
+        listbox_font = ('courier', 16)
+
+        ##########
+        # Actually start doing stuff
         master.geometry('+%d+%d' % (window_x, window_y))
 
         # keep values
@@ -261,7 +266,7 @@ class App:
         self.day_var = IntVar(master)
         self.day_var.trace('w', lambda a, b, c: self.update_listbox())
         self.day_button = Checkbutton(frame_edit, text="Day", variable=self.day_var, takefocus=0)
-        self.day_button.pack(side=LEFT)
+        #self.day_button.pack(side=LEFT)
 
         self.day_3_var = IntVar(master)
         self.day_3_var.trace('w', lambda a, b, c: self.update_listbox())
@@ -279,12 +284,10 @@ class App:
         self.friends_button = Checkbutton(frame_edit, text="Friends", variable=self.friends_var, takefocus=0)
         # self.friends_button.pack(side=LEFT)
 
-        min_label = Label(frame_edit, text="Min:")
+        min_label = Label(frame_edit, text="M:")
         min_label.pack(side=LEFT)
         self.min_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
                                     update_fun=self.update_listbox)
-        max_label = Label(frame_edit, text="Max:")
-        max_label.pack(side=LEFT)
         self.max_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
                                     update_fun=self.update_listbox)
 
