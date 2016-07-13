@@ -227,14 +227,6 @@ def action_print(db_filename):
         print (filename + " " + str(record))
 
 
-def action_merge_db(db_filename, db_source):
-    db_dict_target = read_db_file(db_filename)
-    db_dict_source = read_db_file(db_source)
-    for key, value in db_dict_source.iteritems():
-        db_dict_target[key] = value
-    write_db_file(db_filename, db_dict_target)
-
-
 def get_valid_db_dict(db_filename):
     db_dict = read_db_file(db_filename)
     alc_file_set = set(get_ableton_files())
@@ -260,29 +252,6 @@ def action_list_by_name(db_filename):
     valid_dict = get_valid_db_dict(db_filename)
     valid_names = sorted(valid_dict.keys(), key=str.lower)
     print_pretty_files(valid_names, valid_dict)
-
-
-# convert to new style
-def action_write_new_style_db(db_filename, new_db_filename):
-    db_dict = read_db_file(db_filename)
-    result = {}
-    for filename, tuple in db_dict.iteritems():
-        bpm, tag_list, key = tuple
-        new_record = {}
-        new_record['bpm'] = bpm
-        new_record['tags'] = tag_list
-        new_record['key'] = key
-        result[filename] = new_record
-    write_db_file(new_db_filename, result)
-
-
-def action_write_old_style_db(db_filename, new_db_filename):
-    db_dict = read_db_file(db_filename)
-    result = {}
-    for filename, record in db_dict.iteritems():
-        new_tuple = (record['bpm'], record['tags'], record['key'])
-        result[filename] = new_tuple
-    write_db_file(new_db_filename, result)
 
 
 def alc_to_xml(alc_filename):
@@ -1077,12 +1046,13 @@ if __name__ == '__main__':
     _ = argv_iter.next()
 
     db_filename = argv_iter.next()
-    # can't do this until you can save as well, fool
-    #db_dict = read_db_file(db_filename)
+    # TODO: read db once here and pass object around
 
     command_opt = argv_iter.next()
     if command_opt == '-addbpm':
         action_add(db_filename)
+    elif command_opt == '-addkey':
+        action_add_missing_keys(db_filename)
     elif command_opt == '-e':
         edit_filename = argv_iter.next()
         action_edit(db_filename, edit_filename)
@@ -1090,17 +1060,9 @@ if __name__ == '__main__':
         action_print(db_filename)
     elif command_opt == '-ls':
         action_list_by_name(db_filename)
-    elif command_opt == '-newstyle':
-        new_db_filename = argv_iter.next()
-        action_write_new_style_db(db_filename, new_db_filename)
-    elif command_opt == '-oldstyle':
-        new_db_filename = argv_iter.next()
-        action_write_old_style_db(db_filename, new_db_filename)
     elif command_opt == '-test':
         filename = argv_iter.next()
         action_test_xml(filename)
-    elif command_opt == '-addkey':
-        action_add_missing_keys(db_filename)
     elif command_opt == '-check':
         action_check_bitrate(db_filename)
     elif command_opt == '-als':
