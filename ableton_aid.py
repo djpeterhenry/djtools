@@ -22,6 +22,7 @@ import json
 import time
 import unicodedata
 import datetime
+import difflib
 
 # import mutagen
 from mutagen.mp3 import MP3
@@ -717,12 +718,7 @@ def action_list_missing(db_filename):
         print (f)
 
 
-# pip install python-Levenshtein
-#import Levenshtein
-import difflib
-
-
-def test_edit_distance(db_filename):
+def action_transfer_ts(db_filename):
     db_dict = read_db_file(db_filename)
     alc_file_set = set(get_ableton_files())
     alc_file_list = list(alc_file_set)
@@ -1145,8 +1141,8 @@ if __name__ == '__main__':
         action_rename_tag(db_filename, tag_old, tag_new)
     elif command_opt == '-list_missing':
         action_list_missing(db_filename)
-    elif command_opt == '-test_edit_distance':
-        test_edit_distance(db_filename)
+    elif command_opt == '-transfer_ts':
+        action_transfer_ts(db_filename)
     elif command_opt == '-list_sets':
         action_list_sets(db_filename)
     elif command_opt == '-html_sets':
