@@ -4,8 +4,10 @@
 from mutagen.easyid3 import EasyID3
 
 # dup import:
-import sys, os, glob, stat
-import cPickle
+import sys
+import os
+import glob
+import stat
 import shutil
 import re
 import random
@@ -19,9 +21,6 @@ import atexit
 import datetime
 import codecs
 import json
-
-# touches
-import cPickle
 
 
 class App:
@@ -920,6 +919,14 @@ class App:
         return result
 
 
+def raise_above_all(window):
+    """
+    An idea I don't yet use (compare with current long thing)
+    """
+    window.attributes('-topmost', 1)
+    window.attributes('-topmost', 0)
+
+
 if __name__ == '__main__':
     # get db filename
     argv_iter = iter(sys.argv)
@@ -937,5 +944,8 @@ if __name__ == '__main__':
 
     master = Tk()
     app = App(master, db_filename, include_extra)
-    if always_on_top: master.call('wm', 'attributes', '.', '-topmost', '1')
+    # This doesn't actually work to always lift...do raise_above_all in loop?
+    master.call('wm', 'attributes', '.', '-topmost', '1')
+    if not always_on_top:
+        master.call('wm', 'attributes', '.', '-topmost', '0')
     master.mainloop()

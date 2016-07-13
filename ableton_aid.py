@@ -23,6 +23,7 @@ import time
 import unicodedata
 import datetime
 import difflib
+import urllib
 from collections import defaultdict
 
 
@@ -278,7 +279,6 @@ def get_key_from_sample(sample_fullpath):
         return None
     keyfinder_app = '/Applications/KeyFinder.app/Contents/MacOS/KeyFinder'
     command = '"%s" -f "%s"' % (keyfinder_app, sample_fullpath)
-    #subprocess.call(command, shell=True)
     result = subprocess.check_output(command, shell=True)
     return result
 
@@ -728,8 +728,6 @@ def action_list_sets(db_filename):
         for f in files:
             print (f)
 
-import urllib
-
 
 def get_google_query(f):
     s = os.path.splitext(f)[0]
@@ -847,7 +845,6 @@ def action_update_cache(db_filename):
         print (cache_dict)
 
 
-# new stuff here:
 def get_valid_alc_files(db_dict):
     alc_files = get_ableton_files()
     valid_alc_files = [
@@ -975,7 +972,7 @@ def print_html_files(files, db_dict):
 
 def normalize_hfs_filename(filename):
     """
-    This was a bit of advice that I don't currently use anywhere...
+    This was a bit of advice that I don't use anywhere...
     """
     filename = unicodedata.normalize(
         'NFC', unicode(filename, 'utf-8')).encode('utf-8')
