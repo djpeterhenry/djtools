@@ -50,20 +50,13 @@ def get_int(prompt_string):
         return None
 
 
-def get_ableton_files_old():
-    result = glob.glob('*.alc')
-    result.extend(glob.glob('*.als'))
-    result.extend(glob.glob('*.mp3'))
-    return result
-
-
 def is_ableton_file(filename):
     valid_ext = ['.alc', '.als', '.mp3']
     ext = os.path.splitext(filename)[1]
     return ext in valid_ext
 
 
-def get_ableton_files_new():
+def get_ableton_files():
     walk_result = os.walk('.')
     result = []
     for dirpath, dirnames, filenames in walk_result:
@@ -73,10 +66,6 @@ def get_ableton_files_new():
             if is_ableton_file(filename):
                 result.append(filename)
     return result
-
-
-def get_ableton_files():
-    return get_ableton_files_new()
 
 
 def string_by_type(x_list):
