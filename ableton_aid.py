@@ -468,6 +468,7 @@ def action_key_frequency(db_filename):
     for key, count in iter(sorted(key_frequency.iteritems())):
         by_count.append((count, key))
     by_count.sort()
+    by_count.reverse()
     for count, key in by_count:
         print ('%4s - %3s: %d' % (key, get_camelot_key(key), count))
 
