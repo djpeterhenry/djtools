@@ -538,17 +538,6 @@ def delete_key(record, key):
         pass
 
 
-def action_remove_old_fields(db_filename, new_db_filename):
-    db_dict = read_db_file(db_filename)
-    for filename, record in iter(sorted(db_dict.iteritems())):
-        delete_key(record, 'copy_list')
-        delete_key(record, 'copy_count')
-        delete_key(record, 'copy_last')
-        delete_key(record, 'select_last')
-        delete_key(record, 'select_count')
-    write_db_file(new_db_filename, db_dict)
-
-
 def action_print_date_als(db_filename, als_filename):
     # do I need these?
     db_dict = read_db_file(db_filename)
@@ -1057,9 +1046,6 @@ if __name__ == '__main__':
         action_key_frequency(db_filename)
     elif command_opt == '-listfields':
         action_list_fields(db_filename)
-    elif command_opt == '-removeold':
-        new_db_filename = argv_iter.next()
-        action_remove_old_fields(db_filename, new_db_filename)
     elif command_opt == '-print_als':
         als_filename = argv_iter.next()
         action_print_date_als(db_filename, als_filename)
