@@ -23,6 +23,8 @@ import time
 import unicodedata
 import datetime
 import difflib
+from collections import defaultdict
+
 
 # import mutagen
 from mutagen.mp3 import MP3
@@ -732,8 +734,6 @@ def action_transfer_ts(db_filename):
                 del db_dict[f]
                 write_db_file(db_filename, db_dict)
 
-from collections import *
-
 
 def get_db_by_ts(db_dict):
     result = defaultdict(list)
@@ -742,8 +742,6 @@ def get_db_by_ts(db_dict):
         for ts in ts_list:
             result[ts].append(f)
     return result
-
-# todo: just return a list with dividers, damn it!!!
 
 
 def action_list_sets(db_filename):
