@@ -6,6 +6,7 @@ from mutagen.easyid3 import EasyID3
 # dup import:
 import sys
 import os
+import os.path
 import glob
 import stat
 import shutil
@@ -23,6 +24,7 @@ import codecs
 import json
 from itertools import groupby
 
+lock_filename = 'ableton_gui.lock'
 
 class App:
     add_tag_string = 'add...'
@@ -38,6 +40,10 @@ class App:
         return ['name', 'bpm', 'alc', 'sample', 'date', 'num', 'random']
 
     def __init__(self, master, db_filename, include_extra):
+        if os.path.exists(lock_filename):
+            raise RuntimeError('Locked: {}'.format(lock_filename))
+        open(lock_filename, 'a').close()
+
         # window position
         window_x = 0
         window_y = 170
@@ -341,6 +347,7 @@ class App:
 
     def quit_handler(self):
         self.save_dialog()
+        os.remove(lock_filename)
 
     def listbox_select(self, ignore):
         self.listbox_target_string = self.get_selected_string()
