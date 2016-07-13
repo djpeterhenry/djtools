@@ -21,6 +21,7 @@ import atexit
 import datetime
 import codecs
 import json
+from itertools import groupby
 
 
 class App:
@@ -590,7 +591,6 @@ class App:
         # done looping over all filenames
 
         # fill out the important results
-        from itertools import groupby
         if filename_pairs_list:
             files_display, filenames = zip(*filename_pairs_list)
             t = time.time()
