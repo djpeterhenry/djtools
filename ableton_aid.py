@@ -551,10 +551,10 @@ def action_print_date_als(db_filename, als_filename):
         print (filename)
 
 
-def summarize_als(als_filename, overwrite=True):
+def action_summarize_als(als_filename, overwrite):
     base_filename, _ = os.path.splitext(als_filename)
     output_filename = base_filename + '.txt'
-    if not overwrite and os.path.isfile(output_filename):
+    if not overwrite and os.path.exists(output_filename):
         return
     output_file = open(output_filename, 'w')
     try:
@@ -565,11 +565,11 @@ def summarize_als(als_filename, overwrite=True):
         return
 
 
-def summarize_all_als(folder, overwrite):
+def action_summarize_als_folder(folder, overwrite):
     als_files = glob.glob(os.path.join(folder, '*.als'))
     for f in als_files:
         print(f)
-        summarize_als(f, overwrite=overwrite)
+        summarize_als(f, overwrite)
 
 
 def get_ts_for_file(file):
@@ -580,7 +580,7 @@ def get_ts_for_file(file):
         return None
 
 
-def update_db_from_summaries(db_filename, folder):
+def action_update_db_from_summaries(db_filename, folder):
     als_files = glob.glob(os.path.join(folder, '*.als'))
     db_dict = read_db_file(db_filename)
     for f in als_files:
@@ -1051,13 +1051,13 @@ if __name__ == '__main__':
         action_print_date_als(db_filename, als_filename)
     elif command_opt == '-summarize_als':
         als_filename = argv_iter.next()
-        summarize_als(als_filename)
+        action_summarize_als(als_filename, True)
     elif command_opt == '-summarize_als_folder':
         als_folder = argv_iter.next()
-        summarize_all_als(als_folder, False)
+        action_summarize_als_folder(als_folder, False)
     elif command_opt == '-update_db_from_summaries':
         als_folder = argv_iter.next()
-        update_db_from_summaries(db_filename, als_folder)
+        action_update_db_from_summaries(db_filename, als_folder)
     elif command_opt == '-remove_tag':
         tag = argv_iter.next()
         action_remove_tag(db_filename, tag)
