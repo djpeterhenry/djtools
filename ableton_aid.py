@@ -68,16 +68,6 @@ def get_ableton_files():
     return result
 
 
-def string_by_type(x_list):
-    s_list = []
-    for x in x_list:
-        if type(x) is int:
-            s_list.append('[%03d]' % x)
-        else:
-            s_list.append('[%s]' % x)
-    return ' '.join(s_list)
-
-
 def get_ts_list(record):
     try:
         ts_list = record['ts_list']
