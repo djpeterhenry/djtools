@@ -346,8 +346,9 @@ class App:
         atexit.register(self.quit_handler)
 
     def quit_handler(self):
-        self.save_dialog()
         os.remove(lock_filename)
+        self.save_dialog()
+
 
     def listbox_select(self, ignore):
         self.listbox_target_string = self.get_selected_string()
