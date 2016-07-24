@@ -36,8 +36,8 @@ class App:
     hidden_tag_list = []
 
     def get_order_list(self):
-        # Supported?: 'sets' 'key'
-        return ['name', 'bpm', 'alc', 'sample', 'date', 'num', 'random']
+        # Supported: 'sets' 'key' 'name'
+        return ['bpm', 'alc', 'sample', 'date', 'num', 'random']
 
     def __init__(self, master, db_filename, include_extra):
         if os.path.exists(lock_filename):
@@ -183,6 +183,11 @@ class App:
                                    update_fun=self.update_listbox)
         self.entry_bpm_range = EntryText(frame_top, take_focus=True, int_only=True, initial_value=str(init_bpm_range),
                                          text_width=1, int_min=0, int_max=9, update_fun=self.update_listbox)
+
+        self.bpm_star_var = IntVar(master)
+        self.bpm_star_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.bpm_star_button = Checkbutton(frame_top, text="*", variable=self.bpm_star_var, takefocus=0)
+        self.bpm_star_button.pack(side=LEFT)
 
         self.order_list = self.get_order_list()
         self.order_var = StringVar(frame_top)
@@ -336,6 +341,7 @@ class App:
         self.listbox.bind("2", lambda _: self.command_2())
         self.listbox.bind("3", lambda _: self.command_3())
         self.listbox.bind("4", lambda _: self.command_4())
+        self.listbox.bind("9", lambda _: self.command_9())
         self.listbox.bind("u", lambda _: self.command_update_key())
 
         self.last_copied_filename = None
@@ -480,6 +486,7 @@ class App:
         filter_string = self.entry_filter.stringvar.get()
         filter_bpm = self.entry_bpm.get_int()
         filter_bpm_range = self.entry_bpm_range.get_int()
+        filter_bpm_star = self.bpm_star_var.get()
         tag_filter = None
         if self.entry_tag_filter:
             tag_filter = self.entry_tag_filter.stringvar.get()
@@ -526,8 +533,10 @@ class App:
 
             if filter_bpm is not None and self.skip_bpm_check_string not in tag_list:
                 any_success = False
+                # TODO: could move this filter change outside loop, as well as other range math
                 bpm_range = filter_bpm_range
                 if is_vocal: bpm_range += 10
+                if filter_bpm_star: bpm_range += 10
                 for sub_bpm in [int(round(bpm / 2.0)), bpm, int(round(bpm * 2.0))]:
                     if (sub_bpm >= filter_bpm - bpm_range and sub_bpm <= filter_bpm + bpm_range):
                         any_success = True
@@ -775,6 +784,9 @@ class App:
 
     def command_4(self):
         self.key_var_4.set(not bool(self.key_var_4.get()))
+
+    def command_9(self):
+        self.bpm_star_var.set(not bool(self.bpm_star_var.get()))
 
     def command_update_key(self):
         filename = self.get_selected_filename()
