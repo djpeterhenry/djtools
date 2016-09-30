@@ -30,7 +30,7 @@ class App:
     add_tag_string = 'add...'
     skip_key_check_string = 'ALL KEYS'
     skip_bpm_check_string = 'ALL BPM'
-    extra_tag_list = ['x', 'vocal', 'SS', '-NN',
+    extra_tag_list = ['x', 'vocal', 'SS', '90', '-NN',
         skip_key_check_string, skip_bpm_check_string,
         'NEW']
     hidden_tag_list = []
@@ -48,7 +48,7 @@ class App:
         window_x = 0
         window_y = 170
         # window size (note that 1 is different than 0.  So very very true.)
-        listbox_width = 1
+        listbox_width = 60
         listbox_height = 16
 
         # other dimensions
