@@ -48,7 +48,7 @@ class App:
         window_x = 0
         window_y = 170
         # window size (note that 1 is different than 0.  So very very true.)
-        listbox_width = 60
+        listbox_width = 80
         listbox_height = 16
 
         # other dimensions
