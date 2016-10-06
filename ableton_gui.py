@@ -33,7 +33,15 @@ class App:
     extra_tag_list = ['x', 'vocal', 'SS', '90', '-NN',
         skip_key_check_string, skip_bpm_check_string,
         'NEW']
-    hidden_tag_list = []
+    hidden_tag_pattern_list = [
+        '-gc',
+        '-mr',
+        '-ji',
+        '-pe',
+        'northfield',
+        'shawna',
+        '(weidner)',
+        ]
 
     def get_order_list(self):
         # Supported: 'sets' 'key' 'name'
@@ -392,7 +400,12 @@ class App:
         for tag in sorted(others):
             result.append(tag)
         # remove hidden
-        result = [x for x in result if x not in self.hidden_tag_list]
+        def exclude(tag):
+            for pattern in self.hidden_tag_pattern_list:
+                if pattern in tag:
+                    return True
+            return False
+        result = [tag for tag in result if not exclude(tag)]
         return result
 
     def is_valid_tag(self, tag):
