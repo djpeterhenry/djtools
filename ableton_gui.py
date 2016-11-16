@@ -194,12 +194,17 @@ class App:
         frame_top = Frame(master)
         frame_top.pack(side=TOP, fill=X)
 
-        self.entry_filter = EntryText(frame_top, text_width=search_width, take_focus=True,
-                                      update_fun=self.update_listbox)
-        self.entry_bpm = EntryText(frame_top, text_width=3, int_min=0, int_max=999, take_focus=True,
-                                   update_fun=self.update_listbox)
-        self.entry_bpm_range = EntryText(frame_top, take_focus=True, int_only=True, initial_value=str(init_bpm_range),
-                                         text_width=1, int_min=0, int_max=9, update_fun=self.update_listbox)
+        self.entry_filter = EntryText(
+            frame_top, text_width=search_width, take_focus=True,
+            update_fun=self.update_listbox)
+        self.entry_bpm = EntryText(
+            frame_top, text_width=3,
+            int_min=0, int_max=999, take_focus=True,
+            update_fun=self.update_listbox)
+        self.entry_bpm_range = EntryText(
+            frame_top, text_width=1, take_focus=True,
+            int_only=True, initial_value=str(init_bpm_range), int_min=0, int_max=9,
+            update_fun=self.update_listbox)
 
         self.bpm_star_var = IntVar(master)
         self.bpm_star_var.trace('w', lambda a, b, c: self.update_listbox())
