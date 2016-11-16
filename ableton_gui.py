@@ -120,15 +120,18 @@ class App:
                 self.entry.pack(side=LEFT)
 
             def update(self):
-                if self.int_only: self.update_int()
+                self.update_int()
                 self.update_fun()
 
             def update_int(self):
-                int_value = self.get_int()
-                if int_value is not None and int_value >= self.int_min and int_value <= self.int_max:
-                    self.last_int_value = int_value
-                else:
-                    self.stringvar.set(self.last_int_value)
+                parse_int = self.parse_int()
+                if self.int_only:
+                    # if invalid, set to last
+                    # otherwise we have a valid int!
+                    if parse_int is None or parse_int < self.int_min or parse_int > self.int_max:
+                        self.stringvar.set(self.last_int_value)
+                    else:
+                        self.last_int_value = parse_int
 
             def clear(self):
                 self.stringvar.set('')
@@ -141,7 +144,7 @@ class App:
                 return "break"
 
             def key_escape(self, arg):
-                self.clear()
+                self.stringvar.set('')
 
             def key_uparrow(self, arg):
                 self.int_plus()
@@ -164,6 +167,12 @@ class App:
                         self.stringvar.set(int_value - 1)
 
             def get_int(self):
+                try:
+                    return int(self.stringvar.get())
+                except:
+                    return None
+
+            def parse_int(self):
                 try:
                     return int(self.stringvar.get())
                 except:
