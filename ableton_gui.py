@@ -132,7 +132,6 @@ class App:
                 if not self.int_only:
                     return
                 parse_int = self.parse_int()
-                print 'parse_int: {}'.format(parse_int)
 
                 # if invalid, set to last
                 # otherwise we have a valid int!
@@ -240,15 +239,20 @@ class App:
         self.entry_tag_filter = None
 
         if include_extra:
-            self.entry_bpm_edit = EntryText(frame_edit, int_only=True, initial_value='0', text_width=3,
-                                            update_fun=self.update_bpm_edit)
-            self.entry_key_edit = EntryText(frame_edit, text_width=4, update_fun=self.update_key_edit)
+            self.entry_bpm_edit = EntryText(
+                frame_edit, int_only=True, initial_value='0', text_width=3,
+                update_fun=self.update_bpm_edit)
+            self.entry_key_edit = EntryText(frame_edit, text_width=4,
+                update_fun=self.update_key_edit)
 
-        self.entry_key_filter = EntryText(frame_edit, take_focus=True, text_width=4, int_min=1, int_max=12,
-                                          update_fun=self.update_listbox)
-        self.entry_key_filter_range = EntryText(frame_edit, take_focus=True, int_only=True,
-                                                initial_value=str(init_key_range), text_width=1, int_min=0, int_max=6,
-                                                update_fun=self.update_listbox)
+        self.entry_key_filter = EntryText(
+            frame_edit, take_focus=True, text_width=4,
+            int_only=True, int_min=1, int_max=12,
+            update_fun=self.update_listbox)
+        self.entry_key_filter_range = EntryText(
+            frame_edit, take_focus=True, text_width=1,
+            int_only=True, initial_value=str(init_key_range), int_min=0, int_max=6,
+            update_fun=self.update_listbox)
 
         # new fun extra key bits
         self.key_var_1 = IntVar(master)
