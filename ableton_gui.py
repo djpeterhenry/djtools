@@ -129,7 +129,7 @@ class App:
                     # if invalid, set to last
                     # otherwise we have a valid int!
                     if parse_int is None or parse_int < self.int_min or parse_int > self.int_max:
-                        self.stringvar.set(self.last_int_value)
+                        self.stringvar.set(self.last_int_value or '')
                     else:
                         self.last_int_value = parse_int
 
