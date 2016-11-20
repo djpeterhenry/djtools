@@ -26,6 +26,7 @@ from itertools import groupby
 
 lock_filename = 'ableton_gui.lock'
 
+# print samples is amazing and you should fix it
 class App:
     add_tag_string = 'add...'
     skip_key_check_string = 'ALL KEYS'
@@ -374,12 +375,11 @@ class App:
         self.listbox.bind("v", lambda _: self.command_v())
         self.listbox.bind("f", lambda _: self.command_f())
         self.listbox.bind("g", lambda _: self.command_g())
+        self.listbox.bind("l", lambda _: self.command_l())
         self.listbox.bind("n", lambda _: self.command_n())
         self.listbox.bind("j", lambda _: self.command_order_down())
         self.listbox.bind("k", lambda _: self.command_order_up())
         self.listbox.bind("p", lambda _: self.command_print())
-        #self.listbox.bind("l", lambda _: self.command_print_samples())
-        self.listbox.bind("l", lambda _: self.command_look())
         self.listbox.bind("0", lambda _: self.command_0())
         self.listbox.bind("1", lambda _: self.command_1())
         self.listbox.bind("2", lambda _: self.command_2())
@@ -850,6 +850,12 @@ class App:
         filename = self.get_selected_filename()
         if not filename: return
         tag = GOOD_TAG
+        self.add_tag_to_filename(filename, tag)
+
+    def command_l(self):
+        filename = self.get_selected_filename()
+        if not filename: return
+        tag = LOOK_TAG
         self.add_tag_to_filename(filename, tag)
 
     def command_n(self):
