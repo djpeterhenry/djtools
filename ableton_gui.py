@@ -30,9 +30,17 @@ class App:
     add_tag_string = 'add...'
     skip_key_check_string = 'ALL KEYS'
     skip_bpm_check_string = 'ALL BPM'
-    extra_tag_list = ['x', 'vocal', 'SS', '90', '-NN',
-        skip_key_check_string, skip_bpm_check_string,
-        'NEW']
+    LOOK_TAG = 'LOOK'
+    GOOD_TAG = 'GOOD'
+    extra_tag_list = [
+        'x',
+        'vocal',
+        GOOD_TAG,
+        LOOK_TAG,
+        'SS',
+        skip_key_check_string,
+        skip_bpm_check_string,
+        ]
     hidden_tag_pattern_list = [
         '-gc',
         '-mr',
@@ -370,7 +378,8 @@ class App:
         self.listbox.bind("j", lambda _: self.command_order_down())
         self.listbox.bind("k", lambda _: self.command_order_up())
         self.listbox.bind("p", lambda _: self.command_print())
-        self.listbox.bind("l", lambda _: self.command_print_samples())
+        #self.listbox.bind("l", lambda _: self.command_print_samples())
+        self.listbox.bind("l", lambda _: self.command_look())
         self.listbox.bind("0", lambda _: self.command_0())
         self.listbox.bind("1", lambda _: self.command_1())
         self.listbox.bind("2", lambda _: self.command_2())
@@ -840,7 +849,7 @@ class App:
     def command_g(self):
         filename = self.get_selected_filename()
         if not filename: return
-        tag = 'GOOD'
+        tag = GOOD_TAG
         self.add_tag_to_filename(filename, tag)
 
     def command_n(self):
