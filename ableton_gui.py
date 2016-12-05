@@ -25,22 +25,21 @@ import json
 from itertools import groupby
 
 lock_filename = 'ableton_gui.lock'
+SKIP_KEY = 'ALL KEYS'
+SKIP_BPM = 'ALL BPM'
+LOOK_TAG = 'LOOK'
+GOOD_TAG = 'GOOD'
 
 # print samples is amazing and you should fix it
 class App:
-    add_tag_string = 'add...'
-    skip_key_check_string = 'ALL KEYS'
-    skip_bpm_check_string = 'ALL BPM'
-    LOOK_TAG = 'LOOK'
-    GOOD_TAG = 'GOOD'
     extra_tag_list = [
         'x',
         'vocal',
         GOOD_TAG,
         LOOK_TAG,
         'SS',
-        skip_key_check_string,
-        skip_bpm_check_string,
+        SKIP_KEY,
+        SKIP_BPM,
         ]
     hidden_tag_pattern_list = [
         '-gc',
@@ -424,8 +423,6 @@ class App:
     def get_tag_list(self):
         result = []
         result.append('')
-        # result.append(self.add_tag_string)
-        # result.extend([x for _,x in ableton_aid.tag_shorthand.iteritems()])
         result.extend(self.extra_tag_list)
         # also check the dictionary
         # want to sort those from the dictionary
@@ -433,8 +430,7 @@ class App:
         for record in self.db_dict.itervalues():
             for tag in record['tags']:
                 if tag not in result: others.add(tag)
-        for tag in sorted(others):
-            result.append(tag)
+        result.extend(sorted(others))
         # remove hidden
         def exclude(tag):
             for pattern in self.hidden_tag_pattern_list:
@@ -443,9 +439,6 @@ class App:
             return False
         result = [tag for tag in result if not exclude(tag)]
         return result
-
-    def is_valid_tag(self, tag):
-        return tag is not None and tag != '' and tag != self.add_tag_string
 
     def update_listbox(self):
         time_start = time.clock()
@@ -580,7 +573,7 @@ class App:
                 for s in filter_string.split():
                     if s.lower() not in filename.lower(): keep = False
 
-            if filter_bpm is not None and self.skip_bpm_check_string not in tag_list:
+            if filter_bpm is not None and SKIP_BPM not in tag_list:
                 any_success = False
                 # TODO: could move this filter change outside loop, as well as other range math
                 bpm_range = filter_bpm_range
@@ -617,7 +610,7 @@ class App:
 
             if key_filter == '-' and len(key) > 0: keep = False
             if key_filter == '*' and len(key) == 0: keep = False
-            if self.skip_key_check_string not in tag_list:
+            if SKIP_KEY not in tag_list:
                 if cam_filter_numbers:
                     if cam_song is None:
                         keep = False
@@ -777,7 +770,7 @@ class App:
         filename = self.get_selected_filename()
         if not filename: return
         tag = self.tag_var.get()
-        if not self.is_valid_tag(tag): return
+        if not tag: return
         record = self.db_dict[filename]
         try:
             record['tags'].remove(tag)
@@ -794,7 +787,7 @@ class App:
         return self.save_dialog()
 
     def add_tag_to_filename(self, filename, tag):
-        if not self.is_valid_tag(tag): return
+        if not tag: return
         record = self.db_dict[filename]
         if tag not in record['tags']:
             record['tags'].append(tag)
@@ -915,6 +908,7 @@ class App:
         self.entry_bpm.clear()
         self.entry_key_filter.clear()
         self.entry_tag_filter.clear()
+        # TODO CLEAR TAG DROPDOWN
 
     def generate_and_set_from_current_button(self):
         t = time.time()
