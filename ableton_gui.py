@@ -728,6 +728,14 @@ class App:
             pass
         return result
 
+    def ts_filename(self, filename):
+        record = self.db_dict[filename]
+        ts = time.time()
+        try:
+            record['ts_list'].append(ts)
+        except KeyError:
+            record['ts_list'] = [ts]
+
     def command_copy(self):
         filename_path = self.get_selected_filepath()
         if not filename_path: return
@@ -739,18 +747,11 @@ class App:
         if not filename: return  # impossible
         if filename == self.last_copied_filename: return
         self.last_copied_filename = filename
-        record = self.db_dict[filename]
-        ts = time.time()
-        try:
-            record['ts_list'].append(ts)
-        except KeyError:
-            record['ts_list'] = [ts]
+        self.ts_filename(filename)
         # and finally reveal if wanted
         if bool(self.reveal_var.get()):
             print ("reveal:", filename)
             ableton_aid.reveal_file(filename)
-        # and of course (recently) add in a cache variable
-        self.last_copy_filename = filename
 
     def command_touch(self):
         filename_path = self.get_selected_filepath()
@@ -791,6 +792,9 @@ class App:
         record = self.db_dict[filename]
         if tag not in record['tags']:
             record['tags'].append(tag)
+        # timestamp every time we tag
+        self.ts_filename(filename)
+        # some old indexing code
         old_index = self.get_selected_index()
         self.update_listbox()
         self.listbox.activate(old_index)
