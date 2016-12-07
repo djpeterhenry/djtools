@@ -345,6 +345,11 @@ class App:
         self.max_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
                                     update_fun=self.update_listbox)
 
+        # key Label
+        self.key_label_var = StringVar()
+        key_label = Label(frame_edit, textvariable=self.key_label_var)
+        key_label.pack(side=LEFT)
+
         #################
         # last row (listbox)
 
@@ -498,7 +503,6 @@ class App:
         cam_filter = ableton_aid.get_camelot_key(key_filter)
         # direct camelot allowed as well
         if cam_filter is None and len(key_filter) > 0 and key_filter[0].isdigit():
-            # possible_lower = [s.lower() for s in ableton_aid.camelot_dict.values()]
             possible_lower = [s.lower() for s in ableton_aid.reverse_camelot_dict.keys()]
             if key_filter.lower() in possible_lower:
                 cam_filter = key_filter
@@ -507,6 +511,13 @@ class App:
                 fake_key_filter = key_filter + 'A'
                 if fake_key_filter.lower() in possible_lower:
                     cam_filter = fake_key_filter
+
+        # print keys for number
+        if cam_filter is not None:
+            keys = ableton_aid.get_keys_for_camelot_number(cam_filter[:-1])
+            keys_as_str = ' '.join(keys)
+            self.key_label_var.set(keys_as_str)
+
         # create the numbers from the filter
         # currently just need acceptable camelot numbers (ignore major minor)
         cam_filter_numbers = []

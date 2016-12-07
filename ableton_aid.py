@@ -1004,6 +1004,14 @@ def generate_date(valid_alc_files, db_dict):
     return get_files_from_pairs(generate_date_pairs(valid_alc_files, db_dict))
 
 
+def get_keys_for_camelot_number(camelot_number):
+    if camelot_number is None:
+        return []
+    key_minor = reverse_camelot_dict[str(camelot_number)+'A']
+    key_major = reverse_camelot_dict[str(camelot_number)+'B']
+    return [key_minor, key_major]
+
+
 ########################################################################
 if __name__ == '__main__':
     argv_iter = iter(sys.argv)
