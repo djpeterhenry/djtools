@@ -521,7 +521,7 @@ class App:
         # create the numbers from the filter
         # currently just need acceptable camelot numbers (ignore major minor)
         cam_filter_numbers = []
-        key_filter_range = self.entry_key_filter_range.get_int()
+        key_filter_range = self.entry_key_filter_range.get_int() or 0
         do_key_filter = not self.key_var_star.get()
         if do_key_filter and cam_filter and key_filter_range is not None:
             cam_filter_num = int(cam_filter[:-1])
@@ -538,7 +538,7 @@ class App:
 
         filter_string = self.entry_filter.stringvar.get()
         filter_bpm = self.entry_bpm.get_int()
-        filter_bpm_range = self.entry_bpm_range.get_int()
+        filter_bpm_range = self.entry_bpm_range.get_int() or 0
         filter_bpm_star = self.bpm_star_var.get()
         tag_filter = None
         if self.entry_tag_filter:
