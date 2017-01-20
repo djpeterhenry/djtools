@@ -62,10 +62,10 @@ class App:
 
         # window position
         window_x = 0
-        window_y = 170
+        window_y = 210
         # window size (note that 1 is different than 0.  So very very true.)
         listbox_width = 80
-        listbox_height = 16
+        listbox_height = 15
 
         # other dimensions
         search_width = 8
