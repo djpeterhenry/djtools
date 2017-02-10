@@ -350,6 +350,11 @@ class App:
         key_label = Label(frame_edit, textvariable=self.key_label_var)
         key_label.pack(side=LEFT)
 
+        # count Label
+        self.count_label_var = StringVar()
+        count_label = Label(frame_edit, textvariable=self.count_label_var)
+        count_label.pack(side=LEFT)
+
         #################
         # last row (listbox)
 
@@ -690,7 +695,9 @@ class App:
         # no matter what (in addition to select)
         self.refresh_edit()
 
+        self.count_label_var.set(str(len(filename_pairs_list)))
         print "Listbox length:", len(filename_pairs_list)
+
 
         # timing
         time_end = time.clock()
