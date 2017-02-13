@@ -235,6 +235,16 @@ class App:
             b = Radiobutton(frame_top, text=s + ' ', variable=self.order_var, value=s, takefocus=0)
             b.pack(side=LEFT, anchor=W)
 
+        # key Label
+        self.key_label_var = StringVar()
+        key_label = Label(frame_top, textvariable=self.key_label_var)
+        key_label.pack(side=LEFT)
+
+        # count Label
+        self.count_label_var = StringVar()
+        count_label = Label(frame_top, textvariable=self.count_label_var)
+        count_label.pack(side=LEFT)
+
         #################
         # second row
         tag_list = self.get_tag_list()
@@ -345,15 +355,6 @@ class App:
         self.max_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
                                     update_fun=self.update_listbox)
 
-        # key Label
-        self.key_label_var = StringVar()
-        key_label = Label(frame_edit, textvariable=self.key_label_var)
-        key_label.pack(side=LEFT)
-
-        # count Label
-        self.count_label_var = StringVar()
-        count_label = Label(frame_edit, textvariable=self.count_label_var)
-        count_label.pack(side=LEFT)
 
         #################
         # last row (listbox)
