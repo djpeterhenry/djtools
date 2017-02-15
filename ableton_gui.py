@@ -16,14 +16,16 @@ import random
 import subprocess
 import tkSimpleDialog
 import tkMessageBox
-import ableton_aid
 import time
 import atexit
 import datetime
 import codecs
 import json
 from itertools import groupby
+
+import ableton_aid
 from entry_text import EntryText
+from lists_selector import ListsSelector
 
 
 lock_filename = 'ableton_gui.lock'
@@ -199,7 +201,6 @@ class App:
         self.key_button_star = Checkbutton(frame_edit, text="*", variable=self.key_var_star, takefocus=0)
         self.key_button_star.pack(side=LEFT)
 
-        # tag filter not extra????
         self.entry_tag_filter = EntryText(frame_edit, text_width=tag_filter_width, update_fun=self.update_listbox)
 
         self.tag_var = StringVar(master)
@@ -261,7 +262,7 @@ class App:
         self.max_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
                                     update_fun=self.update_listbox)
 
-
+        self.lists_selector = ListsSelector(frame_edit, 'lists')
 
 
         #################
