@@ -53,11 +53,10 @@ class ListsSelector:
             als_filename = s + '.als'
             if s in db_dict:
                 result.append(s)
+            elif als_filename in db_dict:
+                result.append(als_filename)
             elif alc_filename in db_dict:
                 result.append(alc_filename)
-            elif als_filename in db_dict:
-                print ('found: {}'.format(als_filename))
-                result.append(als_filename)
             else:
                 result.append(s)
         return result
