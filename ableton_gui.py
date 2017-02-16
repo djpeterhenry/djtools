@@ -292,7 +292,7 @@ class App:
         self.listbox.bind("s", lambda _: self.command_save())
         # self.listbox.bind("x", lambda _ : self.command_x())
         self.listbox.bind("v", lambda _: self.command_v())
-        self.listbox.bind("f", lambda _: self.command_f())
+        self.listbox.bind("f", lambda _: self.command_copy_filename())
         self.listbox.bind("g", lambda _: self.command_g())
         self.listbox.bind("l", lambda _: self.command_l())
         self.listbox.bind("n", lambda _: self.command_n())
@@ -688,6 +688,20 @@ class App:
             print ("reveal:", filename)
             ableton_aid.reveal_file(filename)
 
+    # should be classmethod
+    def set_clipboard_data(self, data):
+        p = subprocess.Popen(['pbcopy'], stdin=subprocess.PIPE)
+        p.stdin.write(data)
+        p.stdin.close()
+        retcode = p.wait()
+
+
+    def command_copy_filename(self):
+        filename = self.get_selected_filename()
+        if not filename: return
+        self.set_clipboard_data(filename)
+
+
     def command_touch(self):
         filename_path = self.get_selected_filepath()
         if not filename_path: return
@@ -774,9 +788,6 @@ class App:
         if not filename: return
         record = self.db_dict[filename]
         record['key'] = ''
-
-    def command_f(self):
-        self.friends_var.set(not bool(self.friends_var.get()))
 
     def command_g(self):
         filename = self.get_selected_filename()
