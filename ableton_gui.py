@@ -262,7 +262,7 @@ class App:
         self.max_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
                                     update_fun=self.update_listbox)
 
-        self.lists_selector = ListsSelector(frame_edit, 'lists')
+        self.lists_selector = ListsSelector(frame_edit, 'lists', self.update_listbox)
 
 
         #################
@@ -464,10 +464,17 @@ class App:
         do_vocal_check = True
         if self.order_var.get() == 'sets': do_vocal_check = False
 
+        # possibly override list to use with selected song list
+        list_to_use = self.list_to_use
+        lists_selector_song_list = self.lists_selector.get_song_list(self.db_dict)
+        if lists_selector_song_list:
+            list_to_use = lists_selector_song_list
+            do_vocal_check = False
+
         select_index = 0
         filename_pairs_list = []  # insert them all at the end for speed?
         last_filename = None
-        for filename in self.list_to_use:
+        for filename in list_to_use:
             # never repeat yourself
             if filename == last_filename: continue
 

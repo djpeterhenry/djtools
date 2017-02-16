@@ -26,7 +26,25 @@ class ListsSelector:
                 self.song_list = [song.strip() for song in f.readlines()]
         except:
             self.song_list = None
-        # print
+        if self.update_function:
+            self.update_function()
+        # debug print
         if self.song_list:
             for s in self.song_list:
                 print s
+
+
+    def get_song_list(self, db_dict):
+        if not self.song_list:
+            return None
+        result = []
+        for s in self.song_list:
+            alc_filename = s + '.alc'
+            als_filename = s + '.als'
+            if alc_filename in db_dict:
+                result.append(alc_filename)
+            elif als_filename in db_dict:
+                result.append(als_filename)
+            else:
+                result.append(s)
+        return result
