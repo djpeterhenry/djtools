@@ -183,13 +183,18 @@ class App:
         # new fun extra key bits
         self.key_var_1 = IntVar(master)
         self.key_var_1.trace('w', lambda a, b, c: self.update_listbox())
-        self.key_button_1 = Checkbutton(frame_edit, text="1", variable=self.key_var_1, takefocus=0)
+        self.key_button_1 = Checkbutton(frame_edit, text="-1", variable=self.key_var_1, takefocus=0)
         self.key_button_1.pack(side=LEFT)
 
         self.key_var_2 = IntVar(master)
         self.key_var_2.trace('w', lambda a, b, c: self.update_listbox())
-        self.key_button_2 = Checkbutton(frame_edit, text="2", variable=self.key_var_2, takefocus=0)
+        self.key_button_2 = Checkbutton(frame_edit, text="1", variable=self.key_var_2, takefocus=0)
         self.key_button_2.pack(side=LEFT)
+
+        self.key_var_3 = IntVar(master)
+        self.key_var_3.trace('w', lambda a, b, c: self.update_listbox())
+        self.key_button_3 = Checkbutton(frame_edit, text="2", variable=self.key_var_3, takefocus=0)
+        self.key_button_3.pack(side=LEFT)
 
         self.key_var_4 = IntVar(master)
         self.key_var_4.trace('w', lambda a, b, c: self.update_listbox())
@@ -278,6 +283,7 @@ class App:
         self.listbox.pack(side=LEFT, fill=BOTH, expand=1)
         self.scrollbar.pack(side=RIGHT, fill=Y)
 
+        # TODO(peter): bind to master
         self.listbox_target_string = None
         self.listbox_target_filename = None
         self.listbox.bind("<<ListboxSelect>>", self.listbox_select)
@@ -447,8 +453,9 @@ class App:
                 cam_filter_numbers.append(((cam_filter_num + i - 1) % 12) + 1)
                 cam_filter_numbers.append(((cam_filter_num - i - 1) % 12) + 1)
             # add variables
-            if self.key_var_1.get(): cam_filter_numbers.append(((cam_filter_num + 1 - 1) % 12) + 1)
-            if self.key_var_2.get(): cam_filter_numbers.append(((cam_filter_num + 2 - 1) % 12) + 1)
+            if self.key_var_1.get(): cam_filter_numbers.append(((cam_filter_num - 1 - 1) % 12) + 1)
+            if self.key_var_2.get(): cam_filter_numbers.append(((cam_filter_num + 1 - 1) % 12) + 1)
+            if self.key_var_3.get(): cam_filter_numbers.append(((cam_filter_num + 2 - 1) % 12) + 1)
             if self.key_var_4.get(): cam_filter_numbers.append(((cam_filter_num + 4 - 1) % 12) + 1)
 
         filter_string = self.entry_filter.stringvar.get()
@@ -775,7 +782,7 @@ class App:
         self.key_var_2.set(not bool(self.key_var_2.get()))
 
     def command_3(self):
-        pass
+        self.key_var_3.set(not bool(self.key_var_3.get()))
 
     def command_4(self):
         self.key_var_4.set(not bool(self.key_var_4.get()))
