@@ -584,10 +584,17 @@ class App:
                 # key_display = '%3s:%3s' % (key, cam_song)
                 # check this with edit
                 key_display = '%3s' % (cam_song)
-            # cool_filename = ' %03d|%s|%02d| %s' % (bpm, key_display, len(ts_list), file)
             cool_filename = ' %03d|%s|%02d| %s' % (bpm, key_display, min(99, len(ts_list)), file)
             filename_pairs_list.append((cool_filename, filename))
         # done looping over all filenames
+
+        # reasonable size
+        MAX_LENGTH = 1000
+        ALPHA = 0.9
+        if len(filename_pairs_list) > MAX_LENGTH:
+            first = filename_pairs_list[:int(MAX_LENGTH*ALPHA)]
+            last = filename_pairs_list[-int(MAX_LENGTH*(1-ALPHA)):]
+            filename_pairs_list = first + last
 
         # fill out the important results
         if filename_pairs_list:
