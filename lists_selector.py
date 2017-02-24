@@ -10,7 +10,8 @@ class ListsSelector:
         self.song_list = None
 
         files = [os.path.join(path, f) for f in os.listdir(path)]
-        self.name_to_file = {os.path.splitext(os.path.split(f)[1])[0]:f for f in files}
+        self.name_to_file = {os.path.splitext(os.path.split(f)[1])[0]:f
+            for f in files if os.path.splitext(f)[1] == '.txt'}
         names_to_list = [''] + sorted(list(self.name_to_file.iterkeys()))
 
         self.string_var = StringVar(root)
