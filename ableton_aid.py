@@ -638,8 +638,8 @@ def action_rename_tag(db_filename, tag_old, tag_new):
 
 
 def reveal_file(filename):
-    command = 'open -R "%s"' % filename
-    subprocess.call(command, shell=True)
+    command = ['open','-R', filename]
+    subprocess.call(command)
 
 
 def get_missing(db_filename):

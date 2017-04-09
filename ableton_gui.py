@@ -66,10 +66,10 @@ class App:
 
         # window position
         window_x = 0
-        window_y = 210
+        window_y = 225
         # window size (note that 1 is different than 0.  So very very true.)
-        listbox_width = 80
-        listbox_height = 15
+        listbox_width = 78
+        listbox_height = 14
 
         # other dimensions
         search_width = 8
@@ -253,7 +253,7 @@ class App:
         # no need for this:
         # self.day_3_var.trace('w', lambda a,b,c: self.update_listbox())
         self.reveal_button = Checkbutton(frame_edit, text="Reveal", variable=self.reveal_var, takefocus=0)
-        # self.reveal_button.pack(side=LEFT)
+        self.reveal_button.pack(side=LEFT)
 
         self.friends_var = IntVar(master)
         self.friends_var.trace('w', lambda a, b, c: self.update_listbox())
@@ -699,8 +699,11 @@ class App:
         self.ts_filename(filename)
         # and finally reveal if wanted
         if bool(self.reveal_var.get()):
-            print ("reveal:", filename)
-            ableton_aid.reveal_file(filename)
+            # reveal alc or sample?
+            # alc:
+            # ableton_aid.reveal_file(filename)
+            cache_dict = self.dict_file_cache[filename]
+            ableton_aid.reveal_file(cache_dict['sample_file'])
 
     # should be classmethod
     def set_clipboard_data(self, data):
