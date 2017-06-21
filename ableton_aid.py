@@ -745,8 +745,9 @@ def action_html_sets(db_filename):
     ts_db_dict = get_db_by_ts(db_dict)
     last_ts = max(ts_db_dict.iterkeys()) + 1
     last_date = datetime.date.today()
-    max_count = 5000
+    max_count = 10000
     count = 0
+    last_file = None
     for ts in sorted(ts_db_dict.iterkeys(), reverse=True):
         date = datetime.date.fromtimestamp(ts)
         divider = False
@@ -763,7 +764,11 @@ def action_html_sets(db_filename):
         last_ts = ts
         last_date = date
         files = ts_db_dict[ts]
+        # NOTE(peter): there should be only one...
         for f in files:
+            if last_file == f:
+                continue
+            last_file = f
             record = db_dict[f]
             name = get_base_filename_with_bpm_and_key(f, record)
             # link = f
