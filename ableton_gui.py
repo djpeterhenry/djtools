@@ -57,7 +57,7 @@ class App:
 
     def get_order_list(self):
         # Supported: 'sets' 'key' 'name'
-        return ['bpm', 'alc', 'sample', 'date', 'num', 'random']
+        return ['bpm', 'alc', 'sample', 'date', 'date+alc', 'num', 'random']
 
     def __init__(self, master, db_filename, include_extra):
         if os.path.exists(lock_filename):
@@ -885,6 +885,8 @@ class App:
             self.list_to_use = self.generate_bpm()
         elif (self.order_var.get() == 'date'):
             self.list_to_use = self.generate_date()
+        elif (self.order_var.get() == 'date+alc'):
+            self.list_to_use = self.generate_date_plus_alc()
         elif (self.order_var.get() == 'sample'):
             self.list_to_use = self.generate_sample()
         elif (self.order_var.get() == 'alc'):
@@ -910,6 +912,9 @@ class App:
 
     def generate_alc(self):
         return ableton_aid.generate_alc(self.valid_alc_files, self.dict_date_alc)
+
+    def generate_date_plus_alc(self):
+        return ableton_aid.generate_date_plus_alc(self.valid_alc_files, self.db_dict, self.dict_date_alc)
 
     def generate_sample(self):
         return ableton_aid.generate_sample(self.valid_alc_files, self.dict_date_sample)

@@ -984,22 +984,33 @@ def normalize_hfs_filename(filename):
     return filename
 
 
+def get_last_ts(record):
+    ts_list = get_ts_list(record)
+    try:
+        return ts_list[-1]
+    except IndexError:
+        return 0
+
 def generate_date_pairs(valid_alc_files, db_dict):
     date_file_tuples = []
     for file in valid_alc_files:
         record = db_dict[file]
-        # get last ts if any exist
-        # otherwise we don't care and use 0
-        ts_list = get_ts_list(record)
-        try:
-            ts = ts_list[-1]
-        except IndexError:
-            ts = 0
+        ts = get_last_ts(record)
         date_file_tuples.append((ts, file))
     date_file_tuples.sort()
     date_file_tuples.reverse()
     return date_file_tuples
 
+def generate_date_plus_alc_pairs(valid_alc_files, db_dict, dict_date_alc):
+    tuples = []
+    for file in valid_alc_files:
+        record = db_dict[file]
+        play_date = get_last_ts(record)
+        alc_date = dict_date_alc[file]
+        tuples.append((max(play_date, alc_date), file))
+    tuples.sort()
+    tuples.reverse()
+    return tuples
 
 def generate_alc(valid_alc_files, dict_date_alc):
     return get_files_from_pairs(generate_alc_pairs(valid_alc_files, dict_date_alc))
@@ -1007,6 +1018,10 @@ def generate_alc(valid_alc_files, dict_date_alc):
 
 def generate_date(valid_alc_files, db_dict):
     return get_files_from_pairs(generate_date_pairs(valid_alc_files, db_dict))
+
+
+def generate_date_plus_alc(valid_alc_files, db_dict, dict_date_alc):
+    return get_files_from_pairs(generate_date_plus_alc_pairs(valid_alc_files, db_dict, dict_date_alc))
 
 
 def get_keys_for_camelot_number(camelot_number):
