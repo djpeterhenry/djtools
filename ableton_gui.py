@@ -57,7 +57,8 @@ class App:
 
     def get_order_list(self):
         # Supported: 'sets' 'key' 'name'
-        return ['bpm', 'alc', 'sample', 'date', 'date+alc', 'num', 'random']
+        #return ['bpm', 'alc', 'sample', 'date', 'date+alc', 'num', 'random']
+        return ['date+alc', 'num', 'alc', 'random']
 
     def __init__(self, master, db_filename, include_extra):
         if os.path.exists(lock_filename):
