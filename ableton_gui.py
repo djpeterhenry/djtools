@@ -176,10 +176,11 @@ class App:
             frame_edit, take_focus=True, text_width=4,
             int_only=True, int_min=1, int_max=12,
             update_fun=self.update_listbox)
-        self.entry_key_filter_range = EntryText(
-            frame_edit, take_focus=True, text_width=1,
-            int_only=True, initial_value=str(init_key_range), int_min=0, int_max=6,
-            update_fun=self.update_listbox)
+        # range:
+        # self.entry_key_filter_range = EntryText(
+        #     frame_edit, take_focus=True, text_width=1,
+        #     int_only=True, initial_value=str(init_key_range), int_min=0, int_max=6,
+        #     update_fun=self.update_listbox)
 
         # new fun extra key bits
         self.key_var_1 = IntVar(master)
@@ -443,7 +444,8 @@ class App:
         # create the numbers from the filter
         # currently just need acceptable camelot numbers (ignore major minor)
         cam_filter_numbers = []
-        key_filter_range = self.entry_key_filter_range.get_int() or 0
+        #key_filter_range = self.entry_key_filter_range.get_int() or 0
+        key_filter_range = 0
         do_key_filter = not self.key_var_star.get()
         if do_key_filter and cam_filter and key_filter_range is not None:
             cam_filter_num = int(cam_filter[:-1])
