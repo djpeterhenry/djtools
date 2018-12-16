@@ -460,6 +460,7 @@ def action_test_date_list_to_dict(date_file):
 
 
 def action_key_frequency(db_filename):
+    TRAKTOR = false
     date_file_tuples = []
     db_dict = read_db_file(db_filename)
     alc_file_set = set(get_ableton_files())
@@ -468,10 +469,10 @@ def action_key_frequency(db_filename):
         if filename not in alc_file_set:
             continue
         bpm, tags, key = (record['bpm'], record['tags'], record['key'])
-        cam_key = get_camelot_key(key)
+        cam_key = get_camelot_key(key, TRAKTOR)
         if cam_key is None:
             continue
-        key_key = reverse_camelot_dict[cam_key]
+        key_key = get_key_dicts(TRAKTOR)[1][cam_key]
         if key_key not in key_frequency:
             key_frequency[key_key] = 0
         key_frequency[key_key] = key_frequency[key_key] + 1
@@ -482,17 +483,19 @@ def action_key_frequency(db_filename):
     by_count.sort()
     by_count.reverse()
     for count, key in by_count:
-        print ('%4s - %3s: %d' % (key, get_camelot_key(key), count))
+        print ('%4s - %3s: %d' % (key, get_camelot_key(key, TRAKTOR), count))
 
 
-def generate_camelot_dict():
-    camelot_list = ['Ab', 'B', 'Eb', 'Gb', 'Bb', 'Db', 'F', 'Ab',
+def generate_camelot_dict(traktor=False):
+    CAMELOT_LIST = ['Ab', 'B', 'Eb', 'Gb', 'Bb', 'Db', 'F', 'Ab',
                     'C', 'Eb', 'G', 'Bb', 'D', 'F', 'A', 'C',
                     'E', 'G', 'B', 'D', 'Gb', 'A', 'Db', 'E']
+    TRAKTOR_LIST = CAMELOT_LIST[14:] + CAMELOT_LIST[:14]
+    key_list = TRAKTOR_LIST if traktor else CAMELOT_LIST
     initial_dict = {}
     reverse_dict = {}
     ab = ['A', 'B']
-    for i, k in enumerate(camelot_list):
+    for i, k in enumerate(key_list):
         camelot_name = str(i / 2 + 1) + ab[i % 2]
         if i % 2 == 0:
             k = k + 'm'
@@ -514,18 +517,23 @@ def generate_camelot_dict():
             full_dict[sharp_dict_entry] = c
     return full_dict, reverse_dict
 
-# create global
-camelot_dict, reverse_camelot_dict = generate_camelot_dict()
+# create globals once
+camelot_dicts = generate_camelot_dict()
+traktor_dicts = generate_camelot_dict(traktor=True)
+def get_key_dicts(traktor):
+    return traktor_dicts if traktor else camelot_dicts
+#camelot_dict, reverse_camelot_dict = v
 
 
-def get_camelot_key(key):
+def get_camelot_key(key, traktor):
     if len(key) < 1:
         return None
     key = key[:1].upper() + key[1:]
     if key[-1] == '?':
         key = key[:-1]
-    if camelot_dict.has_key(key):
-        return camelot_dict[key]
+    key_dict = get_key_dicts(traktor)[0]
+    if key_dict.has_key(key):
+        return key_dict[key]
     else:
         return None
 
@@ -1052,11 +1060,12 @@ def generate_date_plus_alc(valid_alc_files, db_dict, dict_date_alc):
     return get_files_from_pairs(generate_date_plus_alc_pairs(valid_alc_files, db_dict, dict_date_alc))
 
 
-def get_keys_for_camelot_number(camelot_number):
+def get_keys_for_camelot_number(camelot_number, traktor):
     if camelot_number is None:
         return []
-    key_minor = reverse_camelot_dict[str(camelot_number)+'A']
-    key_major = reverse_camelot_dict[str(camelot_number)+'B']
+    key_dicts = get_key_dicts(traktor)
+    key_minor = key_dicts[1][str(camelot_number)+'A']
+    key_major = key_dicts[1][str(camelot_number)+'B']
     return [key_minor, key_major]
 
 

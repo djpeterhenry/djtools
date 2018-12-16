@@ -141,6 +141,11 @@ class App:
             b = Radiobutton(frame_top, text=s + ' ', variable=self.order_var, value=s, takefocus=0)
             b.pack(side=LEFT, anchor=W)
 
+        self.traktor_key_var = IntVar(master)
+        self.traktor_key_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.traktor_key_button = Checkbutton(frame_top, text="Traktor Key", variable=self.traktor_key_var, takefocus=0)
+        self.traktor_key_button.pack(side=LEFT)
+
         # key Label
         self.key_label_var = StringVar()
         key_label = Label(frame_top, textvariable=self.key_label_var)
@@ -421,10 +426,11 @@ class App:
         # split = self.key_filter_string.split()
         # key_filter = split[0] if split else ''
         key_filter = self.entry_key_filter.stringvar.get().strip()
-        cam_filter = ableton_aid.get_camelot_key(key_filter)
+        cam_filter = ableton_aid.get_camelot_key(key_filter, self.traktor_key_var)
         # direct camelot allowed as well
         if cam_filter is None and len(key_filter) > 0 and key_filter[0].isdigit():
-            possible_lower = [s.lower() for s in ableton_aid.reverse_camelot_dict.keys()]
+            reverse_key_dict = ableton_aid.get_key_dicts(traktor=self.traktor_key_var)[1]
+            possible_lower = [s.lower() for s in reverse_key_dict.keys()]
             if key_filter.lower() in possible_lower:
                 cam_filter = key_filter
             # since major/minor doesn't matter, also allow just camelot numbers
@@ -435,7 +441,7 @@ class App:
 
         # print keys for number
         if cam_filter is not None:
-            keys = ableton_aid.get_keys_for_camelot_number(cam_filter[:-1])
+            keys = ableton_aid.get_keys_for_camelot_number(cam_filter[:-1], self.traktor_key_var)
             keys_as_str = ' '.join(keys)
             self.key_label_var.set(keys_as_str)
 
@@ -547,7 +553,7 @@ class App:
                 if is_ss != ss_selected: keep = False
 
             # used beyond filter check
-            cam_song = ableton_aid.get_camelot_key(key)
+            cam_song = ableton_aid.get_camelot_key(key, self.traktor_key_var)
 
             if key_filter == '-' and len(key) > 0: keep = False
             if key_filter == '*' and len(key) == 0: keep = False
@@ -777,7 +783,7 @@ class App:
         filepath = self.get_selected_filepath()
         if not filepath: return
         found_key = ableton_aid.get_key_from_alc(filepath)
-        if not ableton_aid.get_camelot_key(found_key): return
+        if not ableton_aid.get_camelot_key(found_key, self.traktor_key_var): return
         self.stringvar_key.set(found_key)
 
     def command_v(self):
@@ -933,7 +939,7 @@ class App:
         for file in self.valid_alc_files:
             record = self.db_dict[file]
             key_song = record['key']
-            cam_song = ableton_aid.get_camelot_key(key_song)
+            cam_song = ableton_aid.get_camelot_key(key_song, self.traktor_key_var)
             if cam_song is not None:
                 cam_sort = ('%02d' % int(cam_song[:-1])) + cam_song[-1]
                 key_file_tuples.append((cam_sort, file))
