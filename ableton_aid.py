@@ -85,7 +85,11 @@ def get_base_filename(filename, record):
     pre_padding = ' ' * 2
     divider = ' - '
     file, ext = os.path.splitext(filename)
+    result = file
+    if 'pretty_name' in record:
+        result = record['pretty_name']
     # TODO(peter): what were you trying to do here?
+    # Interesting idea but supersceded by exporting sample db
     if False and ext in ['.mp3', '.flac']:
         audio = EasyID3(filename)
         artist = ""
@@ -99,16 +103,16 @@ def get_base_filename(filename, record):
         except KeyError:
             pass
         if len(artist) > 0:
-            file = '%s%s%s' % (artist, divider, song)
+            result = '%s%s%s' % (artist, divider, song)
         elif len(song) > 0:
-            file = song
+            result = song
     # add extension:
     if ext not in ['.alc']:
-        file = '%s (%s)' % (file, ext[1:].upper())
+        result = '%s (%s)' % (result, ext[1:].upper())
     # add vocal:
     if 'vocal' in record['tags']:
-        file = file + ' [Vocal]'
-    return file
+        result = result + ' [Vocal]'
+    return result
 
 
 def get_base_filename_with_bpm_and_key(filename, record):
@@ -835,11 +839,11 @@ def update_and_get_cache_values(filename):
         if cache_m_time_alc == m_time_alc:
             return cache_dict
     # must update file
-    # NOTE: this breaks when trying to print to terminal but works thereafter
-#    print (u'updating: {}'.format(filename))
+    # for some reason this breaks when trying to print to terminal
+    # print (u'updating: {}'.format(filename))
     m_time_alc = os.path.getmtime(filename)
     sample_file = get_sample_from_alc_file(filename)
-    print (u'sample_file: {}'.format(sample_file))
+    # print (u'sample_file: {}'.format(sample_file))
     m_time_sample = os.path.getmtime(sample_file)
     cache_dict['m_time_alc'] = m_time_alc
     cache_dict['sample_file'] = sample_file
@@ -867,7 +871,9 @@ def action_export_database(db_filename, sample_db_filename):
             continue
         cache_dict = update_and_get_cache_values(filename)
         sample_filename = os.path.basename(cache_dict['sample_file'])
-        sample_db[sample_filename] = db_dict[filename]
+        record = db_dict[filename]
+        record['pretty_name'] = os.path.splitext(filename)[0]
+        sample_db[sample_filename] = record
     write_db_file(sample_db_filename, sample_db)
 
 
