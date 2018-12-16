@@ -42,6 +42,9 @@ tag_shorthand = {
     'b': 'beats'
 }
 
+ABLETON_EXTENSIONS=['.alc', '.als']
+SAMPLE_EXTENSIONS=['.mp3', '.m4a', '.wav', '.aiff', '.flac']
+ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
@@ -52,9 +55,8 @@ def get_int(prompt_string):
 
 
 def is_ableton_file(filename):
-    valid_ext = ['.alc', '.als', '.mp3']
     ext = os.path.splitext(filename)[1]
-    return ext in valid_ext
+    return ext in ALL_EXTENSIONS
 
 
 def get_ableton_files():
@@ -266,6 +268,8 @@ def get_sample_from_xml(xml_root):
 
 
 def get_sample_from_alc_file(alc_filename):
+    if os.path.splitext(alc_filename)[1] in SAMPLE_EXTENSIONS:
+        return alc_filename
     return get_sample_from_xml(alc_to_xml(alc_filename))
 
 
@@ -850,6 +854,19 @@ def action_update_cache(db_filename):
         print (cache_dict)
 
 
+def action_export_database(db_filename, sample_db_filename):
+    db_dict = read_db_file(db_filename)
+    alc_file_set = set(get_ableton_files())
+    sample_db = {}
+    for filename, _ in iter(sorted(db_dict.iteritems())):
+        if filename not in alc_file_set:
+            continue
+        cache_dict = update_and_get_cache_values(filename)
+        sample_filename = os.path.basename(cache_dict['sample_file'])
+        sample_db[sample_filename] = db_dict[filename]
+    write_db_file(sample_db_filename, sample_db)
+
+
 def get_valid_alc_files(db_dict):
     alc_files = get_ableton_files()
     valid_alc_files = [
@@ -927,11 +944,12 @@ def get_dict_date_alc_json(valid_alc_files, dict_file_cache):
     magic_date = datetime.date(2016, 6, 12)
     magic_ts = time.mktime(magic_date.timetuple())
     json_filename = 'alc_dates.json'
-    dict_date_alc = json_list_to_dict(json_filename)
+    have_json_file = os.path.exists(json_filename)
+    dict_date_alc = json_list_to_dict(json_filename) if have_json_file else {}
     for file in valid_alc_files:
         cache_dict = dict_file_cache[file]
         m_time_alc = cache_dict['m_time_alc']
-        if m_time_alc < magic_ts:
+        if have_json_file and m_time_alc < magic_ts:
             continue
         dict_date_alc[file] = m_time_alc
     return dict_date_alc
@@ -1032,6 +1050,7 @@ def get_keys_for_camelot_number(camelot_number):
     return [key_minor, key_major]
 
 
+
 ########################################################################
 if __name__ == '__main__':
     argv_iter = iter(sys.argv)
@@ -1108,6 +1127,9 @@ if __name__ == '__main__':
         action_html_list_by_alc(db_filename)
     elif command_opt == '-update_cache':
         action_update_cache(db_filename)
+    elif command_opt == '-export_sample_db':
+        sample_db_filename = argv_iter.next()
+        action_export_database(db_filename, sample_db_filename)
     else:
         print ('Unknown command')
         sys.exit(1)

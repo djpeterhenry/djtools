@@ -269,7 +269,8 @@ class App:
         self.max_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
                                     update_fun=self.update_listbox)
 
-        self.lists_selector = ListsSelector(frame_edit, 'lists', self.update_listbox)
+        LISTS_FOLDER = 'lists'
+        self.lists_selector = ListsSelector(frame_edit, LISTS_FOLDER, self.update_listbox)
 
 
         #################

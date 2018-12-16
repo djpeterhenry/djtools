@@ -9,6 +9,10 @@ class ListsSelector:
         # update with file contents:
         self.song_list = None
 
+        # safe to early exit contructor here if path isn't valid
+        if not os.path.exists(path):
+            return
+
         files = [os.path.join(path, f) for f in os.listdir(path)]
         self.name_to_file = {os.path.splitext(os.path.split(f)[1])[0]:f
             for f in files if os.path.splitext(f)[1] == '.txt'}
