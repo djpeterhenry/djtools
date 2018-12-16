@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 
-# for tags if installed
-from mutagen.easyid3 import EasyID3
-
 # dup import:
 from Tkinter import *
 import sys
