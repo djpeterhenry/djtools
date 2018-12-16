@@ -28,9 +28,11 @@ from collections import defaultdict
 
 
 # import mutagen
-from mutagen.mp3 import MP3
-from mutagen.easyid3 import EasyID3
-
+try:
+    from mutagen.mp3 import MP3
+    from mutagen.easyid3 import EasyID3
+except:
+    pass
 
 tag_shorthand = {
     'c': 'classic',
@@ -83,7 +85,8 @@ def get_base_filename(filename, record):
     pre_padding = ' ' * 2
     divider = ' - '
     file, ext = os.path.splitext(filename)
-    if ext in ['.mp3', '.flac']:
+    # TODO(peter): what were you trying to do here?
+    if False and ext in ['.mp3', '.flac']:
         audio = EasyID3(filename)
         artist = ""
         try:
@@ -100,7 +103,7 @@ def get_base_filename(filename, record):
         elif len(song) > 0:
             file = song
     # add extension:
-    if ext in ['.mp3', '.flac', '.als']:
+    if ext not in ['.alc']:
         file = '%s (%s)' % (file, ext[1:].upper())
     # add vocal:
     if 'vocal' in record['tags']:
@@ -162,9 +165,10 @@ def action_add(db_filename):
 
         # get with tag if mp3
         bpm = None
-        if os.path.splitext(filename)[1] == '.mp3':
-            bpm = get_mp3_bpm(filename)
-            print ('bpm from mp3:', bpm)
+        # TODO(peter): consider making this work again
+        # if os.path.splitext(filename)[1] == '.mp3':
+        #     bpm = get_mp3_bpm(filename)
+        #     print ('bpm from mp3:', bpm)
         if bpm is None:
             ui = raw_input("BPM: ")
             try:
