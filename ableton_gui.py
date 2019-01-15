@@ -945,6 +945,7 @@ class App:
     def generate_num(self):
         return ableton_aid.get_files_by_num(self.valid_alc_files, self.db_dict)
 
+    # TODO(peter): duplicated in ableton_aid
     def generate_sets(self):
         ts_db_dict = ableton_aid.get_db_by_ts(self.db_dict)
         result = []
