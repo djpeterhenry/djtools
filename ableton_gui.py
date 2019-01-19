@@ -25,7 +25,7 @@ from entry_text import EntryText
 from lists_selector import ListsSelector
 
 
-lock_filename = 'ableton_gui.lock'
+LOCK_FILEPATH = '/tmp/ableton_gui.lock'
 SKIP_KEY = 'ALL KEYS'
 SKIP_BPM = 'ALL BPM'
 LOOK_TAG = 'LOOK'
@@ -58,9 +58,9 @@ class App:
         return ['date+alc', 'num', 'alc', 'random']
 
     def __init__(self, master, db_filename, include_extra):
-        if os.path.exists(lock_filename):
-            raise RuntimeError('Locked: {}'.format(lock_filename))
-        open(lock_filename, 'a').close()
+        if os.path.exists(LOCK_FILEPATH):
+            raise RuntimeError('Locked: {}'.format(LOCK_FILEPATH))
+        open(LOCK_FILEPATH, 'a').close()
 
         # window position
         window_x = 0
@@ -141,6 +141,9 @@ class App:
             b = Radiobutton(frame_top, text=s + ' ', variable=self.order_var, value=s, takefocus=0)
             b.pack(side=LEFT, anchor=W)
 
+        LISTS_FOLDER = 'lists'
+        self.lists_selector = ListsSelector(frame_top, LISTS_FOLDER, self.update_listbox)
+
         # key Label
         self.key_label_var = StringVar()
         key_label = Label(frame_top, textvariable=self.key_label_var)
@@ -173,11 +176,6 @@ class App:
             frame_edit, take_focus=True, text_width=4,
             int_only=True, int_min=1, int_max=12,
             update_fun=self.update_listbox)
-        # range:
-        # self.entry_key_filter_range = EntryText(
-        #     frame_edit, take_focus=True, text_width=1,
-        #     int_only=True, initial_value=str(init_key_range), int_min=0, int_max=6,
-        #     update_fun=self.update_listbox)
 
         # new fun extra key bits
         self.key_var_1 = IntVar(master)
@@ -266,8 +264,7 @@ class App:
         self.max_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
                                     update_fun=self.update_listbox)
 
-        LISTS_FOLDER = 'lists'
-        self.lists_selector = ListsSelector(frame_edit, LISTS_FOLDER, self.update_listbox)
+
 
 
         #################
@@ -321,7 +318,7 @@ class App:
         atexit.register(self.quit_handler)
 
     def quit_handler(self):
-        os.remove(lock_filename)
+        os.remove(LOCK_FILEPATH)
         self.save_dialog()
 
 
@@ -442,7 +439,6 @@ class App:
         # create the numbers from the filter
         # currently just need acceptable camelot numbers (ignore major minor)
         cam_filter_numbers = []
-        #key_filter_range = self.entry_key_filter_range.get_int() or 0
         key_filter_range = 0
         do_key_filter = not self.key_var_star.get()
         if do_key_filter and cam_filter and key_filter_range is not None:
