@@ -954,7 +954,6 @@ class App:
             ts_last = ts
             for f in file_list:
                 result.append(f)
-
         return result
 
 
