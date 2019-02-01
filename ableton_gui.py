@@ -31,6 +31,8 @@ SKIP_BPM = 'ALL BPM'
 LOOK_TAG = 'LOOK'
 GOOD_TAG = 'GOOD'
 
+LISTS_FOLDER = '/Users/peter/github/djpeterhenry.github.io/lists'
+
 # print samples is amazing and you should fix it
 class App:
     extra_tag_list = [
@@ -141,7 +143,6 @@ class App:
             b = Radiobutton(frame_top, text=s + ' ', variable=self.order_var, value=s, takefocus=0)
             b.pack(side=LEFT, anchor=W)
 
-        LISTS_FOLDER = 'lists'
         self.lists_selector = ListsSelector(frame_top, LISTS_FOLDER, self.update_listbox)
 
         # key Label
