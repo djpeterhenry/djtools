@@ -35,9 +35,10 @@ except:
     pass
 
 
-ABLETON_EXTENSIONS=['.alc', '.als']
-SAMPLE_EXTENSIONS=['.mp3', '.m4a', '.wav', '.aiff', '.flac']
+ABLETON_EXTENSIONS = ['.alc', '.als']
+SAMPLE_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.aiff', '.flac']
 ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
+
 
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
@@ -170,13 +171,33 @@ def print_pretty_files(file_list, db_dict):
         print (pretty_name)
 
 
+def alc_to_str(alc_filename):
+    with gzip.open(alc_filename, 'rb') as f:
+        return f.read()
+
+
 def alc_to_xml(alc_filename):
-    f = gzip.open(alc_filename, 'rb')
-    file_content = f.read()
-    f.close()
-    # tree = ET.parse('country_data.xml')
-    root = ET.fromstring(file_content)
-    return root
+    return ET.fromstring(alc_to_str(alc_filename))
+
+
+def get_audioclip_from_alc(alc_filename):
+    xml_root = alc_to_xml(alc_filename)
+    xml_audioclips = xml_root.findall('.//AudioClip')
+    if len(xml_audioclips) != 1:
+        raise ValueError(
+            'Wrong number of audioclips: {}'.format(len(xml_audioclips)))
+    result = {}
+    xml_clip = xml_audioclips[0]
+    xml_warp_markers = xml_clip.find('WarpMarkers')
+    result['warp_markers'] = []
+    for marker in xml_warp_markers:
+        result['warp_markers'].append(dict(sec_time=float(marker.get('SecTime')),
+                                           beat_time=float(marker.get('BeatTime'))))
+    xml_loop = xml_clip.find('Loop')
+    result['loop_start'] = float(xml_loop.find('HiddenLoopStart').get('Value'))
+    result['loop_end'] = float(xml_loop.find('HiddenLoopEnd').get('Value'))
+    result['start'] = float(xml_clip.find('CurrentStart').get('Value'))
+    return result
 
 
 def get_sample_from_xml(xml_root):
@@ -207,9 +228,14 @@ def get_sample_from_alc_file(alc_filename):
 
 def get_key_from_sample(sample_fullpath):
     """
-    Sort of. Call the executable with the command line arguments -f filepath to have the key estimate printed to stdout (and/or any errors to stderr). If you also use the switch -w it will try and write to tags. Preferences from the GUI are used to determine the exact operation of the CLI.
+    Sort of. Call the executable with the command line arguments -f filepath to 
+    have the key estimate printed to stdout (and/or any errors to stderr). 
+    If you also use the switch -w it will try and write to tags. 
+    Preferences from the GUI are used to determine the exact operation of the CLI.
 
-    Don't forget that the Mac binary is buried in the .app bundle, so your command line will look something like: ./KeyFinder.app/Contents/MacOS/KeyFinder -f ~/Music/my_track.mp3 [-w]
+    Don't forget that the Mac binary is buried in the .app bundle, 
+    so your command line will look something like: 
+    ./KeyFinder.app/Contents/MacOS/KeyFinder -f ~/Music/my_track.mp3 [-w]
     """
     if sample_fullpath is None:
         return None
@@ -307,7 +333,7 @@ def get_ts_for_file(file):
 
 
 def reveal_file(filename):
-    command = ['open','-R', filename]
+    command = ['open', '-R', filename]
     subprocess.call(command)
 
 
@@ -456,12 +482,14 @@ def normalize_hfs_filename(filename):
         'NFC', unicode(filename, 'utf-8')).encode('utf-8')
     return filename
 
+
 def get_last_ts(record):
     ts_list = get_ts_list(record)
     try:
         return ts_list[-1]
     except IndexError:
         return 0
+
 
 def generate_date_pairs(valid_alc_files, db_dict):
     date_file_tuples = []
@@ -472,6 +500,7 @@ def generate_date_pairs(valid_alc_files, db_dict):
     date_file_tuples.sort()
     date_file_tuples.reverse()
     return date_file_tuples
+
 
 def generate_date_plus_alc_pairs(valid_alc_files, db_dict, dict_date_alc):
     tuples = []
@@ -484,11 +513,14 @@ def generate_date_plus_alc_pairs(valid_alc_files, db_dict, dict_date_alc):
     tuples.reverse()
     return tuples
 
+
 def generate_alc(valid_alc_files, dict_date_alc):
     return get_files_from_pairs(generate_alc_pairs(valid_alc_files, dict_date_alc))
 
+
 def generate_date(valid_alc_files, db_dict):
     return get_files_from_pairs(generate_date_pairs(valid_alc_files, db_dict))
+
 
 def generate_date_plus_alc(valid_alc_files, db_dict, dict_date_alc):
     return get_files_from_pairs(generate_date_plus_alc_pairs(valid_alc_files, db_dict, dict_date_alc))
@@ -497,13 +529,18 @@ def generate_date_plus_alc(valid_alc_files, db_dict, dict_date_alc):
 def get_keys_for_camelot_number(camelot_number):
     if camelot_number is None:
         return []
-    key_minor = reverse_camelot_dict[str(camelot_number)+'A']
-    key_major = reverse_camelot_dict[str(camelot_number)+'B']
+    key_minor = reverse_camelot_dict[str(camelot_number) + 'A']
+    key_major = reverse_camelot_dict[str(camelot_number) + 'B']
     return [key_minor, key_major]
 
 
+def assert_exists(filename):
+    if not os.path.exists(filename):
+        raise ValueError('File does not exist: {}'.format(filename))
+
+
 ###########
-## Updated actions
+# Updated actions
 
 def action_add(args):
     db_dict = read_db_file(args.db_filename)
@@ -535,10 +572,10 @@ def action_add(args):
     write_db_file(args.db_filename, db_dict)
 
 # TODO(peter): this function still gross:
+
+
 def action_edit(args):
-    if not os.path.exists(args.edit_filename):
-        print ("File does not exist")
-        sys.exit(1)
+    assert_exists(args.edit_filename)
     print (args.edit_filename)
     db_dict = read_db_file(args.db_filename)
     bpm = None
@@ -727,14 +764,24 @@ def action_export_sample_database(args):
     write_db_file(args.sample_db_filename, sample_db)
 
 
+def action_print_xml(args):
+    assert_exists(args.alc_filename)
+    print (alc_to_str(args.alc_filename))
+
+
+def action_print_audioclip(args):
+    assert_exists(args.alc_filename)
+    print (get_audioclip_from_alc(args.alc_filename))
+
+
 ###########
-## main
+# main
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('db_filename')
     subparsers = parser.add_subparsers()
-    
+
     subparsers.add_parser('addbpm').set_defaults(func=action_add)
     subparsers.add_parser('addkey').set_defaults(func=action_add_missing_keys)
 
@@ -755,16 +802,27 @@ def parse_args():
     p_rename.add_argument('tag_new')
     p_rename.set_defaults(func=action_rename_tag)
 
-    subparsers.add_parser('list_missing').set_defaults(func=action_list_missing)
+    subparsers.add_parser('list_missing').set_defaults(
+        func=action_list_missing)
     subparsers.add_parser('transfer_ts').set_defaults(func=action_transfer_ts)
-    subparsers.add_parser('update_cache').set_defaults(func=action_update_cache)
+    subparsers.add_parser('update_cache').set_defaults(
+        func=action_update_cache)
 
     p_export = subparsers.add_parser('export_sample_db')
     p_export.add_argument('sample_db_filename')
     p_export.set_defaults(func=action_export_sample_database)
 
+    p_xml = subparsers.add_parser('print_xml')
+    p_xml.add_argument('alc_filename')
+    p_xml.set_defaults(func=action_print_xml)
+
+    p_audioclip = subparsers.add_parser('print_audioclip')
+    p_audioclip.add_argument('alc_filename')
+    p_audioclip.set_defaults(func=action_print_audioclip)
+
     return parser.parse_args()
-    
+
+
 def main(args):
     args.func(args)
 
