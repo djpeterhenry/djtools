@@ -8,6 +8,7 @@ import os.path
 import glob
 import stat
 import shutil
+import argparse
 import re
 import random
 import subprocess
@@ -958,24 +959,21 @@ class App:
         return result
 
 
-if __name__ == '__main__':
-    # get db filename
-    argv_iter = iter(sys.argv)
-    _ = argv_iter.next()
-    db_filename = argv_iter.next()
-    always_on_top = False
-    include_extra = False
-    try:
-        while (True):
-            flag = argv_iter.next()
-            if flag == '-t': always_on_top = True
-            if flag == '-e': include_extra = True
-    except StopIteration:
-        pass
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('db_filename')
+    parser.add_argument('--always_on_top', '-t', action='store_true')
+    parser.add_argument('--include_extra', '-e', action='store_true')
+    return parser.parse_args()
+    
 
+def main(args):
     master = Tk()
-    app = App(master, db_filename, include_extra)
-    master.call('wm', 'attributes', '.', '-topmost', '1')
-    if not always_on_top:
-        master.call('wm', 'attributes', '.', '-topmost', '0')
+    app = App(master, args.db_filename, args.include_extra)
+    on_top_str = '1' if args.always_on_top else '0'
+    master.call('wm', 'attributes', '.', '-topmost', on_top_str)
     master.mainloop()
+
+
+if __name__ == '__main__':
+    main(parse_args())
