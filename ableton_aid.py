@@ -204,6 +204,8 @@ def get_audioclip_from_alc(alc_filename):
         relative_path, xml_fileref.find('Name').get('Value'))
     if os.path.exists(sample_filepath):
         result['sample'] = sample_filepath
+    else:
+        print ('Sample failed: {}'.format(alc_filename))
     return result
 
 
@@ -781,6 +783,13 @@ def action_print_audioclip(args):
     print (get_audioclip_from_alc(args.alc_filename))
 
 
+def action_test_audioclip_on_all(args):
+    alc_files = get_ableton_files()
+    for index, f in enumerate(alc_files):
+        get_audioclip_from_alc(f)
+        print ('{}/{}'.format(index, len(alc_files)))
+
+
 ###########
 # main
 
@@ -826,6 +835,9 @@ def parse_args():
     p_audioclip = subparsers.add_parser('print_audioclip')
     p_audioclip.add_argument('alc_filename')
     p_audioclip.set_defaults(func=action_print_audioclip)
+
+    p_test = subparsers.add_parser('test_audioclip_on_all')
+    p_test.set_defaults(func=action_test_audioclip_on_all)
 
     return parser.parse_args()
 
