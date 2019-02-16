@@ -182,12 +182,11 @@ def alc_to_xml(alc_filename):
 
 def get_audioclip_from_alc(alc_filename):
     xml_root = alc_to_xml(alc_filename)
-    xml_audioclips = xml_root.findall('.//AudioClip')
-    if len(xml_audioclips) != 1:
-        raise ValueError(
-            'Wrong number of audioclips: {}'.format(len(xml_audioclips)))
+    # just find the first AudioClip for now
+    xml_clip = xml_root.find('.//AudioClip')
+    if xml_clip is None:
+        return None
     result = {}
-    xml_clip = xml_audioclips[0]
     xml_warp_markers = xml_clip.find('WarpMarkers')
     result['warp_markers'] = []
     for marker in xml_warp_markers:
@@ -197,6 +196,14 @@ def get_audioclip_from_alc(alc_filename):
     result['loop_start'] = float(xml_loop.find('HiddenLoopStart').get('Value'))
     result['loop_end'] = float(xml_loop.find('HiddenLoopEnd').get('Value'))
     result['start'] = float(xml_clip.find('CurrentStart').get('Value'))
+    # also sample info
+    xml_fileref = xml_clip.find('SampleRef/FileRef')
+    relative_path = os.path.join(
+        '..', *[x.get('Dir') for x in xml_fileref.find('RelativePath')])
+    sample_filepath = os.path.join(
+        relative_path, xml_fileref.find('Name').get('Value'))
+    if os.path.exists(sample_filepath):
+        result['sample'] = sample_filepath
     return result
 
 
