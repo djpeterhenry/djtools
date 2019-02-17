@@ -421,19 +421,13 @@ def get_dict_file_cache(valid_alc_files):
     return dict_file_cache
 
 
-def get_dict_date_sample(valid_alc_files, dict_file_cache):
-    dict_date_sample = {}
-    for file in valid_alc_files:
-        cache_dict = dict_file_cache[file]
-        dict_date_sample[file] = cache_dict['m_time_sample']
-    return dict_date_sample
-
-
-def generate_sample(valid_alc_files, dict_date_sample):
+def generate_sample(valid_alc_files, db_dict):
     date_file_tuples = []
-    for file in valid_alc_files:
-        m_time_sample = dict_date_sample[file]
-        date_file_tuples.append((m_time_sample, file))
+    for f in valid_alc_files:
+        record = db_dict[f]
+        if 'clip' not in record:
+            continue
+        date_file_tuples.append((record['clip']['sample_ts'], f))
     date_file_tuples.sort()
     date_file_tuples.reverse()
     return [file for _, file in date_file_tuples]
@@ -802,6 +796,20 @@ def action_update_db_clips(args):
             write_db_file(args.db_filename, db_dict)
     write_db_file(args.db_filename, db_dict)
 
+def action_test_json_dates(args):
+    db_dict = read_db_file(args.db_filename)
+    import ipdb; ipdb.set_trace()
+    json_filename = 'alc_dates.json'
+    alc_file_set = set(get_ableton_files())
+    with open(json_filename) as json_file:
+        json_list = json.load(json_file)
+    for ts, f in json_list:
+        f_str = f.encode('utf-8')
+        if f_str not in alc_file_set:
+            print ('not present:', repr(f))
+            continue
+    print ('done')
+
 
 ###########
 # main
@@ -850,6 +858,8 @@ def parse_args():
     p_audioclip.set_defaults(func=action_print_audioclip)
 
     subparsers.add_parser('update_db_clips').set_defaults(func=action_update_db_clips)
+
+    subparsers.add_parser('test_json_dates').set_defaults(func=action_test_json_dates)
 
     return parser.parse_args()
 

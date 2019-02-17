@@ -107,10 +107,6 @@ class App:
         self.dict_date_alc = ableton_aid.get_dict_date_alc(
             self.valid_alc_files, self.dict_file_cache)
 
-        # old sample dates
-        self.dict_date_sample = ableton_aid.get_dict_date_sample(
-            self.valid_alc_files, self.dict_file_cache)
-
         ########
         # gui
 
@@ -995,7 +991,7 @@ class App:
         return ableton_aid.generate_date_plus_alc(self.valid_alc_files, self.db_dict, self.dict_date_alc)
 
     def generate_sample(self):
-        return ableton_aid.generate_sample(self.valid_alc_files, self.dict_date_sample)
+        return ableton_aid.generate_sample(self.valid_alc_files, self.db_dict)
 
     def generate_bpm(self):
         bpm_file_tuples = []
