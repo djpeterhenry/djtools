@@ -39,6 +39,8 @@ ABLETON_EXTENSIONS = ['.alc', '.als']
 SAMPLE_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.aiff', '.flac']
 ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 
+OLD_ALC_TS_CUTOFF = time.mktime(datetime.date(2016, 6, 12).timetuple())
+
 
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
@@ -328,21 +330,6 @@ def get_camelot_key(key):
         return None
 
 
-def delete_key(record, key):
-    try:
-        del record[key]
-    except KeyError:
-        pass
-
-
-def get_ts_for_file(file):
-    try:
-        return os.path.getmtime(file)
-    except OSError as e:
-        print (e)
-        return None
-
-
 def reveal_file(filename):
     command = ['open', '-R', filename]
     subprocess.call(command)
@@ -377,48 +364,12 @@ def get_files_by_num(files, db_dict):
     return [file for _, file in num_file_tuples]
 
 
-def update_and_get_cache_values(filename):
-    cache_filename = filename + '.cache.txt'
-    try:
-        cache_dict = cPickle.load(open(cache_filename))
-    except:
-        cache_dict = {}
-    try:
-        cache_m_time_alc = cache_dict['m_time_alc']
-    except:
-        cache_m_time_alc = None
-    if cache_m_time_alc:
-        m_time_alc = os.path.getmtime(filename)
-        if cache_m_time_alc == m_time_alc:
-            return cache_dict
-    # must update file
-    # for some reason this breaks when trying to print to terminal
-    # print (u'updating: {}'.format(filename))
-    m_time_alc = os.path.getmtime(filename)
-    sample_file = get_sample_from_alc_file(filename)
-    # print (u'sample_file: {}'.format(sample_file))
-    m_time_sample = os.path.getmtime(sample_file)
-    cache_dict['m_time_alc'] = m_time_alc
-    cache_dict['sample_file'] = sample_file
-    cache_dict['m_time_sample'] = m_time_sample
-    cPickle.dump(cache_dict, open(cache_filename, 'w'))
-    return cache_dict
-
-
 def get_valid_alc_files(db_dict):
     alc_files = get_ableton_files()
     valid_alc_files = [
         filename for filename in alc_files if db_dict.has_key(filename)]
     valid_alc_files.sort(key=lambda s: s.lower())
     return valid_alc_files
-
-
-def get_dict_file_cache(valid_alc_files):
-    dict_file_cache = {}
-    for file in valid_alc_files:
-        cache_dict = update_and_get_cache_values(file)
-        dict_file_cache[file] = cache_dict
-    return dict_file_cache
 
 
 def generate_sample(valid_alc_files, db_dict):
@@ -433,59 +384,8 @@ def generate_sample(valid_alc_files, db_dict):
     return [file for _, file in date_file_tuples]
 
 
-def json_list_to_dict(json_filename):
-    result = {}
-    with open(json_filename) as json_file:
-        json_list = json.load(json_file)
-        for ts, filename in json_list:
-            # filename is in unicode here...gotta encode it
-            result[filename.encode('utf-8')] = ts
-    return result
-
-
-def get_dict_date_alc_json(valid_alc_files, dict_file_cache):
-    # would like to use file date, but it's wrong and too new
-    # examining filesystem, june 11 was when they all got updated
-    magic_date = datetime.date(2016, 6, 12)
-    magic_ts = time.mktime(magic_date.timetuple())
-    json_filename = 'alc_dates.json'
-    have_json_file = os.path.exists(json_filename)
-    dict_date_alc = json_list_to_dict(json_filename) if have_json_file else {}
-    for file in valid_alc_files:
-        cache_dict = dict_file_cache[file]
-        m_time_alc = cache_dict['m_time_alc']
-        if have_json_file and m_time_alc < magic_ts:
-            continue
-        dict_date_alc[file] = m_time_alc
-    return dict_date_alc
-
-
-def get_dict_date_alc(valid_alc_files, dict_file_cache):
-    return get_dict_date_alc_json(valid_alc_files, dict_file_cache)
-
-
 def get_files_from_pairs(pairs):
     return [file for _, file in pairs]
-
-
-def generate_alc_pairs(valid_alc_files, dict_date_alc):
-    date_file_tuples = []
-    for file in valid_alc_files:
-        m_time_alc = dict_date_alc[file]
-        date_file_tuples.append((m_time_alc, file))
-    date_file_tuples.sort()
-    date_file_tuples.reverse()
-    return date_file_tuples
-    return [file for _, file in date_file_tuples]
-
-
-def normalize_hfs_filename(filename):
-    """
-    This was a bit of advice that I don't use anywhere...
-    """
-    filename = unicodedata.normalize(
-        'NFC', unicode(filename, 'utf-8')).encode('utf-8')
-    return filename
 
 
 def get_last_ts(record):
@@ -496,39 +396,63 @@ def get_last_ts(record):
         return 0
 
 
-def generate_date_pairs(valid_alc_files, db_dict):
+def get_alc_ts(record):
+    try:
+        alc_ts = record['clip']['alc_ts']
+        if alc_ts < OLD_ALC_TS_CUTOFF and 'old_alc_ts' in record:
+            return record['old_alc_ts']
+        return alc_ts
+    except KeyError:
+        return 0
+
+
+def get_sample(record):
+    try:
+        return record['clip']['sample']
+    except KeyError:
+        return None
+
+
+def generate_alc_pairs(valid_alc_files, db_dict):
     date_file_tuples = []
-    for file in valid_alc_files:
-        record = db_dict[file]
-        ts = get_last_ts(record)
-        date_file_tuples.append((ts, file))
+    for f in valid_alc_files:
+        date_file_tuples.append((get_alc_ts(db_dict[f]), f))
     date_file_tuples.sort()
     date_file_tuples.reverse()
     return date_file_tuples
 
 
-def generate_date_plus_alc_pairs(valid_alc_files, db_dict, dict_date_alc):
+def generate_date_pairs(valid_alc_files, db_dict):
+    date_file_tuples = []
+    for f in valid_alc_files:
+        date_file_tuples.append((get_last_ts(db_dict[f]), f))
+    date_file_tuples.sort()
+    date_file_tuples.reverse()
+    return date_file_tuples
+
+
+def generate_date_plus_alc_pairs(valid_alc_files, db_dict):
     tuples = []
-    for file in valid_alc_files:
-        record = db_dict[file]
+    for f in valid_alc_files:
+        record = db_dict[f]
         play_date = get_last_ts(record)
-        alc_date = dict_date_alc[file]
-        tuples.append((max(play_date, alc_date), file))
+        alc_date = get_alc_ts(record)
+        tuples.append((max(play_date, alc_date), f))
     tuples.sort()
     tuples.reverse()
     return tuples
 
 
-def generate_alc(valid_alc_files, dict_date_alc):
-    return get_files_from_pairs(generate_alc_pairs(valid_alc_files, dict_date_alc))
+def generate_alc(valid_alc_files, db_dict):
+    return get_files_from_pairs(generate_alc_pairs(valid_alc_files, db_dict))
 
 
 def generate_date(valid_alc_files, db_dict):
     return get_files_from_pairs(generate_date_pairs(valid_alc_files, db_dict))
 
 
-def generate_date_plus_alc(valid_alc_files, db_dict, dict_date_alc):
-    return get_files_from_pairs(generate_date_plus_alc_pairs(valid_alc_files, db_dict, dict_date_alc))
+def generate_date_plus_alc(valid_alc_files, db_dict):
+    return get_files_from_pairs(generate_date_plus_alc_pairs(valid_alc_files, db_dict))
 
 
 def get_keys_for_camelot_number(camelot_number):
@@ -743,16 +667,6 @@ def action_transfer_ts(args):
                 write_db_file(args.db_filename, db_dict)
 
 
-def action_update_cache(args):
-    db_dict = read_db_file(args.db_filename)
-    alc_file_set = set(get_ableton_files())
-    for filename, _ in iter(sorted(db_dict.iteritems())):
-        if filename not in alc_file_set:
-            continue
-        cache_dict = update_and_get_cache_values(filename)
-        print (cache_dict)
-
-
 def action_export_sample_database(args):
     db_dict = read_db_file(args.db_filename)
     alc_file_set = set(get_ableton_files())
@@ -760,9 +674,11 @@ def action_export_sample_database(args):
     for filename, _ in iter(sorted(db_dict.iteritems())):
         if filename not in alc_file_set:
             continue
-        cache_dict = update_and_get_cache_values(filename)
-        sample_filename = os.path.basename(cache_dict['sample_file'])
         record = db_dict[filename]
+        sample_filepath = get_sample(record)
+        if not sample_filepath:
+            continue
+        sample_filename = os.path.basename(sample_filepath)
         record['pretty_name'] = os.path.splitext(filename)[0]
         sample_db[sample_filename] = record
     write_db_file(args.sample_db_filename, sample_db)
@@ -796,19 +712,22 @@ def action_update_db_clips(args):
             write_db_file(args.db_filename, db_dict)
     write_db_file(args.db_filename, db_dict)
 
+
 def action_test_json_dates(args):
     db_dict = read_db_file(args.db_filename)
-    import ipdb; ipdb.set_trace()
     json_filename = 'alc_dates.json'
-    alc_file_set = set(get_ableton_files())
     with open(json_filename) as json_file:
         json_list = json.load(json_file)
     for ts, f in json_list:
         f_str = f.encode('utf-8')
-        if f_str not in alc_file_set:
-            print ('not present:', repr(f))
+        if f_str in db_dict:
+            record = db_dict[f_str]
+            record['old_alc_ts'] = float(ts)
+            print ('applied:', repr(f_str))
+        else:
+            print ('not present:', repr(f_str))
             continue
-    print ('done')
+    write_db_file(args.db_filename, db_dict)
 
 
 ###########
@@ -842,8 +761,6 @@ def parse_args():
     subparsers.add_parser('list_missing').set_defaults(
         func=action_list_missing)
     subparsers.add_parser('transfer_ts').set_defaults(func=action_transfer_ts)
-    subparsers.add_parser('update_cache').set_defaults(
-        func=action_update_cache)
 
     p_export = subparsers.add_parser('export_sample_db')
     p_export.add_argument('sample_db_filename')
@@ -857,9 +774,11 @@ def parse_args():
     p_audioclip.add_argument('alc_filename')
     p_audioclip.set_defaults(func=action_print_audioclip)
 
-    subparsers.add_parser('update_db_clips').set_defaults(func=action_update_db_clips)
+    subparsers.add_parser('update_db_clips').set_defaults(
+        func=action_update_db_clips)
 
-    subparsers.add_parser('test_json_dates').set_defaults(func=action_test_json_dates)
+    subparsers.add_parser('test_json_dates').set_defaults(
+        func=action_test_json_dates)
 
     return parser.parse_args()
 

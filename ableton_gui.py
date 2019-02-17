@@ -18,7 +18,6 @@ import time
 import atexit
 import datetime
 import codecs
-import json
 from itertools import groupby
 
 import ableton_aid
@@ -96,16 +95,7 @@ class App:
         self.valid_alc_files = ableton_aid.get_valid_alc_files(self.db_dict)
         self.list_to_use = self.valid_alc_files
 
-        # read cache files once
-        t_cache = time.clock()
-        print ("Updating and getting cache values...")
-        self.dict_file_cache = ableton_aid.get_dict_file_cache(
-            self.valid_alc_files)
-        print ("Took: %f" % (time.clock() - t_cache))
-
-        # old alc dates
-        self.dict_date_alc = ableton_aid.get_dict_date_alc(
-            self.valid_alc_files, self.dict_file_cache)
+        # TODO: update the clip values here?
 
         ########
         # gui
@@ -308,7 +298,6 @@ class App:
         self.listbox.bind("<Return>", lambda _: self.command_copy())
         self.listbox.bind("c", lambda _: self.command_clear())
         self.listbox.bind("m", lambda _: self.command_clear_min_max())
-        self.listbox.bind("t", lambda _: self.command_touch())
         self.listbox.bind("a", lambda _: self.command_tag_add())
         self.listbox.bind("r", lambda _: self.command_tag_remove())
         self.listbox.bind("s", lambda _: self.command_save())
@@ -758,11 +747,11 @@ class App:
         self.ts_filename(filename)
         # and finally reveal if wanted
         if bool(self.reveal_var.get()):
-            # reveal alc or sample?
-            # alc:
-            # ableton_aid.reveal_file(filename)
-            cache_dict = self.dict_file_cache[filename]
-            ableton_aid.reveal_file(cache_dict['sample_file'])
+            try:
+                sample = ableton_aid.get_sample(self.db_dict[filename])
+                ableton_aid.reveal_file(sample)
+            except KeyError as e:
+                print (e)
 
     # should be classmethod
     def set_clipboard_data(self, data):
@@ -776,15 +765,6 @@ class App:
         if not filename:
             return
         self.set_clipboard_data(filename)
-
-    def command_touch(self):
-        filename_path = self.get_selected_filepath()
-        if not filename_path:
-            return
-        os.utime(filename_path, None)
-        filename = self.get_selected_filename()
-        self.dict_date_alc[filename] = time.time()
-        print 'touched', filename_path
 
     def command_tag_add(self):
         filename = self.get_selected_filename()
@@ -910,16 +890,6 @@ class App:
         for f in result:
             print f
 
-    def command_print_samples(self):
-        output_filename = 'print_samples.m3u'
-        # file_output = open(output_filename, 'w')
-        file_output = codecs.open(output_filename, 'w', 'utf-8')
-        for i, filename in enumerate(self.active_alc_files):
-            cache_dict = self.dict_file_cache[filename]
-            # print filename
-            # print cache_dict
-            file_output.write(cache_dict['sample_file'] + '\n')
-
     def command_clear_min_max(self):
         print 'clear min max'
         self.min_amount.set(0)
@@ -985,10 +955,10 @@ class App:
         return ableton_aid.generate_date(self.valid_alc_files, self.db_dict)
 
     def generate_alc(self):
-        return ableton_aid.generate_alc(self.valid_alc_files, self.dict_date_alc)
+        return ableton_aid.generate_alc(self.valid_alc_files, self.db_dict)
 
     def generate_date_plus_alc(self):
-        return ableton_aid.generate_date_plus_alc(self.valid_alc_files, self.db_dict, self.dict_date_alc)
+        return ableton_aid.generate_date_plus_alc(self.valid_alc_files, self.db_dict)
 
     def generate_sample(self):
         return ableton_aid.generate_sample(self.valid_alc_files, self.db_dict)
