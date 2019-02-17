@@ -187,6 +187,7 @@ def get_audioclip_from_alc(alc_filename):
     if xml_clip is None:
         return None
     result = {}
+    result['alc_ts'] = os.path.getmtime(alc_filename)
     xml_warp_markers = xml_clip.find('WarpMarkers')
     result['warp_markers'] = []
     for marker in xml_warp_markers:
@@ -204,6 +205,7 @@ def get_audioclip_from_alc(alc_filename):
         relative_path, xml_fileref.find('Name').get('Value'))
     if os.path.exists(sample_filepath):
         result['sample'] = sample_filepath
+        result['sample_ts'] = os.path.getmtime(sample_filepath)
     else:
         print ('Sample failed: {}'.format(alc_filename))
     return result
@@ -580,10 +582,9 @@ def action_add(args):
         print ("Inserted: " + str(new_record))
     write_db_file(args.db_filename, db_dict)
 
-# TODO(peter): this function still gross:
-
 
 def action_edit(args):
+    # TODO(peter): clean up this shitty old function
     assert_exists(args.edit_filename)
     print (args.edit_filename)
     db_dict = read_db_file(args.db_filename)
@@ -783,11 +784,23 @@ def action_print_audioclip(args):
     print (get_audioclip_from_alc(args.alc_filename))
 
 
-def action_test_audioclip_on_all(args):
-    alc_files = get_ableton_files()
-    for index, f in enumerate(alc_files):
-        get_audioclip_from_alc(f)
-        print ('{}/{}'.format(index, len(alc_files)))
+def action_update_db_clips(args):
+    db_dict = read_db_file(args.db_filename)
+    alc_file_set = set(get_ableton_files())
+    count = 0
+    for filename, record in db_dict.iteritems():
+        count += 1
+        if filename not in alc_file_set:
+            continue
+        alc_ts = os.path.getmtime(filename)
+        if 'clip' in record and record['clip']['alc_ts'] == alc_ts:
+            continue
+        record['clip'] = get_audioclip_from_alc(filename)
+        print (filename)
+        # save every 10?
+        if count % 10 == 0:
+            write_db_file(args.db_filename, db_dict)
+    write_db_file(args.db_filename, db_dict)
 
 
 ###########
@@ -836,8 +849,7 @@ def parse_args():
     p_audioclip.add_argument('alc_filename')
     p_audioclip.set_defaults(func=action_print_audioclip)
 
-    p_test = subparsers.add_parser('test_audioclip_on_all')
-    p_test.set_defaults(func=action_test_audioclip_on_all)
+    subparsers.add_parser('update_db_clips').set_defaults(func=action_update_db_clips)
 
     return parser.parse_args()
 
