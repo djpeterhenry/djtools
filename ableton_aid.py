@@ -713,22 +713,6 @@ def action_update_db_clips(args):
     write_db_file(args.db_filename, db_dict)
 
 
-def action_test_json_dates(args):
-    db_dict = read_db_file(args.db_filename)
-    json_filename = 'alc_dates.json'
-    with open(json_filename) as json_file:
-        json_list = json.load(json_file)
-    for ts, f in json_list:
-        f_str = f.encode('utf-8')
-        if f_str in db_dict:
-            record = db_dict[f_str]
-            record['old_alc_ts'] = float(ts)
-            print ('applied:', repr(f_str))
-        else:
-            print ('not present:', repr(f_str))
-            continue
-    write_db_file(args.db_filename, db_dict)
-
 
 ###########
 # main
@@ -776,9 +760,6 @@ def parse_args():
 
     subparsers.add_parser('update_db_clips').set_defaults(
         func=action_update_db_clips)
-
-    subparsers.add_parser('test_json_dates').set_defaults(
-        func=action_test_json_dates)
 
     return parser.parse_args()
 
