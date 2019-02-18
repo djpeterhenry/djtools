@@ -7,6 +7,7 @@ Created on May 14, 2009
 
 from __future__ import print_function
 
+
 import sys
 import os
 import glob
@@ -196,9 +197,9 @@ def get_audioclip_from_alc(alc_filename):
         result['warp_markers'].append(dict(sec_time=float(marker.get('SecTime')),
                                            beat_time=float(marker.get('BeatTime'))))
     xml_loop = xml_clip.find('Loop')
+    result['start'] = float(xml_loop.find('LoopStart').get('Value'))
     result['loop_start'] = float(xml_loop.find('HiddenLoopStart').get('Value'))
     result['loop_end'] = float(xml_loop.find('HiddenLoopEnd').get('Value'))
-    result['start'] = float(xml_clip.find('CurrentStart').get('Value'))
     # also sample info
     xml_fileref = xml_clip.find('SampleRef/FileRef')
     relative_path = os.path.join(
@@ -694,7 +695,7 @@ def action_print_audioclip(args):
     print (get_audioclip_from_alc(args.alc_filename))
 
 
-def action_update_db_clips(args):
+def action_update_db_clips(args, force=True):
     db_dict = read_db_file(args.db_filename)
     alc_file_set = set(get_ableton_files())
     count = 0
@@ -703,15 +704,13 @@ def action_update_db_clips(args):
         if filename not in alc_file_set:
             continue
         alc_ts = os.path.getmtime(filename)
-        if 'clip' in record and record['clip']['alc_ts'] == alc_ts:
+        if not force and 'clip' in record and record['clip']['alc_ts'] == alc_ts:
             continue
         record['clip'] = get_audioclip_from_alc(filename)
         print (filename)
-        # save every 10?
-        if count % 10 == 0:
+        if count % 20 == 0:
             write_db_file(args.db_filename, db_dict)
     write_db_file(args.db_filename, db_dict)
-
 
 
 ###########
