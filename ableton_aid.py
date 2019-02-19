@@ -469,6 +469,16 @@ def assert_exists(filename):
         raise ValueError('File does not exist: {}'.format(filename))
 
 
+def update_db_clips(valid_alc_files, db_dict, force=False):
+    for f in valid_alc_files:
+        record = db_dict[f]
+        alc_ts = os.path.getmtime(f)
+        if not force and 'clip' in record and record['clip']['alc_ts'] == alc_ts:
+            continue
+        record['clip'] = get_audioclip_from_alc(f)
+        print ('Updated:', f)
+
+
 ###########
 # Updated actions
 
@@ -695,21 +705,10 @@ def action_print_audioclip(args):
     print (get_audioclip_from_alc(args.alc_filename))
 
 
-def action_update_db_clips(args, force=True):
+def action_update_db_clips(args, force=False):
     db_dict = read_db_file(args.db_filename)
-    alc_file_set = set(get_ableton_files())
-    count = 0
-    for filename, record in db_dict.iteritems():
-        count += 1
-        if filename not in alc_file_set:
-            continue
-        alc_ts = os.path.getmtime(filename)
-        if not force and 'clip' in record and record['clip']['alc_ts'] == alc_ts:
-            continue
-        record['clip'] = get_audioclip_from_alc(filename)
-        print (filename)
-        if count % 20 == 0:
-            write_db_file(args.db_filename, db_dict)
+    valid_alc_files = get_valid_alc_files(db_dict)
+    update_db_clips(valid_alc_files, db_dict, force)
     write_db_file(args.db_filename, db_dict)
 
 

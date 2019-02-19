@@ -95,7 +95,8 @@ class App:
         self.valid_alc_files = ableton_aid.get_valid_alc_files(self.db_dict)
         self.list_to_use = self.valid_alc_files
 
-        # TODO: update the clip values here?
+        # update clips on load
+        ableton_aid.update_db_clips(self.valid_alc_files, self.db_dict)
 
         ########
         # gui
