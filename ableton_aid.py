@@ -782,6 +782,11 @@ def action_export_rekordbox(args):
         sample_uri = 'file://localhost' + os.path.abspath(sample)
         et_track.set('Location', sample_uri)
 
+        # try camelot key for now
+        cam_key = get_camelot_key(record['key'])
+        if cam_key:
+            et_track.set('Tonality', cam_key)
+
         # need this for some reason to get warp markers.  
         # Should get it from total track duration
         # set to 20 min for now which works...
