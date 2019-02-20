@@ -734,11 +734,31 @@ def action_export_rekordbox(args):
     # just focus on one for now
     def filter_cubic(filename):
         return 'cubic' in filename.lower() and 'got this' in filename.lower()
+    def filter_sticky(filename):
+        return 'sticky' in filename.lower() and 'lane' in filename.lower()
     def filter_true(filename):
         return True
 
-    files_to_test = [x for x in db_dict.keys() if filter_true(x)]
+    files_to_test = [x for x in db_dict.keys() if filter_sticky(x)]
     files_to_test.sort()
+
+    def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
+        et_tempo = ET.SubElement(et_track, 'TEMPO')
+        et_tempo.set('Inizio', str(sec_time))
+        et_tempo.set('Bpm', str(bpm))
+        et_tempo.set('Metro', '4/4')
+        # round beat time to nearest beat and mod 4?
+        nearest_beat = (int(round(beat_time)) % 4) + 1
+        et_tempo.set('Battito', str(nearest_beat))    
+
+    def add_position_marker(et_track, name, type, num, start_seconds, end_seconds=None):
+        et_position = ET.SubElement(et_track, 'POSITION_MARK')
+        et_position.set('Name', name)
+        et_position.set('Type', str(type))
+        et_position.set('Start', str(start_seconds))
+        if end_seconds is not None:
+            et_position.set('End', str(end_seconds))
+        et_position.set('Num', str(num))
 
     for f in files_to_test:
         record = db_dict[f]
@@ -768,35 +788,48 @@ def action_export_rekordbox(args):
 
         clip = record['clip']
         warp_markers = clip['warp_markers']
+
+        # maybe these need to be in order?
+        beat_grid_markers = []
+
         for warp_index in xrange(len(warp_markers) - 1):
             this_marker = warp_markers[warp_index]
+            this_beat_time = this_marker['beat_time']
+            this_sec_time = this_marker['sec_time']
             next_marker = warp_markers[warp_index + 1]
-            bpm = 60 * ((next_marker['beat_time'] - this_marker['beat_time']) /
-                        (next_marker['sec_time'] - this_marker['sec_time']))
+            next_beat_time = next_marker['beat_time']
+            next_sec_time = next_marker['sec_time']
+            bpm = 60 * (next_beat_time - this_beat_time) / (next_sec_time - this_sec_time)
             if warp_index == 0:
                 first_bpm = bpm
                 et_track.set('AverageBpm', str(bpm))
+            beat_grid_markers.append(
+                dict(sec_time=this_sec_time, bpm=bpm, beat_time=this_beat_time))
 
-            et_tempo = ET.SubElement(et_track, 'TEMPO')
-            et_tempo.set('Inizio', str(this_marker['sec_time']))
-            et_tempo.set('Bpm', str(bpm))
-            et_tempo.set('Metro', '4/4')
-            # round beat time to nearest beat and mod 4?
-            nearest_beat = (int(round(this_marker['beat_time'])) % 4) + 1
-            et_tempo.set('Battito', str(nearest_beat))
-        
         # if we have a first bpm we have a first marker
-        first_marker = warp_markers[0]
-        beat_diff = clip['start'] - first_marker['beat_time']
-        spb = 60 / first_bpm
-        sec_diff = beat_diff * spb
-        start_seconds = first_marker['sec_time'] + sec_diff
-        et_position = ET.SubElement(et_track, 'POSITION_MARK')
-        et_position.set('Name', 'Start')
-        et_position.set('Type', '0')
-        et_position.set('Start', str(start_seconds))
-        et_position.set('Num', '0')
+        if first_bpm:
+            first_marker = warp_markers[0]
+            start_beat = clip['start']
+            beat_diff = start_beat - first_marker['beat_time']
+            spb = 60 / first_bpm
+            sec_diff = beat_diff * spb
+            start_seconds = first_marker['sec_time'] + sec_diff
+            # if beat_diff is < 0 supply additional beat grid
+            if beat_diff < -1e-9:
+                beat_grid_markers.append(
+                    dict(sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat))
 
+            # sort beat grid markers before adding
+            beat_grid_markers.sort(key=lambda x: x['sec_time'])
+            for b in beat_grid_markers:
+                add_beat_grid_marker(et_track, **b)
+
+        # memory cue
+        add_position_marker(et_track, 'Start', 0, -1, start_seconds)
+        # hot cue
+        add_position_marker(et_track, 'Start (hot)', 0, 0, start_seconds)
+
+        # finally record this track id
         track_to_id[f] = num_added
         num_added += 1
 
