@@ -479,6 +479,17 @@ def update_db_clips(valid_alc_files, db_dict, force=False):
         print ('Updated:', f)
 
 
+def get_artist_and_track(filename):
+    delimiter = ' - '
+    split = os.path.splitext(filename)[0].split(delimiter)
+    if len(split) == 1:
+        return '', split[0]
+    elif len(split) == 2:
+        return split[0], split[1]
+    else:
+        return split[0], delimiter.join(split[1:])
+
+
 ###########
 # Updated actions
 
@@ -712,6 +723,106 @@ def action_update_db_clips(args, force=False):
     write_db_file(args.db_filename, db_dict)
 
 
+def action_export_rekordbox(args):
+    db_dict = get_valid_db_dict(args.db_filename)
+
+    num_added = 0
+    et_dj_playlists = ET.Element('DJ_PLAYLISTS')
+    et_collection = ET.SubElement(et_dj_playlists, 'COLLECTION')
+    track_to_id = {}
+
+    # just focus on one for now
+    def filter_cubic(filename):
+        return 'cubic' in filename.lower() and 'got this' in filename.lower()
+    def filter_true(filename):
+        return True
+
+    files_to_test = [x for x in db_dict.keys() if filter_true(x)]
+    files_to_test.sort()
+
+    for f in files_to_test:
+        record = db_dict[f]
+        if 'clip' not in record:
+            continue
+        sample = record['clip']['sample']
+        # Ok, this seems to work to get all the samples to unicode...
+        # Still not sure why some samples (Take Over Control Acapella) are u''
+        if not isinstance(sample, unicode):
+            sample = sample.decode('utf-8')
+
+        et_track = ET.SubElement(et_collection, 'TRACK')
+        et_track.set('TrackID', str(num_added))
+        artist, track = get_artist_and_track(f)
+        # Evidently getting these as unicode is important for some
+        et_track.set('Name', track.decode('utf-8'))
+        et_track.set('Artist', artist.decode('utf-8'))        
+        sample_uri = 'file://localhost' + os.path.abspath(sample)
+        et_track.set('Location', sample_uri)
+
+        # need this for some reason to get warp markers.  
+        # Should get it from total track duration
+        # set to 20 min for now which works...
+        et_track.set('TotalTime', str(60*20))
+
+        first_bpm = None
+
+        clip = record['clip']
+        warp_markers = clip['warp_markers']
+        for warp_index in xrange(len(warp_markers) - 1):
+            this_marker = warp_markers[warp_index]
+            next_marker = warp_markers[warp_index + 1]
+            bpm = 60 * ((next_marker['beat_time'] - this_marker['beat_time']) /
+                        (next_marker['sec_time'] - this_marker['sec_time']))
+            if warp_index == 0:
+                first_bpm = bpm
+                et_track.set('AverageBpm', str(bpm))
+
+            et_tempo = ET.SubElement(et_track, 'TEMPO')
+            et_tempo.set('Inizio', str(this_marker['sec_time']))
+            et_tempo.set('Bpm', str(bpm))
+            et_tempo.set('Metro', '4/4')
+            # round beat time to nearest beat and mod 4?
+            nearest_beat = (int(round(this_marker['beat_time'])) % 4) + 1
+            et_tempo.set('Battito', str(nearest_beat))
+        
+        # if we have a first bpm we have a first marker
+        first_marker = warp_markers[0]
+        beat_diff = clip['start'] - first_marker['beat_time']
+        spb = 60 / first_bpm
+        sec_diff = beat_diff * spb
+        start_seconds = first_marker['sec_time'] + sec_diff
+        et_position = ET.SubElement(et_track, 'POSITION_MARK')
+        et_position.set('Name', 'Start')
+        et_position.set('Type', '0')
+        et_position.set('Start', str(start_seconds))
+        et_position.set('Num', '0')
+
+        track_to_id[f] = num_added
+        num_added += 1
+
+    # this is great...add this at the end!
+    et_collection.set('Entries', str(num_added))
+
+    # now the playlist...
+    et_playlists = ET.SubElement(et_dj_playlists, 'PLAYLISTS')
+    et_root_node = ET.SubElement(et_playlists, 'NODE')
+    et_root_node.set('Type', str(0))
+    et_root_node.set('Name', 'ROOT')
+    et_root_node.set('Count', str(1))
+
+    et_playlist_node = ET.SubElement(et_root_node, 'NODE')
+    et_playlist_node.set('Type', str(1))
+    et_playlist_node.set('Name', 'test_playlist')
+    et_playlist_node.set('Entries', str(len(track_to_id)))
+    et_playlist_node.set('KeyType', str(0))
+    for f, track_id in track_to_id.iteritems():
+        et_track = ET.SubElement(et_playlist_node, 'TRACK')
+        et_track.set('Key', str(track_id))
+
+    tree = ET.ElementTree(et_dj_playlists)
+    tree.write(args.rekordbox_filename, encoding='utf-8', xml_declaration=True)
+
+
 ###########
 # main
 
@@ -758,6 +869,10 @@ def parse_args():
 
     subparsers.add_parser('update_db_clips').set_defaults(
         func=action_update_db_clips)
+
+    p_rekordbox = subparsers.add_parser('export_rekordbox')
+    p_rekordbox.add_argument('rekordbox_filename')
+    p_rekordbox.set_defaults(func=action_export_rekordbox)
 
     return parser.parse_args()
 
