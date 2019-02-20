@@ -760,6 +760,11 @@ def action_export_rekordbox(args):
             et_position.set('End', str(end_seconds))
         et_position.set('Num', str(num))
 
+    def get_seconds_for_beat(ref_beat, ref_sec, desired_beat, bpm):
+        beat_diff = desired_beat - ref_beat
+        spb = 60.0 / bpm
+        return ref_sec + beat_diff * spb
+
     for f in files_to_test:
         record = db_dict[f]
         if 'clip' not in record:
@@ -806,28 +811,38 @@ def action_export_rekordbox(args):
             beat_grid_markers.append(
                 dict(sec_time=this_sec_time, bpm=bpm, beat_time=this_beat_time))
 
-        # if we have a first bpm we have a first marker
+        # We need a first bpm and first marker to do the rest
         if first_bpm:
             first_marker = warp_markers[0]
+            first_marker_beat = first_marker['beat_time']
+            first_marker_sec = first_marker['sec_time']
+
             start_beat = clip['start']
-            beat_diff = start_beat - first_marker['beat_time']
-            spb = 60 / first_bpm
-            sec_diff = beat_diff * spb
-            start_seconds = first_marker['sec_time'] + sec_diff
-            # if beat_diff is < 0 supply additional beat grid
-            if beat_diff < -1e-9:
+            start_seconds = get_seconds_for_beat(
+                first_marker_beat, first_marker_sec, start_beat, first_bpm)
+
+            if start_beat < first_marker_beat:
                 beat_grid_markers.append(
                     dict(sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat))
 
-            # sort beat grid markers before adding
+            # sort beat grid markers before adding (needed...sigh)
             beat_grid_markers.sort(key=lambda x: x['sec_time'])
             for b in beat_grid_markers:
                 add_beat_grid_marker(et_track, **b)
 
-        # memory cue
-        add_position_marker(et_track, 'Start', 0, -1, start_seconds)
-        # hot cue
-        add_position_marker(et_track, 'Start (hot)', 0, 0, start_seconds)
+            # memory cue
+            add_position_marker(et_track, 'Start', 0, -1, start_seconds)
+            # hot cue
+            #add_position_marker(et_track, 'Start (hot)', 0, 0, start_seconds)
+            # loop hot and memory queues
+            loop_start_beat = clip['loop_start']
+            loop_end_beat = clip['loop_end']
+            loop_start_sec = get_seconds_for_beat(
+                first_marker_beat, first_marker_sec, loop_start_beat, first_bpm)
+            loop_end_sec = get_seconds_for_beat(
+                first_marker_beat, first_marker_sec, loop_end_beat, first_bpm)
+            add_position_marker(et_track, 'Start Loop', 4, 0, loop_start_sec, loop_end_sec)
+            add_position_marker(et_track, 'Start Loop', 4, -1, loop_start_sec, loop_end_sec)
 
         # finally record this track id
         track_to_id[f] = num_added
