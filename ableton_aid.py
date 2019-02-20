@@ -731,15 +731,13 @@ def action_export_rekordbox(args):
     et_collection = ET.SubElement(et_dj_playlists, 'COLLECTION')
     track_to_id = {}
 
-    # just focus on one for now
+    # just focus on single tracks to debug one for now
     def filter_cubic(filename):
         return 'cubic' in filename.lower() and 'got this' in filename.lower()
     def filter_sticky(filename):
         return 'sticky' in filename.lower() and 'lane' in filename.lower()
-    def filter_true(filename):
-        return True
 
-    files_to_test = [x for x in db_dict.keys() if filter_sticky(x)]
+    files_to_test = [x for x in db_dict.keys() if True]
     files_to_test.sort()
 
     def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
