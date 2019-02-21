@@ -332,6 +332,13 @@ def get_camelot_key(key):
         return None
 
 
+def get_camelot_num(key):
+    cam_key = get_camelot_key(key)
+    if cam_key is None:
+        return None
+    return int(cam_key[:-1])
+
+
 def reveal_file(filename):
     command = ['open', '-R', filename]
     subprocess.call(command)
@@ -743,19 +750,14 @@ def action_update_db_clips(args, force=True):
 def action_export_rekordbox(args):
     db_dict = get_valid_db_dict(args.db_filename)
 
-    num_added = 0
-    et_dj_playlists = ET.Element('DJ_PLAYLISTS')
-    et_collection = ET.SubElement(et_dj_playlists, 'COLLECTION')
-    track_to_id = {}
-
     # just focus on single tracks to debug one for now
     def filter_cubic(filename):
         return 'cubic' in filename.lower() and 'got this' in filename.lower()
     def filter_sticky(filename):
         return 'sticky' in filename.lower() and 'lane' in filename.lower()
 
-    files_to_test = [x for x in db_dict.keys() if True]
-    files_to_test.sort()
+    files_by_name = [x for x in db_dict.keys() if True]
+    files_by_name.sort()
 
     def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
         et_tempo = ET.SubElement(et_track, 'TEMPO')
@@ -780,7 +782,12 @@ def action_export_rekordbox(args):
         spb = 60.0 / bpm
         return ref_sec + beat_diff * spb
 
-    for f in files_to_test:
+    num_added = 0
+    et_dj_playlists = ET.Element('DJ_PLAYLISTS')
+    et_collection = ET.SubElement(et_dj_playlists, 'COLLECTION')
+    track_to_id = {}
+
+    for f in files_by_name:
         record = db_dict[f]
         if 'clip' not in record:
             continue
@@ -791,7 +798,6 @@ def action_export_rekordbox(args):
             sample = sample.decode('utf-8')
 
         et_track = ET.SubElement(et_collection, 'TRACK')
-        et_track.set('TrackID', str(num_added))
         artist, track = get_artist_and_track(f)
         # Evidently getting these as unicode is important for some
         et_track.set('Name', track.decode('utf-8'))
@@ -883,26 +889,53 @@ def action_export_rekordbox(args):
                 add_position_marker(et_track, 'Beat 1', 0, -1, first_marker_sec)
 
         # finally record this track id
+        et_track.set('TrackID', str(num_added))
         track_to_id[f] = num_added
         num_added += 1
     # this is great...add this at the end!
     et_collection.set('Entries', str(num_added))
 
+    collection_by_name = sorted(track_to_id.keys())
+
+    def set_folder_count(et):
+        et.set('Count', str(len(et.getchildren())))
+
+    def set_playlist_count(et):
+        et.set('Entries', str(len(et.getchildren())))
+
     # now the playlists...
     et_playlists = ET.SubElement(et_dj_playlists, 'PLAYLISTS')
     et_root_node = ET.SubElement(et_playlists, 'NODE')
-    et_root_node.set('Type', str(0))
+    et_root_node.set('Type', '0')
     et_root_node.set('Name', 'ROOT')
-    et_root_node.set('Count', str(1))
 
-    et_playlist_node = ET.SubElement(et_root_node, 'NODE')
-    et_playlist_node.set('Type', str(1))
-    et_playlist_node.set('Name', 'test_playlist')
-    et_playlist_node.set('Entries', str(len(track_to_id)))
-    et_playlist_node.set('KeyType', str(0))
-    for f, track_id in track_to_id.iteritems():
-        et_track = ET.SubElement(et_playlist_node, 'TRACK')
-        et_track.set('Key', str(track_id))
+    # folders for bpm
+    bpm_range = 3
+    for bpm in xrange(80, 160, 2):
+        et_bpm_folder = ET.SubElement(et_root_node, 'NODE')
+        et_bpm_folder.set('Type', '0')
+        et_bpm_folder.set('Name', '{:03d} BPM'.format(bpm))
+
+        for key in xrange(1, 13):
+            et_key = ET.SubElement(et_bpm_folder, 'NODE')
+            et_key.set('Type', '1')
+            et_key.set('Name', '{:02d} KEY'.format(key))
+            et_key.set('KeyType', str(0))
+
+            cam_num_list = [key, get_relative_camelot_key(key, 1)]
+
+            for f in collection_by_name:
+                record = db_dict[f]
+                if not matches_bpm_filter(bpm, bpm_range, record['bpm']):
+                    continue
+                cam_num = get_camelot_num(record['key'])
+                if cam_num not in cam_num_list:
+                    continue
+                et_track = ET.SubElement(et_key, 'TRACK')
+                et_track.set('Key', str(track_to_id[f]))
+            set_playlist_count(et_key)
+        set_folder_count(et_bpm_folder)
+    set_folder_count(et_root_node)
 
     tree = ET.ElementTree(et_dj_playlists)
     tree.write(args.rekordbox_filename, encoding='utf-8', xml_declaration=True)
