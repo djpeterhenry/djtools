@@ -903,6 +903,16 @@ def action_export_rekordbox(args):
     def set_playlist_count(et):
         et.set('Entries', str(len(et.getchildren())))
 
+    def add_playlist_for_files(et_parent, name, files):
+        et_list = ET.SubElement(et_parent, 'NODE')
+        et_list.set('Type', '1')
+        et_list.set('Name', name)
+        et_list.set('KeyType', '0')
+        for f in files:
+            et_track = ET.SubElement(et_list, 'TRACK')
+            et_track.set('Key', str(track_to_id[f]))
+        set_playlist_count(et_list)
+
     # now the playlists...
     et_playlists = ET.SubElement(et_dj_playlists, 'PLAYLISTS')
     et_root_node = ET.SubElement(et_playlists, 'NODE')
@@ -916,14 +926,15 @@ def action_export_rekordbox(args):
         et_bpm_folder.set('Type', '0')
         et_bpm_folder.set('Name', '{:03d} BPM'.format(bpm))
 
+        # first all files matching bpm
+        matching_files = [f for f in collection_by_name if
+                          matches_bpm_filter(bpm, bpm_range, db_dict[f]['bpm'])]
+        add_playlist_for_files(et_bpm_folder, 'ALL', matching_files)
+
+        # now per key
         for key in xrange(1, 13):
-            et_key = ET.SubElement(et_bpm_folder, 'NODE')
-            et_key.set('Type', '1')
-            et_key.set('Name', '{:02d} KEY'.format(key))
-            et_key.set('KeyType', str(0))
-
             cam_num_list = [key, get_relative_camelot_key(key, 1)]
-
+            matching_files = []
             for f in collection_by_name:
                 record = db_dict[f]
                 if not matches_bpm_filter(bpm, bpm_range, record['bpm']):
@@ -931,9 +942,8 @@ def action_export_rekordbox(args):
                 cam_num = get_camelot_num(record['key'])
                 if cam_num not in cam_num_list:
                     continue
-                et_track = ET.SubElement(et_key, 'TRACK')
-                et_track.set('Key', str(track_to_id[f]))
-            set_playlist_count(et_key)
+                matching_files.append(f)
+            add_playlist_for_files(et_bpm_folder, '{:02d} KEY'.format(key), matching_files)
         set_folder_count(et_bpm_folder)
     set_folder_count(et_root_node)
 
