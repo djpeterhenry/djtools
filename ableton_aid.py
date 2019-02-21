@@ -793,22 +793,24 @@ def action_export_rekordbox(args):
             continue
         sample = record['clip']['sample']
         # Ok, this seems to work to get all the samples to unicode...
-        # Still not sure why some samples (Take Over Control Acapella) are u''
+        # Still not sure why some samples (Take Over Control Acapella) are unicode
         if not isinstance(sample, unicode):
             sample = sample.decode('utf-8')
 
         et_track = ET.SubElement(et_collection, 'TRACK')
         artist, track = get_artist_and_track(f)
+
+        # Put camelot key in track name
+        cam_key = get_camelot_key(record['key'])
+        if cam_key:
+            et_track.set('Tonality', cam_key)
+            track = '{} [{}]'.format(track, cam_key)
+
         # Evidently getting these as unicode is important for some
         et_track.set('Name', track.decode('utf-8'))
         et_track.set('Artist', artist.decode('utf-8'))        
         sample_uri = 'file://localhost' + os.path.abspath(sample)
         et_track.set('Location', sample_uri)
-
-        # try camelot key for now
-        cam_key = get_camelot_key(record['key'])
-        if cam_key:
-            et_track.set('Tonality', cam_key)
 
         # number of plays
         num_plays = len(get_ts_list(record))
