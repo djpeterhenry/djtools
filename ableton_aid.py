@@ -198,6 +198,7 @@ def get_audioclip_from_alc(alc_filename):
                                            beat_time=float(marker.get('BeatTime'))))
     xml_loop = xml_clip.find('Loop')
     result['start'] = float(xml_loop.find('LoopStart').get('Value'))
+    result['end'] = float(xml_loop.find('LoopEnd').get('Value'))
     result['loop_start'] = float(xml_loop.find('HiddenLoopStart').get('Value'))
     result['loop_end'] = float(xml_loop.find('HiddenLoopEnd').get('Value'))
     # also sample info
@@ -716,7 +717,7 @@ def action_print_audioclip(args):
     print (get_audioclip_from_alc(args.alc_filename))
 
 
-def action_update_db_clips(args, force=False):
+def action_update_db_clips(args, force=True):
     db_dict = read_db_file(args.db_filename)
     valid_alc_files = get_valid_alc_files(db_dict)
     update_db_clips(valid_alc_files, db_dict, force)
@@ -787,11 +788,6 @@ def action_export_rekordbox(args):
         if cam_key:
             et_track.set('Tonality', cam_key)
 
-        # need this for some reason to get warp markers.  
-        # Should get it from total track duration
-        # set to 20 min for now which works...
-        et_track.set('TotalTime', str(60*20))
-
         first_bpm = None
 
         clip = record['clip']
@@ -823,6 +819,12 @@ def action_export_rekordbox(args):
             start_beat = clip['start']
             start_seconds = get_seconds_for_beat(
                 first_marker_beat, first_marker_sec, start_beat, first_bpm)
+
+            # NOTE(peter): this may be wrong if the bpm changes a lot...
+            end_beat = clip['end']
+            end_seconds = get_seconds_for_beat(
+                first_marker_beat, first_marker_sec, end_beat, first_bpm)
+            et_track.set('TotalTime', str(end_seconds - start_seconds))
 
             if start_beat < first_marker_beat:
                 beat_grid_markers.append(
