@@ -408,6 +408,14 @@ def get_alc_ts(record):
         return 0
 
 
+def get_alc_or_last_ts(record):
+    return max(get_alc_ts(record), get_last_ts(record))
+
+
+def get_date_from_ts(ts):
+    return datetime.date.fromtimestamp(ts).strftime('%Y-%m-%d')
+
+
 def get_sample(record):
     try:
         return record['clip']['sample']
@@ -416,30 +424,27 @@ def get_sample(record):
 
 
 def generate_alc_pairs(valid_alc_files, db_dict):
-    date_file_tuples = []
+    tuples = []
     for f in valid_alc_files:
-        date_file_tuples.append((get_alc_ts(db_dict[f]), f))
-    date_file_tuples.sort()
-    date_file_tuples.reverse()
-    return date_file_tuples
+        tuples.append((get_alc_ts(db_dict[f]), f))
+    tuples.sort()
+    tuples.reverse()
+    return tuples
 
 
 def generate_date_pairs(valid_alc_files, db_dict):
-    date_file_tuples = []
+    tuples = []
     for f in valid_alc_files:
-        date_file_tuples.append((get_last_ts(db_dict[f]), f))
-    date_file_tuples.sort()
-    date_file_tuples.reverse()
-    return date_file_tuples
+        tuples.append((get_last_ts(db_dict[f]), f))
+    tuples.sort()
+    tuples.reverse()
+    return tuples
 
 
 def generate_date_plus_alc_pairs(valid_alc_files, db_dict):
     tuples = []
     for f in valid_alc_files:
-        record = db_dict[f]
-        play_date = get_last_ts(record)
-        alc_date = get_alc_ts(record)
-        tuples.append((max(play_date, alc_date), f))
+        tuples.append((get_alc_or_last_ts(db_dict[f]), f))
     tuples.sort()
     tuples.reverse()
     return tuples
@@ -802,6 +807,15 @@ def action_export_rekordbox(args):
         # number of plays
         num_plays = len(get_ts_list(record))
         et_track.set('PlayCount', str(num_plays))
+
+        # alc
+        et_track.set('DateAdded', get_date_from_ts(get_alc_ts(record)))
+
+        # abuse comment for alc+date
+        et_track.set('Comments', get_date_from_ts(get_alc_or_last_ts(record)))
+
+        # track number is random
+        et_track.set('TrackNumber', str(random.randint(0, 2**31)))
 
         first_bpm = None
 
