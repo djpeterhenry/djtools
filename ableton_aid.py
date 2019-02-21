@@ -849,6 +849,10 @@ def action_export_rekordbox(args):
             add_position_marker(et_track, 'Start Loop', 4, 0, loop_start_sec, loop_end_sec)
             add_position_marker(et_track, 'Start Loop', 4, -1, loop_start_sec, loop_end_sec)
 
+            # memory cue for first warp marker too if it's after start
+            if start_beat < first_marker_beat:
+                add_position_marker(et_track, 'Beat 1', 0, -1, first_marker_sec)
+
         # finally record this track id
         track_to_id[f] = num_added
         num_added += 1
