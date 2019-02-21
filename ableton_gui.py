@@ -20,7 +20,7 @@ import datetime
 import codecs
 from itertools import groupby
 
-import ableton_aid
+import ableton_aid as aa
 from entry_text import EntryText
 from lists_selector import ListsSelector
 
@@ -91,12 +91,12 @@ class App:
         self.db_filename = db_filename
 
         # core stuff
-        self.db_dict = ableton_aid.read_db_file(db_filename)
-        self.valid_alc_files = ableton_aid.get_valid_alc_files(self.db_dict)
+        self.db_dict = aa.read_db_file(db_filename)
+        self.valid_alc_files = aa.get_valid_alc_files(self.db_dict)
         self.list_to_use = self.valid_alc_files
 
         # update clips on load
-        ableton_aid.update_db_clips(self.valid_alc_files, self.db_dict)
+        aa.update_db_clips(self.valid_alc_files, self.db_dict)
 
         ########
         # gui
@@ -415,7 +415,7 @@ class App:
             print 'friends_selected: selected_filename: ', selected_filename
             if selected_filename:
                 friends_set = set()  # empty will also be like "None"
-                target_ts_list = ableton_aid.get_ts_list(
+                target_ts_list = aa.get_ts_list(
                     self.db_dict[selected_filename])
                 print 'selected_filename', selected_filename
                 print 'target_ts_list', target_ts_list
@@ -430,11 +430,11 @@ class App:
         # split = self.key_filter_string.split()
         # key_filter = split[0] if split else ''
         key_filter = self.entry_key_filter.stringvar.get().strip()
-        cam_filter = ableton_aid.get_camelot_key(key_filter)
+        cam_filter = aa.get_camelot_key(key_filter)
         # direct camelot allowed as well
         if cam_filter is None and len(key_filter) > 0 and key_filter[0].isdigit():
             possible_lower = [s.lower()
-                              for s in ableton_aid.reverse_camelot_dict.keys()]
+                              for s in aa.reverse_camelot_dict.keys()]
             if key_filter.lower() in possible_lower:
                 cam_filter = key_filter
             # since major/minor doesn't matter, also allow just camelot numbers
@@ -445,7 +445,7 @@ class App:
 
         # print keys for number
         if cam_filter is not None:
-            keys = ableton_aid.get_keys_for_camelot_number(cam_filter[:-1])
+            keys = aa.get_keys_for_camelot_number(cam_filter[:-1])
             keys_as_str = ' '.join(keys)
             self.key_label_var.set(keys_as_str)
 
@@ -460,17 +460,17 @@ class App:
             # add range
             for i in range(0, key_filter_range + 1):
                 # python % is always positive
-                cam_filter_numbers.append(((cam_filter_num + i - 1) % 12) + 1)
-                cam_filter_numbers.append(((cam_filter_num - i - 1) % 12) + 1)
+                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, i))
+                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, -i))
             # add variables
             if self.key_var_1.get():
-                cam_filter_numbers.append(((cam_filter_num - 1 - 1) % 12) + 1)
+                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, -1))
             if self.key_var_2.get():
-                cam_filter_numbers.append(((cam_filter_num + 1 - 1) % 12) + 1)
+                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, 1))
             if self.key_var_3.get():
-                cam_filter_numbers.append(((cam_filter_num + 2 - 1) % 12) + 1)
+                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, 2))
             if self.key_var_4.get():
-                cam_filter_numbers.append(((cam_filter_num + 4 - 1) % 12) + 1)
+                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, 4))
 
         filter_string = self.entry_filter.stringvar.get()
         filter_bpm = self.entry_bpm.get_int()
@@ -511,7 +511,7 @@ class App:
                 continue
 
             bpm, tag_list, key = (record['bpm'], record['tags'], record['key'])
-            ts_list = ableton_aid.get_ts_list(record)
+            ts_list = aa.get_ts_list(record)
 
             keep = True
 
@@ -536,7 +536,6 @@ class App:
                         keep = False
 
             if filter_bpm is not None and SKIP_BPM not in tag_list:
-                any_success = False
                 # TODO: could move this filter change outside loop, as well as
                 # other range math
                 bpm_range = filter_bpm_range
@@ -544,10 +543,7 @@ class App:
                     bpm_range += 10
                 if filter_bpm_star:
                     bpm_range += 10
-                for sub_bpm in [int(round(bpm / 2.0)), bpm, int(round(bpm * 2.0))]:
-                    if (sub_bpm >= filter_bpm - bpm_range and sub_bpm <= filter_bpm + bpm_range):
-                        any_success = True
-                if not any_success:
+                if not aa.matches_bpm_filter(filter_bpm, bpm_range, bpm):
                     keep = False
 
             # changing this to: some tag must have all bits of my search
@@ -578,7 +574,7 @@ class App:
                     keep = False
 
             # used beyond filter check
-            cam_song = ableton_aid.get_camelot_key(key)
+            cam_song = aa.get_camelot_key(key)
 
             if key_filter == '-' and len(key) > 0:
                 keep = False
@@ -618,7 +614,7 @@ class App:
 
             last_filename = filename
 
-            file = ableton_aid.get_base_filename(filename, record)
+            file = aa.get_base_filename(filename, record)
             key_display = key
             if cam_song is not None:
                 # key_display = key + ' : ' + cam_song
@@ -749,8 +745,8 @@ class App:
         # and finally reveal if wanted
         if bool(self.reveal_var.get()):
             try:
-                sample = ableton_aid.get_sample(self.db_dict[filename])
-                ableton_aid.reveal_file(sample)
+                sample = aa.get_sample(self.db_dict[filename])
+                aa.reveal_file(sample)
             except KeyError as e:
                 print (e)
 
@@ -792,7 +788,7 @@ class App:
         do_save = tkMessageBox.askokcancel(
             "Confirm Save", 'Save database "%s"?' % self.db_filename)
         if (do_save):
-            ableton_aid.write_db_file(self.db_filename, self.db_dict)
+            aa.write_db_file(self.db_filename, self.db_dict)
 
     def command_save(self):
         return self.save_dialog()
@@ -822,8 +818,8 @@ class App:
         filepath = self.get_selected_filepath()
         if not filepath:
             return
-        found_key = ableton_aid.get_key_from_alc(filepath)
-        if not ableton_aid.get_camelot_key(found_key):
+        found_key = aa.get_key_from_alc(filepath)
+        if not aa.get_camelot_key(found_key):
             return
         self.stringvar_key.set(found_key)
 
@@ -953,16 +949,16 @@ class App:
         return files
 
     def generate_date(self):
-        return ableton_aid.generate_date(self.valid_alc_files, self.db_dict)
+        return aa.generate_date(self.valid_alc_files, self.db_dict)
 
     def generate_alc(self):
-        return ableton_aid.generate_alc(self.valid_alc_files, self.db_dict)
+        return aa.generate_alc(self.valid_alc_files, self.db_dict)
 
     def generate_date_plus_alc(self):
-        return ableton_aid.generate_date_plus_alc(self.valid_alc_files, self.db_dict)
+        return aa.generate_date_plus_alc(self.valid_alc_files, self.db_dict)
 
     def generate_sample(self):
-        return ableton_aid.generate_sample(self.valid_alc_files, self.db_dict)
+        return aa.generate_sample(self.valid_alc_files, self.db_dict)
 
     def generate_bpm(self):
         bpm_file_tuples = []
@@ -977,7 +973,7 @@ class App:
         for file in self.valid_alc_files:
             record = self.db_dict[file]
             key_song = record['key']
-            cam_song = ableton_aid.get_camelot_key(key_song)
+            cam_song = aa.get_camelot_key(key_song)
             if cam_song is not None:
                 cam_sort = ('%02d' % int(cam_song[:-1])) + cam_song[-1]
                 key_file_tuples.append((cam_sort, file))
@@ -987,11 +983,11 @@ class App:
         return [file for _, file in key_file_tuples]
 
     def generate_num(self):
-        return ableton_aid.get_files_by_num(self.valid_alc_files, self.db_dict)
+        return aa.get_files_by_num(self.valid_alc_files, self.db_dict)
 
     # TODO(peter): duplicated in ableton_aid
     def generate_sets(self):
-        ts_db_dict = ableton_aid.get_db_by_ts(self.db_dict)
+        ts_db_dict = aa.get_db_by_ts(self.db_dict)
         result = []
         ts_last = time.time()
         for ts, file_list in sorted(ts_db_dict.iteritems(), reverse=True):

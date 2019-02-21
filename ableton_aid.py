@@ -465,6 +465,17 @@ def get_keys_for_camelot_number(camelot_number):
     return [key_minor, key_major]
 
 
+def get_relative_camelot_key(cam_num, offset):
+    return (((cam_num + offset - 1) % 12) + 1)
+
+
+def matches_bpm_filter(filter_bpm, bpm_range, bpm):
+    for sub_bpm in [int(round(bpm / 2.0)), bpm, int(round(bpm * 2.0))]:
+        if (sub_bpm >= filter_bpm - bpm_range and sub_bpm <= filter_bpm + bpm_range):
+            return True
+    return False
+
+
 def assert_exists(filename):
     if not os.path.exists(filename):
         raise ValueError('File does not exist: {}'.format(filename))
@@ -788,6 +799,10 @@ def action_export_rekordbox(args):
         if cam_key:
             et_track.set('Tonality', cam_key)
 
+        # number of plays
+        num_plays = len(get_ts_list(record))
+        et_track.set('PlayCount', str(num_plays))
+
         first_bpm = None
 
         clip = record['clip']
@@ -856,11 +871,10 @@ def action_export_rekordbox(args):
         # finally record this track id
         track_to_id[f] = num_added
         num_added += 1
-
     # this is great...add this at the end!
     et_collection.set('Entries', str(num_added))
 
-    # now the playlist...
+    # now the playlists...
     et_playlists = ET.SubElement(et_dj_playlists, 'PLAYLISTS')
     et_root_node = ET.SubElement(et_playlists, 'NODE')
     et_root_node.set('Type', str(0))
