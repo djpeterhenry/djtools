@@ -39,6 +39,7 @@ LISTS_FOLDER = '/Users/peter/github/djpeterhenry.github.io/lists'
 class App:
     extra_tag_list = [
         'x',
+        'x_rekordbox',
         'vocal',
         GOOD_TAG,
         LOOK_TAG,

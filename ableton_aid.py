@@ -153,7 +153,7 @@ def get_mp3_bpm(filename):
     return bpm
 
 
-def get_valid_db_dict(db_filename):
+def get_valid_db_dict(db_filename, exclude_x_rekordbox=False):
     db_dict = read_db_file(db_filename)
     alc_file_set = set(get_ableton_files())
     # there is a better python way here:
@@ -162,6 +162,8 @@ def get_valid_db_dict(db_filename):
         if filename not in alc_file_set:
             continue
         if 'x' in record['tags']:
+            continue
+        if exclude_x_rekordbox and 'x_rekordbox' in record['tags']:
             continue
         result[filename] = record
     return result
@@ -748,7 +750,7 @@ def action_update_db_clips(args, force=True):
 
 
 def action_export_rekordbox(args):
-    db_dict = get_valid_db_dict(args.db_filename)
+    db_dict = get_valid_db_dict(args.db_filename, exclude_x_rekordbox=True)
 
     # just focus on single tracks to debug one for now
     def filter_cubic(filename):
@@ -920,6 +922,9 @@ def action_export_rekordbox(args):
     et_root_node = ET.SubElement(et_playlists, 'NODE')
     et_root_node.set('Type', '0')
     et_root_node.set('Name', 'ROOT')
+
+    # playlist for all
+    add_playlist_for_files(et_root_node, 'All', collection_by_name)
 
     # folders for bpm
     bpm_range = 3
