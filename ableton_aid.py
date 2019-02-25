@@ -534,6 +534,16 @@ def get_rekordbox_sample(f, sample_ext):
     return os.path.join(REKORDBOX_SAMPLE_PATH, f_base + '.aiff').encode('utf-8')
 
 
+def get_existing_rekordbox_sample(record):
+    try:
+        sample = record['rekordbox_sample']
+        if os.path.exists(sample):
+            return sample
+    except:
+        pass
+    return None
+
+
 ###########
 # Updated actions
 
@@ -777,7 +787,7 @@ def action_export_rekordbox(args):
         return 'sticky' in filename.lower() and 'lane' in filename.lower()
 
     files_by_name = [x for x in db_dict.keys() if True]
-    files_by_name.sort()
+    files_by_name.sort(key=str.lower)
 
     def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
         et_tempo = ET.SubElement(et_track, 'TEMPO')
@@ -809,7 +819,8 @@ def action_export_rekordbox(args):
 
     for f in files_by_name:
         record = db_dict[f]
-        sample = get_sample_unicode(record)
+        # sample = get_sample_unicode(record)
+        sample = get_existing_rekordbox_sample(record)
         if sample is None:
             print ('Error getting sample for {}'.format(f))
             continue
@@ -975,7 +986,7 @@ def action_export_rekordbox(args):
 
 def action_export_rekordbox_samples(args):
     db_dict = get_valid_db_dict(args.db_filename, exclude_x_rekordbox=True)
-    files = sorted(db_dict.keys())
+    files = sorted(db_dict.keys(), key=str.lower)
     for f in files:
         print ('Starting', f)
         record = db_dict[f]
@@ -984,19 +995,19 @@ def action_export_rekordbox_samples(args):
             print ('Failed to get sample for {}'.format(f))
             continue
         _, sample_ext = os.path.splitext(sample)
-        # convert flac
+        # convert flac, copy others
         if sample_ext.lower() == '.flac':
             target = get_rekordbox_sample(f, '.aiff')
-            if os.path.exists(target):
-                continue
-            cmd = ['ffmpeg', '-i', sample, target]
-            subprocess.check_call(cmd)
+            if not os.path.exists(target):
+                cmd = ['ffmpeg', '-i', sample, target]
+                subprocess.check_call(cmd)
         else:
             target = get_rekordbox_sample(f, sample_ext)
-            if os.path.exists(target):
-                continue
-            shutil.copy(sample, target)
-
+            if not os.path.exists(target):
+                shutil.copy(sample, target)
+        assert os.path.exists(target)
+        record['rekordbox_sample'] = target.decode('utf-8')
+    write_db_file(args.db_filename, db_dict)        
 
 
 ###########
