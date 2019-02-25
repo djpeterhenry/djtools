@@ -27,6 +27,7 @@ import difflib
 import urllib
 from collections import defaultdict
 import argparse
+import shutil
 
 # import mutagen
 try:
@@ -42,6 +43,7 @@ ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 
 OLD_ALC_TS_CUTOFF = time.mktime(datetime.date(2016, 6, 12).timetuple())
 
+REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
@@ -516,6 +518,22 @@ def get_artist_and_track(filename):
         return split[0], delimiter.join(split[1:])
 
 
+def get_sample_unicode(record):
+    if 'clip' not in record:
+        return None
+    sample = record['clip']['sample']
+    # Ok, this seems to work to get all the samples to unicode...
+    # Still not sure why some samples (Take Over Control Acapella) are unicode
+    if not isinstance(sample, unicode):
+        sample = sample.decode('utf-8')
+    return sample
+
+
+def get_rekordbox_sample(f, sample_ext):
+    f_base, _ = os.path.splitext(f.decode('utf-8'))
+    return os.path.join(REKORDBOX_SAMPLE_PATH, f_base + '.aiff').encode('utf-8')
+
+
 ###########
 # Updated actions
 
@@ -791,13 +809,10 @@ def action_export_rekordbox(args):
 
     for f in files_by_name:
         record = db_dict[f]
-        if 'clip' not in record:
+        sample = get_sample_unicode(record)
+        if sample is None:
+            print ('Error getting sample for {}'.format(f))
             continue
-        sample = record['clip']['sample']
-        # Ok, this seems to work to get all the samples to unicode...
-        # Still not sure why some samples (Take Over Control Acapella) are unicode
-        if not isinstance(sample, unicode):
-            sample = sample.decode('utf-8')
 
         et_track = ET.SubElement(et_collection, 'TRACK')
         artist, track = get_artist_and_track(f)
@@ -958,6 +973,32 @@ def action_export_rekordbox(args):
     tree.write(args.rekordbox_filename, encoding='utf-8', xml_declaration=True)
 
 
+def action_export_rekordbox_samples(args):
+    db_dict = get_valid_db_dict(args.db_filename, exclude_x_rekordbox=True)
+    files = sorted(db_dict.keys())
+    for f in files:
+        print ('Starting', f)
+        record = db_dict[f]
+        sample = get_sample_unicode(record)
+        if sample is None:
+            print ('Failed to get sample for {}'.format(f))
+            continue
+        _, sample_ext = os.path.splitext(sample)
+        # convert flac
+        if sample_ext.lower() == '.flac':
+            target = get_rekordbox_sample(f, '.aiff')
+            if os.path.exists(target):
+                continue
+            cmd = ['ffmpeg', '-i', sample, target]
+            subprocess.check_call(cmd)
+        else:
+            target = get_rekordbox_sample(f, sample_ext)
+            if os.path.exists(target):
+                continue
+            shutil.copy(sample, target)
+
+
+
 ###########
 # main
 
@@ -1008,6 +1049,9 @@ def parse_args():
     p_rekordbox = subparsers.add_parser('export_rekordbox')
     p_rekordbox.add_argument('rekordbox_filename')
     p_rekordbox.set_defaults(func=action_export_rekordbox)
+
+    p_rb_samples = subparsers.add_parser('export_rekordbox_samples')
+    p_rb_samples.set_defaults(func=action_export_rekordbox_samples)
 
     return parser.parse_args()
 
