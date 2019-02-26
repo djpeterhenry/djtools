@@ -1035,6 +1035,7 @@ def action_export_mp3_samples(args):
                 cmd = ['ffmpeg', '-i', sample, '-codec:a', 'libmp3lame', '-b:a', '320k', target]
                 subprocess.check_call(cmd)
         assert os.path.exists(target)
+        os.utime(target, (time.time(), get_alc_ts(record)))
         #record['mp3_sample'] = target.decode('utf-8')
     #write_db_file(args.db_filename, db_dict) 
 
