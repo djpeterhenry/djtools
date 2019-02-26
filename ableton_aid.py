@@ -44,6 +44,7 @@ ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 OLD_ALC_TS_CUTOFF = time.mktime(datetime.date(2016, 6, 12).timetuple())
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
+MP3_SAMPLE_PATH = u'/Volumes/MacHelper/mp3_samples'
 
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
@@ -529,9 +530,9 @@ def get_sample_unicode(record):
     return sample
 
 
-def get_rekordbox_sample(f, sample_ext):
+def get_export_sample_path(f, sample_ext, target_path):
     f_base, _ = os.path.splitext(f.decode('utf-8'))
-    return os.path.join(REKORDBOX_SAMPLE_PATH, f_base + '.aiff').encode('utf-8')
+    return os.path.join(target_path, f_base + sample_ext).encode('utf-8')
 
 
 def get_existing_rekordbox_sample(record):
@@ -997,17 +998,45 @@ def action_export_rekordbox_samples(args):
         _, sample_ext = os.path.splitext(sample)
         # convert flac, copy others
         if sample_ext.lower() == '.flac':
-            target = get_rekordbox_sample(f, '.aiff')
+            target = get_export_sample_path(f, '.aiff', REKORDBOX_SAMPLE_PATH)
             if not os.path.exists(target):
                 cmd = ['ffmpeg', '-i', sample, target]
                 subprocess.check_call(cmd)
         else:
-            target = get_rekordbox_sample(f, sample_ext)
+            target = get_export_sample_path(f, sample_ext, REKORDBOX_SAMPLE_PATH)
             if not os.path.exists(target):
                 shutil.copy(sample, target)
         assert os.path.exists(target)
         record['rekordbox_sample'] = target.decode('utf-8')
     write_db_file(args.db_filename, db_dict)        
+
+
+def action_export_mp3_samples(args):
+    db_dict = get_valid_db_dict(args.db_filename, exclude_x_rekordbox=True)
+    files = sorted(db_dict.keys(), key=str.lower)
+    for f in files:
+        print ('Starting', f)
+        record = db_dict[f]
+        sample = get_sample_unicode(record)
+        if sample is None:
+            print ('Failed to get sample for {}'.format(f))
+            continue
+        _, sample_ext = os.path.splitext(sample)
+        # convert all but mp3 and m4a
+        if sample_ext.lower() in ('.mp3', '.m4a'):
+            # copy these
+            target = get_export_sample_path(f, sample_ext, MP3_SAMPLE_PATH)
+            if not os.path.exists(target):
+                shutil.copy(sample, target)
+        else:
+            # convert these
+            target = get_export_sample_path(f, '.mp3', MP3_SAMPLE_PATH)
+            if not os.path.exists(target):
+                cmd = ['ffmpeg', '-i', sample, '-codec:a', 'libmp3lame', '-b:a', '320k', target]
+                subprocess.check_call(cmd)
+        assert os.path.exists(target)
+        #record['mp3_sample'] = target.decode('utf-8')
+    #write_db_file(args.db_filename, db_dict) 
 
 
 ###########
@@ -1063,6 +1092,9 @@ def parse_args():
 
     p_rb_samples = subparsers.add_parser('export_rekordbox_samples')
     p_rb_samples.set_defaults(func=action_export_rekordbox_samples)
+
+    p_mp3_samples = subparsers.add_parser('export_mp3_samples')
+    p_mp3_samples.set_defaults(func=action_export_mp3_samples)
 
     return parser.parse_args()
 
