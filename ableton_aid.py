@@ -68,7 +68,7 @@ def get_ableton_files():
             filename = os.path.join(dirpath, f)[2:]
             if is_ableton_file(filename):
                 result.append(filename)
-    return result
+    return sorted(result, key=str.lower)
 
 
 def get_ts_list(record):
@@ -156,6 +156,7 @@ def get_mp3_bpm(filename):
     return bpm
 
 
+# NOTE: never save a database loaded with this function!
 def get_valid_db_dict(db_filename, exclude_x_rekordbox=False):
     db_dict = read_db_file(db_filename)
     alc_file_set = set(get_ableton_files())
@@ -1008,7 +1009,8 @@ def action_export_rekordbox_samples(args):
                 shutil.copy(sample, target)
         assert os.path.exists(target)
         record['rekordbox_sample'] = target.decode('utf-8')
-    write_db_file(args.db_filename, db_dict)        
+    # NO PETER: you erase non-recordbox songs this way!
+    #write_db_file(args.db_filename, db_dict)        
 
 
 def action_export_mp3_samples(args):
@@ -1037,8 +1039,17 @@ def action_export_mp3_samples(args):
         assert os.path.exists(target)
         os.utime(target, (time.time(), get_alc_ts(record)))
         #record['mp3_sample'] = target.decode('utf-8')
+    # NO!  DO NOT WRITE THIS DICT
     #write_db_file(args.db_filename, db_dict) 
 
+def action_fix_stupid(args):
+    db_dict = read_db_file(args.db_filename)
+    alc_files = get_ableton_files()
+    for f in alc_files:
+        if f not in db_dict:
+            print (f)
+            # shutil.move(f, '../x_songs/')
+            
 
 ###########
 # main
@@ -1096,6 +1107,8 @@ def parse_args():
 
     p_mp3_samples = subparsers.add_parser('export_mp3_samples')
     p_mp3_samples.set_defaults(func=action_export_mp3_samples)
+
+    subparsers.add_parser('fix_stupid').set_defaults(func=action_fix_stupid)
 
     return parser.parse_args()
 
