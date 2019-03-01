@@ -46,6 +46,7 @@ OLD_ALC_TS_CUTOFF = time.mktime(datetime.date(2016, 6, 12).timetuple())
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 MP3_SAMPLE_PATH = u'/Volumes/MacHelper/mp3_samples'
 
+
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
     try:
@@ -156,28 +157,12 @@ def get_mp3_bpm(filename):
     return bpm
 
 
-# NOTE: never save a database loaded with this function!
-def get_valid_db_dict(db_filename, exclude_x_rekordbox=False):
-    db_dict = read_db_file(db_filename)
-    alc_file_set = set(get_ableton_files())
-    # there is a better python way here:
-    result = {}
-    for filename, record in db_dict.iteritems():
-        if filename not in alc_file_set:
-            continue
-        if 'x' in record['tags']:
-            continue
-        if exclude_x_rekordbox and 'x_rekordbox' in record['tags']:
-            continue
-        result[filename] = record
-    return result
-
-
-def print_pretty_files(file_list, db_dict):
-    for filename in file_list:
-        record = db_dict[filename]
-        pretty_name = get_base_filename_with_bpm_and_key(filename, record)
-        print (pretty_name)
+def use_for_rekordbox(record):
+    if 'x' in record['tags']:
+        return False
+    if 'x_rekordbox' in record['tags']:
+        return False
+    return True
 
 
 def alc_to_str(alc_filename):
@@ -636,12 +621,6 @@ def action_print(args):
         print (filename + " " + str(record))
 
 
-def action_list_by_name(args):
-    valid_dict = get_valid_db_dict(args.db_filename)
-    valid_names = sorted(valid_dict.keys(), key=str.lower)
-    print_pretty_files(valid_names, valid_dict)
-
-
 def action_list_sets(args):
     db_dict = read_db_file(args.db_filename)
     ts_db_dict = get_db_by_ts(db_dict)
@@ -780,16 +759,16 @@ def action_update_db_clips(args, force=True):
 
 
 def action_export_rekordbox(args):
-    db_dict = get_valid_db_dict(args.db_filename, exclude_x_rekordbox=True)
+    db_dict = read_db_file(args.db_filename)
+    files = get_ableton_files()
 
     # just focus on single tracks to debug one for now
     def filter_cubic(filename):
         return 'cubic' in filename.lower() and 'got this' in filename.lower()
+
     def filter_sticky(filename):
         return 'sticky' in filename.lower() and 'lane' in filename.lower()
-
-    files_by_name = [x for x in db_dict.keys() if True]
-    files_by_name.sort(key=str.lower)
+    # can filter files here for testing
 
     def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
         et_tempo = ET.SubElement(et_track, 'TEMPO')
@@ -798,7 +777,7 @@ def action_export_rekordbox(args):
         et_tempo.set('Metro', '4/4')
         # round beat time to nearest beat and mod 4?
         nearest_beat = (int(round(beat_time)) % 4) + 1
-        et_tempo.set('Battito', str(nearest_beat))    
+        et_tempo.set('Battito', str(nearest_beat))
 
     def add_position_marker(et_track, name, type, num, start_seconds, end_seconds=None):
         et_position = ET.SubElement(et_track, 'POSITION_MARK')
@@ -819,8 +798,10 @@ def action_export_rekordbox(args):
     et_collection = ET.SubElement(et_dj_playlists, 'COLLECTION')
     track_to_id = {}
 
-    for f in files_by_name:
+    for f in files:
         record = db_dict[f]
+        if not use_for_rekordbox(record):
+            continue
         # sample = get_sample_unicode(record)
         sample = get_existing_rekordbox_sample(record)
         if sample is None:
@@ -838,7 +819,7 @@ def action_export_rekordbox(args):
 
         # Evidently getting these as unicode is important for some
         et_track.set('Name', track.decode('utf-8'))
-        et_track.set('Artist', artist.decode('utf-8'))        
+        et_track.set('Artist', artist.decode('utf-8'))
         sample_uri = 'file://localhost' + os.path.abspath(sample)
         et_track.set('Location', sample_uri)
 
@@ -870,7 +851,8 @@ def action_export_rekordbox(args):
             next_marker = warp_markers[warp_index + 1]
             next_beat_time = next_marker['beat_time']
             next_sec_time = next_marker['sec_time']
-            bpm = 60 * (next_beat_time - this_beat_time) / (next_sec_time - this_sec_time)
+            bpm = 60 * ((next_beat_time - this_beat_time) /
+                        (next_sec_time - this_sec_time))
             if warp_index == 0:
                 first_bpm = bpm
                 et_track.set('AverageBpm', str(bpm))
@@ -913,12 +895,15 @@ def action_export_rekordbox(args):
                 first_marker_beat, first_marker_sec, loop_start_beat, first_bpm)
             loop_end_sec = get_seconds_for_beat(
                 first_marker_beat, first_marker_sec, loop_end_beat, first_bpm)
-            add_position_marker(et_track, 'Start Loop', 4, 0, loop_start_sec, loop_end_sec)
-            add_position_marker(et_track, 'Start Loop', 4, -1, loop_start_sec, loop_end_sec)
+            add_position_marker(et_track, 'Start Loop',
+                                4, 0, loop_start_sec, loop_end_sec)
+            add_position_marker(et_track, 'Start Loop',
+                                4, -1, loop_start_sec, loop_end_sec)
 
             # memory cue for first warp marker too if it's after start
             if start_beat < first_marker_beat:
-                add_position_marker(et_track, 'Beat 1', 0, -1, first_marker_sec)
+                add_position_marker(et_track, 'Beat 1',
+                                    0, -1, first_marker_sec)
 
         # finally record this track id
         et_track.set('TrackID', str(num_added))
@@ -978,7 +963,8 @@ def action_export_rekordbox(args):
                 if cam_num not in cam_num_list:
                     continue
                 matching_files.append(f)
-            add_playlist_for_files(et_bpm_folder, '{:02d} KEY'.format(key), matching_files)
+            add_playlist_for_files(
+                et_bpm_folder, '{:02d} KEY'.format(key), matching_files)
         set_folder_count(et_bpm_folder)
     set_folder_count(et_root_node)
 
@@ -987,11 +973,13 @@ def action_export_rekordbox(args):
 
 
 def action_export_rekordbox_samples(args):
-    db_dict = get_valid_db_dict(args.db_filename, exclude_x_rekordbox=True)
-    files = sorted(db_dict.keys(), key=str.lower)
+    db_dict = read_db_file(args.db_filename)
+    files = get_ableton_files()
     for f in files:
-        print ('Starting', f)
         record = db_dict[f]
+        if not use_for_rekordbox(record):
+            continue
+        print ('Starting', f)
         sample = get_sample_unicode(record)
         if sample is None:
             print ('Failed to get sample for {}'.format(f))
@@ -1004,21 +992,23 @@ def action_export_rekordbox_samples(args):
                 cmd = ['ffmpeg', '-i', sample, target]
                 subprocess.check_call(cmd)
         else:
-            target = get_export_sample_path(f, sample_ext, REKORDBOX_SAMPLE_PATH)
+            target = get_export_sample_path(
+                f, sample_ext, REKORDBOX_SAMPLE_PATH)
             if not os.path.exists(target):
                 shutil.copy(sample, target)
         assert os.path.exists(target)
         record['rekordbox_sample'] = target.decode('utf-8')
-    # NO PETER: you erase non-recordbox songs this way!
-    #write_db_file(args.db_filename, db_dict)        
+    write_db_file(args.db_filename, db_dict)
 
 
 def action_export_mp3_samples(args):
-    db_dict = get_valid_db_dict(args.db_filename, exclude_x_rekordbox=True)
-    files = sorted(db_dict.keys(), key=str.lower)
+    db_dict = read_db_file(args.db_filename)
+    files = get_ableton_files()
     for f in files:
-        print ('Starting', f)
         record = db_dict[f]
+        if not use_for_rekordbox(record):
+            continue
+        print ('Starting', f)
         sample = get_sample_unicode(record)
         if sample is None:
             print ('Failed to get sample for {}'.format(f))
@@ -1034,13 +1024,14 @@ def action_export_mp3_samples(args):
             # convert these
             target = get_export_sample_path(f, '.mp3', MP3_SAMPLE_PATH)
             if not os.path.exists(target):
-                cmd = ['ffmpeg', '-i', sample, '-codec:a', 'libmp3lame', '-b:a', '320k', target]
+                cmd = ['ffmpeg', '-i', sample, '-codec:a',
+                       'libmp3lame', '-b:a', '320k', target]
                 subprocess.check_call(cmd)
         assert os.path.exists(target)
         os.utime(target, (time.time(), get_alc_ts(record)))
-        #record['mp3_sample'] = target.decode('utf-8')
-    # NO!  DO NOT WRITE THIS DICT
-    #write_db_file(args.db_filename, db_dict) 
+        record['mp3_sample'] = target.decode('utf-8')
+    write_db_file(args.db_filename, db_dict)
+
 
 def action_fix_stupid(args):
     db_dict = read_db_file(args.db_filename)
@@ -1049,7 +1040,7 @@ def action_fix_stupid(args):
         if f not in db_dict:
             print (f)
             # shutil.move(f, '../x_songs/')
-            
+
 
 ###########
 # main
@@ -1069,7 +1060,6 @@ def parse_args():
     # TODO: pick one?  print is raw, list is pretty
     # This should match listing orders in GUI, be pretty, and be the new dump
     subparsers.add_parser('print').set_defaults(func=action_print)
-    subparsers.add_parser('list').set_defaults(func=action_list_by_name)
     subparsers.add_parser('list_sets').set_defaults(func=action_list_sets)
 
     subparsers.add_parser('keyfreq').set_defaults(func=action_key_frequency)

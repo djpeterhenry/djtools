@@ -590,7 +590,7 @@ class App:
                         if cam_song_num not in cam_filter_numbers:
                             keep = False
 
-                        # This is the only way to see x tags
+            # This is the only way to see x tags
             is_x = 'x' in tag_list and tag != 'x'
             if is_x:
                 keep = False
