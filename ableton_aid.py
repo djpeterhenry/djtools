@@ -759,6 +759,8 @@ def action_update_db_clips(args, force=True):
 
 
 def action_export_rekordbox(args):
+    USE_REKORDBOX_SAMPLE = True
+
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
 
@@ -802,8 +804,10 @@ def action_export_rekordbox(args):
         record = db_dict[f]
         if not use_for_rekordbox(record):
             continue
-        # sample = get_sample_unicode(record)
-        sample = get_existing_rekordbox_sample(record)
+        if USE_REKORDBOX_SAMPLE:
+            sample = get_existing_rekordbox_sample(record)
+        else:
+            sample = get_sample_unicode(record)
         if sample is None:
             print ('Error getting sample for {}'.format(f))
             continue
@@ -870,10 +874,13 @@ def action_export_rekordbox(args):
                 first_marker_beat, first_marker_sec, start_beat, first_bpm)
 
             # NOTE(peter): this may be wrong if the bpm changes a lot...
-            end_beat = clip['end']
-            end_seconds = get_seconds_for_beat(
-                first_marker_beat, first_marker_sec, end_beat, first_bpm)
-            et_track.set('TotalTime', str(end_seconds - start_seconds))
+            #end_beat = clip['end']
+            #end_seconds = get_seconds_for_beat(first_marker_beat, first_marker_sec, end_beat, first_bpm)
+            #et_track.set('TotalTime', str(end_seconds - start_seconds))
+            # Go back to just setting 20:00 for all tracks because it wants full sample length
+            # Better would be extracting full sample duration and using that,
+            # but needlessly slow
+            et_track.set('TotalTime', str(60 * 20))
 
             if start_beat < first_marker_beat:
                 beat_grid_markers.append(
@@ -930,21 +937,26 @@ def action_export_rekordbox(args):
             et_track.set('Key', str(track_to_id[f]))
         set_playlist_count(et_list)
 
+    def add_folder(et_parent, name):
+        result = ET.SubElement(et_parent, 'NODE')
+        result.set('Type', '0')
+        result.set('Name', name)
+        return result
+
     # now the playlists...
     et_playlists = ET.SubElement(et_dj_playlists, 'PLAYLISTS')
-    et_root_node = ET.SubElement(et_playlists, 'NODE')
-    et_root_node.set('Type', '0')
-    et_root_node.set('Name', 'ROOT')
+    et_root_node = add_folder(et_playlists, 'ROOT')
+
+    # version playlist as root
+    et_version_node = add_folder(et_root_node, 'V2')
 
     # playlist for all
-    add_playlist_for_files(et_root_node, 'All', collection_by_name)
+    add_playlist_for_files(et_version_node, 'ALL', collection_by_name)
 
     # folders for bpm
     bpm_range = 3
     for bpm in xrange(80, 160, 2):
-        et_bpm_folder = ET.SubElement(et_root_node, 'NODE')
-        et_bpm_folder.set('Type', '0')
-        et_bpm_folder.set('Name', '{:03d} BPM'.format(bpm))
+        et_bpm_folder = add_folder(et_version_node, '{:03d} BPM'.format(bpm))
 
         # first all files matching bpm
         matching_files = [f for f in collection_by_name if
@@ -963,8 +975,9 @@ def action_export_rekordbox(args):
                 if cam_num not in cam_num_list:
                     continue
                 matching_files.append(f)
+            str_minor, str_major = get_keys_for_camelot_number(key)
             add_playlist_for_files(
-                et_bpm_folder, '{:02d} KEY'.format(key), matching_files)
+                et_bpm_folder, '{:02d} [{}, {}]'.format(key, str_minor, str_major), matching_files)
         set_folder_count(et_bpm_folder)
     set_folder_count(et_root_node)
 
