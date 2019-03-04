@@ -837,8 +837,8 @@ def action_export_rekordbox(args):
         # abuse comment for alc+date
         et_track.set('Comments', get_date_from_ts(get_alc_or_last_ts(record)))
 
-        # track number is random
-        et_track.set('TrackNumber', str(random.randint(0, 2**31)))
+        # abuse album for random
+        et_track.set('Album', str(random.randint(0, 2**31)))
 
         first_bpm = None
 
