@@ -763,6 +763,7 @@ def action_export_rekordbox(args):
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
+    files = generate_date_plus_alc(files, db_dict)
 
     # just focus on single tracks to debug one for now
     def filter_cubic(filename):
@@ -798,7 +799,8 @@ def action_export_rekordbox(args):
     num_added = 0
     et_dj_playlists = ET.Element('DJ_PLAYLISTS')
     et_collection = ET.SubElement(et_dj_playlists, 'COLLECTION')
-    track_to_id = {}
+    file_to_id = {}
+    files_with_id = []
 
     for f in files:
         record = db_dict[f]
@@ -914,12 +916,11 @@ def action_export_rekordbox(args):
 
         # finally record this track id
         et_track.set('TrackID', str(num_added))
-        track_to_id[f] = num_added
+        file_to_id[f] = num_added
+        files_with_id.append(f)
         num_added += 1
     # this is great...add this at the end!
     et_collection.set('Entries', str(num_added))
-
-    collection_by_name = sorted(track_to_id.keys())
 
     def set_folder_count(et):
         et.set('Count', str(len(et.getchildren())))
@@ -934,7 +935,7 @@ def action_export_rekordbox(args):
         et_list.set('KeyType', '0')
         for f in files:
             et_track = ET.SubElement(et_list, 'TRACK')
-            et_track.set('Key', str(track_to_id[f]))
+            et_track.set('Key', str(file_to_id[f]))
         set_playlist_count(et_list)
 
     def add_folder(et_parent, name):
@@ -943,44 +944,62 @@ def action_export_rekordbox(args):
         result.set('Name', name)
         return result
 
+    def get_filtered_files(files, bpm, bpm_range, cam_num_list):
+        matching_files = []
+        for f in files:
+            record = db_dict[f]
+            if bpm and not matches_bpm_filter(bpm, bpm_range, record['bpm']):
+                continue
+            cam_num = get_camelot_num(record['key'])
+            if cam_num_list and cam_num not in cam_num_list:
+                continue
+            matching_files.append(f)
+        return matching_files
+
+    def get_bpm_name(bpm):
+        return '{:03d} BPM'.format(bpm)
+
+    def get_key_name(key):
+        str_minor, str_major = get_keys_for_camelot_number(key)
+        return '{:02d} [{}, {}]'.format(key, str_minor, str_major)
+
     # now the playlists...
     et_playlists = ET.SubElement(et_dj_playlists, 'PLAYLISTS')
     et_root_node = add_folder(et_playlists, 'ROOT')
 
     # version playlist as root
-    et_version_node = add_folder(et_root_node, 'V2')
+    et_version_node = add_folder(et_root_node, 'V3')
 
     # playlist for all
-    add_playlist_for_files(et_version_node, 'ALL', collection_by_name)
+    add_playlist_for_files(et_version_node, 'All', files_with_id)
 
-    # folders for bpm
-    bpm_range = 3
-    for bpm in xrange(80, 160, 2):
-        et_bpm_folder = add_folder(et_version_node, '{:03d} BPM'.format(bpm))
-
-        # first all files matching bpm
-        matching_files = [f for f in collection_by_name if
-                          matches_bpm_filter(bpm, bpm_range, db_dict[f]['bpm'])]
-        add_playlist_for_files(et_bpm_folder, 'ALL', matching_files)
+    # bpm filter
+    et_filter_rolder = add_folder(et_version_node, 'BPM Filter')
+    bpm_range = 2
+    for bpm in xrange(80, 161, 2):
+        et_bpm_folder = add_folder(et_filter_rolder, get_bpm_name(bpm))
+        matching_files = get_filtered_files(files_with_id, bpm, bpm_range, None)
+        add_playlist_for_files(et_bpm_folder, 'All', matching_files)
 
         # now per key
         for key in xrange(1, 13):
             cam_num_list = [key, get_relative_camelot_key(key, 1)]
-            matching_files = []
-            for f in collection_by_name:
-                record = db_dict[f]
-                if not matches_bpm_filter(bpm, bpm_range, record['bpm']):
-                    continue
-                cam_num = get_camelot_num(record['key'])
-                if cam_num not in cam_num_list:
-                    continue
-                matching_files.append(f)
-            str_minor, str_major = get_keys_for_camelot_number(key)
-            add_playlist_for_files(
-                et_bpm_folder, '{:02d} [{}, {}]'.format(key, str_minor, str_major), matching_files)
-        set_folder_count(et_bpm_folder)
-    set_folder_count(et_root_node)
+            matching_files = get_filtered_files(files_with_id, bpm, bpm_range, cam_num_list)
+            add_playlist_for_files(et_bpm_folder, get_key_name(key), matching_files)
 
+    # key filter
+    et_filter_rolder = add_folder(et_version_node, 'Key Filter')
+    for key in xrange(1,13):
+        et_key_folder = add_folder(et_filter_rolder, get_key_name(key))
+        matching_files = get_filtered_files(files_with_id, None, bpm_range, [key])
+        add_playlist_for_files(et_key_folder, 'All', matching_files)
+
+        bpm_range = 5
+        for bpm in xrange(80, 161, 5):
+            matching_files = get_filtered_files(files_with_id, bpm, bpm_range, [key])
+            add_playlist_for_files(et_key_folder, get_bpm_name(bpm), matching_files)
+
+    # finalize
     tree = ET.ElementTree(et_dj_playlists)
     tree.write(args.rekordbox_filename, encoding='utf-8', xml_declaration=True)
 
