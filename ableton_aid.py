@@ -893,8 +893,11 @@ def action_export_rekordbox(args):
             for b in beat_grid_markers:
                 add_beat_grid_marker(et_track, **b)
 
+            hot_cue_counter = 0
             # memory cue
             add_position_marker(et_track, 'Start', 0, -1, start_seconds)
+            add_position_marker(et_track, 'Start', 0, hot_cue_counter, start_seconds)
+            hot_cue_counter += 1
             # hot cue
             #add_position_marker(et_track, 'Start (hot)', 0, 0, start_seconds)
             # loop hot and memory queues
@@ -905,9 +908,9 @@ def action_export_rekordbox(args):
             loop_end_sec = get_seconds_for_beat(
                 first_marker_beat, first_marker_sec, loop_end_beat, first_bpm)
             add_position_marker(et_track, 'Start Loop',
-                                4, 0, loop_start_sec, loop_end_sec)
-            add_position_marker(et_track, 'Start Loop',
                                 4, -1, loop_start_sec, loop_end_sec)
+            add_position_marker(et_track, 'Start Loop',
+                                4, hot_cue_counter, loop_start_sec, loop_end_sec)
 
             # memory cue for first warp marker too if it's after start
             if start_beat < first_marker_beat:
