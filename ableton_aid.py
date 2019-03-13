@@ -1002,7 +1002,7 @@ def action_export_rekordbox(args):
     et_root_node = add_folder(et_playlists, 'ROOT')
 
     # version playlist as root
-    et_version_node = add_folder(et_root_node, 'V3')
+    et_version_node = add_folder(et_root_node, 'V4')
 
     # playlist for all
     add_playlist_for_files(et_version_node, 'All', files_with_id)
@@ -1032,6 +1032,9 @@ def action_export_rekordbox(args):
         for bpm in xrange(80, 161, 5):
             matching_files = get_filtered_files(files_with_id, bpm, bpm_range, [key])
             add_playlist_for_files(et_key_folder, get_bpm_name(bpm), matching_files)
+
+    # lists
+    # todo
 
     # finalize
     tree = ET.ElementTree(et_dj_playlists)
@@ -1119,6 +1122,7 @@ def action_test_lists(args):
 
 ###########
 # main
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
