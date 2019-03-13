@@ -1002,7 +1002,7 @@ def action_export_rekordbox(args):
     et_root_node = add_folder(et_playlists, 'ROOT')
 
     # version playlist as root
-    et_version_node = add_folder(et_root_node, 'V4')
+    et_version_node = add_folder(et_root_node, 'V3')
 
     # playlist for all
     add_playlist_for_files(et_version_node, 'All', files_with_id)
