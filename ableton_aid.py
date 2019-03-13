@@ -46,6 +46,7 @@ OLD_ALC_TS_CUTOFF = time.mktime(datetime.date(2016, 6, 12).timetuple())
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 MP3_SAMPLE_PATH = u'/Volumes/MacHelper/mp3_samples'
 
+LISTS_FOLDER = '/Users/peter/github/djpeterhenry.github.io/lists'
 
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
@@ -530,6 +531,36 @@ def get_existing_rekordbox_sample(record):
         pass
     return None
 
+
+def get_list_name_to_file(path):
+    files = [os.path.join(path, f) for f in os.listdir(path)]
+    name_to_file = {}
+    for f in files:
+        if not os.path.isfile(f):
+            continue
+        name, ext = os.path.splitext(os.path.basename(f))
+        if ext in ('.txt', '') and not name.startswith('.'):
+            name_to_file[name] = f
+    return name_to_file
+
+
+def get_list_from_file(filename, db_dict):
+    with open(filename) as f:
+        song_list = [song.strip() for song in f.readlines()]
+        display_and_file = []
+        for s in song_list:
+            alc_filename = s + '.alc'
+            als_filename = s + '.als'
+            if s in db_dict:
+                t = (s,s)
+            elif als_filename in db_dict:
+                t = (s,als_filename)
+            elif alc_filename in db_dict:
+                t = (s,alc_filename)
+            else:
+                t = (s, None)
+            display_and_file.append(t)
+        return display_and_file
 
 ###########
 # Updated actions
@@ -1077,6 +1108,15 @@ def action_fix_stupid(args):
             # shutil.move(f, '../x_songs/')
 
 
+def action_test_lists(args):
+    db_dict = read_db_file(args.db_filename)
+    name_to_file = get_list_name_to_file(LISTS_FOLDER)
+    for name, list_file in name_to_file.iteritems():
+        print ('--', name)
+        for display, f in get_list_from_file(list_file, db_dict):
+            if f is None:
+                print (display)
+
 ###########
 # main
 
@@ -1134,6 +1174,8 @@ def parse_args():
     p_mp3_samples.set_defaults(func=action_export_mp3_samples)
 
     subparsers.add_parser('fix_stupid').set_defaults(func=action_fix_stupid)
+
+    subparsers.add_parser('test_lists').set_defaults(func=action_test_lists)
 
     return parser.parse_args()
 

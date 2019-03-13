@@ -31,8 +31,6 @@ SKIP_BPM = 'ALL BPM'
 LOOK_TAG = 'LOOK'
 GOOD_TAG = 'GOOD'
 
-LISTS_FOLDER = '/Users/peter/github/djpeterhenry.github.io/lists'
-
 # print samples is amazing and you should fix it
 
 
@@ -141,7 +139,7 @@ class App:
             b.pack(side=LEFT, anchor=W)
 
         self.lists_selector = ListsSelector(
-            frame_top, LISTS_FOLDER, self.update_listbox)
+            frame_top, aa.LISTS_FOLDER, self.update_listbox)
 
         # key Label
         self.key_label_var = StringVar()
