@@ -1022,9 +1022,9 @@ def action_export_rekordbox(args):
             add_playlist_for_files(et_bpm_folder, get_key_name(key), matching_files)
 
     # key filter
-    et_filter_rolder = add_folder(et_version_node, 'Key Filter')
+    et_filter_folder = add_folder(et_version_node, 'Key Filter')
     for key in xrange(1,13):
-        et_key_folder = add_folder(et_filter_rolder, get_key_name(key))
+        et_key_folder = add_folder(et_filter_folder, get_key_name(key))
         matching_files = get_filtered_files(files_with_id, None, bpm_range, [key])
         add_playlist_for_files(et_key_folder, 'All', matching_files)
 
@@ -1034,7 +1034,12 @@ def action_export_rekordbox(args):
             add_playlist_for_files(et_key_folder, get_bpm_name(bpm), matching_files)
 
     # lists
-    # todo
+    et_lists_folder = add_folder(et_version_node, 'Lists')
+    name_to_file = get_list_name_to_file(LISTS_FOLDER)
+    for name, list_file in sorted(name_to_file.iteritems()):
+        l =  get_list_from_file(list_file, db_dict)
+        matching_files = [f for _, f in l if f is not None]
+        add_playlist_for_files(et_lists_folder, name, matching_files)
 
     # finalize
     tree = ET.ElementTree(et_dj_playlists)
@@ -1114,7 +1119,7 @@ def action_fix_stupid(args):
 def action_test_lists(args):
     db_dict = read_db_file(args.db_filename)
     name_to_file = get_list_name_to_file(LISTS_FOLDER)
-    for name, list_file in name_to_file.iteritems():
+    for name, list_file in sorted(name_to_file.iteritems()):
         print ('--', name)
         for display, f in get_list_from_file(list_file, db_dict):
             if f is None:
