@@ -796,13 +796,6 @@ def action_export_rekordbox(args):
     files = get_ableton_files()
     files = generate_date_plus_alc(files, db_dict)
 
-    # just focus on single tracks to debug one for now
-    def filter_cubic(filename):
-        return 'cubic' in filename.lower() and 'got this' in filename.lower()
-
-    def filter_sticky(filename):
-        return 'sticky' in filename.lower() and 'lane' in filename.lower()
-    # can filter files here for testing
 
     def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
         et_tempo = ET.SubElement(et_track, 'TEMPO')
@@ -1002,7 +995,7 @@ def action_export_rekordbox(args):
     et_root_node = add_folder(et_playlists, 'ROOT')
 
     # version playlist as root
-    et_version_node = add_folder(et_root_node, 'V3')
+    et_version_node = add_folder(et_root_node, 'V4')
 
     # playlist for all
     add_playlist_for_files(et_version_node, 'All', files_with_id)
