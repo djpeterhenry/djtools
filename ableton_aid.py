@@ -791,6 +791,7 @@ def action_update_db_clips(args, force=True):
 
 def action_export_rekordbox(args):
     USE_REKORDBOX_SAMPLE = False
+    VERSION = 5
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -975,7 +976,7 @@ def action_export_rekordbox(args):
         matching_files = []
         for f in files:
             record = db_dict[f]
-            if bpm and not matches_bpm_filter(bpm, bpm_range, record['bpm']):
+            if bpm is not None and not matches_bpm_filter(bpm, bpm_range, record['bpm']):
                 continue
             cam_num = get_camelot_num(record['key'])
             if cam_num_list and cam_num not in cam_num_list:
@@ -995,7 +996,7 @@ def action_export_rekordbox(args):
     et_root_node = add_folder(et_playlists, 'ROOT')
 
     # version playlist as root
-    et_version_node = add_folder(et_root_node, 'V4')
+    et_version_node = add_folder(et_root_node, 'V{:02}'.format(VERSION))
 
     # playlist for all
     add_playlist_for_files(et_version_node, 'All', files_with_id)
@@ -1003,7 +1004,8 @@ def action_export_rekordbox(args):
     # bpm filter
     et_filter_rolder = add_folder(et_version_node, 'BPM Filter')
     bpm_range = 2
-    for bpm in xrange(80, 161, 2):
+    bpm_centers = [0] + range(80, 161, 2)
+    for bpm in bpm_centers:
         et_bpm_folder = add_folder(et_filter_rolder, get_bpm_name(bpm))
         matching_files = get_filtered_files(files_with_id, bpm, bpm_range, None)
         add_playlist_for_files(et_bpm_folder, 'All', matching_files)
@@ -1022,7 +1024,8 @@ def action_export_rekordbox(args):
         add_playlist_for_files(et_key_folder, 'All', matching_files)
 
         bpm_range = 5
-        for bpm in xrange(80, 161, 5):
+        bpm_centers = [0] + range(80, 161, 5)
+        for bpm in bpm_centers:
             matching_files = get_filtered_files(files_with_id, bpm, bpm_range, [key])
             add_playlist_for_files(et_key_folder, get_bpm_name(bpm), matching_files)
 
