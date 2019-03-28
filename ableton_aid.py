@@ -791,7 +791,7 @@ def action_update_db_clips(args, force=True):
 
 def action_export_rekordbox(args):
     USE_REKORDBOX_SAMPLE = False
-    VERSION = 5
+    VERSION = 6
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -1001,33 +1001,32 @@ def action_export_rekordbox(args):
     # playlist for all
     add_playlist_for_files(et_version_node, 'All', files_with_id)
 
-    # bpm filter
-    et_filter_rolder = add_folder(et_version_node, 'BPM Filter')
+    # tight bpm filter
+    et_filter_rolder = add_folder(et_version_node, 'BPM Filter (2)')
     bpm_range = 2
     bpm_centers = [0] + range(80, 161, 2)
     for bpm in bpm_centers:
         et_bpm_folder = add_folder(et_filter_rolder, get_bpm_name(bpm))
         matching_files = get_filtered_files(files_with_id, bpm, bpm_range, None)
         add_playlist_for_files(et_bpm_folder, 'All', matching_files)
-
-        # now per key
+        # (key, key+1)
         for key in xrange(1, 13):
             cam_num_list = [key, get_relative_camelot_key(key, 1)]
             matching_files = get_filtered_files(files_with_id, bpm, bpm_range, cam_num_list)
             add_playlist_for_files(et_bpm_folder, get_key_name(key), matching_files)
 
-    # key filter
-    et_filter_folder = add_folder(et_version_node, 'Key Filter')
-    for key in xrange(1,13):
-        et_key_folder = add_folder(et_filter_folder, get_key_name(key))
-        matching_files = get_filtered_files(files_with_id, None, bpm_range, [key])
-        add_playlist_for_files(et_key_folder, 'All', matching_files)
-
-        bpm_range = 5
-        bpm_centers = [0] + range(80, 161, 5)
-        for bpm in bpm_centers:
+    # loose bpm filter
+    et_filter_folder = add_folder(et_version_node, 'BPM Filter (5)')
+    bpm_range = 5
+    bpm_centers = [0] + range(80, 161, 5)
+    for bpm in bpm_centers:
+        et_bpm_folder = add_folder(et_filter_folder, get_bpm_name(bpm))
+        matching_files = get_filtered_files(files_with_id, bpm, bpm_range, None)
+        add_playlist_for_files(et_bpm_folder, 'All', matching_files)
+        # (key)
+        for key in xrange(1,13):
             matching_files = get_filtered_files(files_with_id, bpm, bpm_range, [key])
-            add_playlist_for_files(et_key_folder, get_bpm_name(bpm), matching_files)
+            add_playlist_for_files(et_bpm_folder, get_key_name(key), matching_files)
 
     # lists
     et_lists_folder = add_folder(et_version_node, 'Lists')
