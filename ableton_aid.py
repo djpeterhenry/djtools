@@ -18,6 +18,7 @@ import re
 import random
 import subprocess
 import gzip
+import codecs
 import xml.etree.ElementTree as ET
 import json
 import time
@@ -544,26 +545,33 @@ def get_list_name_to_file(path):
     return name_to_file
 
 
+def get_song_in_db(s, db_dict):
+    alc_filename = s + '.alc'
+    als_filename = s + '.als'
+    if s in db_dict:
+        t = (s, s)
+    elif als_filename in db_dict:
+        t = (s, als_filename)
+    elif alc_filename in db_dict:
+        t = (s, alc_filename)
+    else:
+        t = (s, None)
+    return t
+
+
 def get_list_from_file(filename, db_dict):
     with open(filename) as f:
         song_list = [song.strip() for song in f.readlines()]
         display_and_file = []
         for s in song_list:
-            alc_filename = s + '.alc'
-            als_filename = s + '.als'
-            if s in db_dict:
-                t = (s,s)
-            elif als_filename in db_dict:
-                t = (s,als_filename)
-            elif alc_filename in db_dict:
-                t = (s,alc_filename)
-            else:
-                t = (s, None)
+            t = get_song_in_db(s, db_dict)
             display_and_file.append(t)
         return display_and_file
 
-###########
-# Updated actions
+
+
+####################################
+# actions start here
 
 def action_add(args):
     db_dict = read_db_file(args.db_filename)
@@ -791,7 +799,7 @@ def action_update_db_clips(args, force=True):
 
 def action_export_rekordbox(args):
     USE_REKORDBOX_SAMPLE = False
-    VERSION = 6
+    VERSION = 7
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -1102,23 +1110,39 @@ def action_export_mp3_samples(args):
     write_db_file(args.db_filename, db_dict)
 
 
-def action_fix_stupid(args):
-    db_dict = read_db_file(args.db_filename)
-    alc_files = get_ableton_files()
-    for f in alc_files:
-        if f not in db_dict:
-            print (f)
-            # shutil.move(f, '../x_songs/')
-
-
 def action_test_lists(args):
     db_dict = read_db_file(args.db_filename)
     name_to_file = get_list_name_to_file(LISTS_FOLDER)
     for name, list_file in sorted(name_to_file.iteritems()):
-        print ('--', name)
+        print ('---', name)
         for display, f in get_list_from_file(list_file, db_dict):
             if f is None:
                 print (display)
+
+
+def action_rekordbox_history(args):
+    db_dict = read_db_file(args.db_filename)
+
+    p_line = re.compile(ur'\d+\t(.*)\t(.*) \[.*$')
+
+    # get date from filename
+    p_filename = re.compile(ur'HISTORY (\d+)-(\d+)-(\d+)\.txt')
+    m_filename = p_filename.match(os.path.basename(args.history_filename))
+    if not m_filename:
+        return
+    year = m_filename.group(1)
+    month = m_filename.group(2)
+    day = m_filename.group(3)
+
+    with codecs.open(args.history_filename, encoding='utf-16le') as h:
+        for line in h.readlines()[1:]:
+            m = p_line.match(line)
+            if m:
+                s = u'{} - {}'.format(m.group(1), m.group(2))
+                s_str = s.encode('utf8')
+                _, f = get_song_in_db(s_str, db_dict)
+                print (f)
+
 
 ###########
 # main
@@ -1177,9 +1201,11 @@ def parse_args():
     p_mp3_samples = subparsers.add_parser('export_mp3_samples')
     p_mp3_samples.set_defaults(func=action_export_mp3_samples)
 
-    subparsers.add_parser('fix_stupid').set_defaults(func=action_fix_stupid)
-
     subparsers.add_parser('test_lists').set_defaults(func=action_test_lists)
+
+    p_rekordbox_history = subparsers.add_parser('rekordbox_history')
+    p_rekordbox_history.add_argument('history_filename')
+    p_rekordbox_history.set_defaults(func=action_rekordbox_history)
 
     return parser.parse_args()
 
