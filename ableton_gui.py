@@ -721,10 +721,7 @@ class App:
     def ts_filename(self, filename):
         record = self.db_dict[filename]
         ts = time.time()
-        try:
-            record['ts_list'].append(ts)
-        except KeyError:
-            record['ts_list'] = [ts]
+        aa.add_ts(record, ts)
 
     def command_copy(self):
         filename_path = self.get_selected_filepath()

@@ -386,6 +386,15 @@ def get_files_from_pairs(pairs):
     return [file for _, file in pairs]
 
 
+def add_ts(record, ts):
+    try:
+        current = record['ts_list']
+        if ts not in current:
+            current.append(ts)
+    except KeyError:
+        record['ts_list'] = [ts]
+
+
 def get_ts_list(record):
     try:
         ts_list = record['ts_list']
@@ -397,7 +406,7 @@ def get_ts_list(record):
 def get_last_ts(record):
     ts_list = get_ts_list(record)
     try:
-        return ts_list[-1]
+        return sorted(ts_list)[-1]
     except IndexError:
         return 0
 
@@ -1162,7 +1171,13 @@ def action_rekordbox_history(args):
                 s = u'{} - {}'.format(m.group(1), m.group(2))
                 s_str = s.encode('utf8')
                 _, f = get_song_in_db(s_str, db_dict)
-                print ('{}:{}'.format(f, date_ts + index))
+                if f is not None:
+                    record = db_dict[f]
+                    ts_to_write = date_ts + index
+                    print ('{}:{}'.format(f, ts_to_write))
+                    add_ts(record, ts_to_write)
+    # write
+    write_db_file(args.db_filename, db_dict)
 
 
 ###########
