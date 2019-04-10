@@ -42,7 +42,11 @@ ABLETON_EXTENSIONS = ['.alc', '.als']
 SAMPLE_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.aiff', '.flac']
 ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 
-OLD_ALC_TS_CUTOFF = time.mktime(datetime.date(2016, 6, 12).timetuple())
+def get_ts_for(year, month, day):
+    return time.mktime(datetime.date(year, month, day).timetuple())
+
+#OLD_ALC_TS_CUTOFF = time.mktime(datetime.date(2016, 6, 12).timetuple())
+OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 MP3_SAMPLE_PATH = u'/Volumes/MacHelper/mp3_samples'
@@ -72,14 +76,6 @@ def get_ableton_files():
             if is_ableton_file(filename):
                 result.append(filename)
     return sorted(result, key=str.lower)
-
-
-def get_ts_list(record):
-    try:
-        ts_list = record['ts_list']
-    except:
-        ts_list = []
-    return ts_list
 
 
 def get_base_filename(filename, record):
@@ -388,6 +384,14 @@ def generate_sample(valid_alc_files, db_dict):
 
 def get_files_from_pairs(pairs):
     return [file for _, file in pairs]
+
+
+def get_ts_list(record):
+    try:
+        ts_list = record['ts_list']
+    except:
+        ts_list = []
+    return ts_list
 
 
 def get_last_ts(record):
@@ -1130,18 +1134,26 @@ def action_rekordbox_history(args):
     m_filename = p_filename.match(os.path.basename(args.history_filename))
     if not m_filename:
         return
-    year = m_filename.group(1)
-    month = m_filename.group(2)
-    day = m_filename.group(3)
+    year = int(m_filename.group(1))
+    month = int(m_filename.group(2))
+    day = int(m_filename.group(3))
+    date_ts = get_ts_for(year, month, day)
+    # fun print of those later:
+    if False:
+        for f, record in db_dict.iteritems():
+            last_ts = get_alc_or_last_ts(record)
+            if last_ts > date_ts:
+                print (f)
+        return
 
     with codecs.open(args.history_filename, encoding='utf-16le') as h:
-        for line in h.readlines()[1:]:
+        for index, line in enumerate(h.readlines()[1:]):
             m = p_line.match(line)
             if m:
                 s = u'{} - {}'.format(m.group(1), m.group(2))
                 s_str = s.encode('utf8')
                 _, f = get_song_in_db(s_str, db_dict)
-                print (f)
+                print ('{}:{}'.format(f, date_ts + index))
 
 
 ###########
