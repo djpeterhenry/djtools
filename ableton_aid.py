@@ -1124,6 +1124,15 @@ def action_test_lists(args):
                 print (display)
 
 
+def action_test_artist_track(args):
+    db_dict = read_db_file(args.db_filename)
+    files = get_ableton_files()
+    for f in files:
+        artist, track = get_artist_and_track(f)
+        if not artist or not track:
+            print (f)
+
+
 def action_rekordbox_history(args):
     db_dict = read_db_file(args.db_filename)
 
@@ -1214,6 +1223,7 @@ def parse_args():
     p_mp3_samples.set_defaults(func=action_export_mp3_samples)
 
     subparsers.add_parser('test_lists').set_defaults(func=action_test_lists)
+    subparsers.add_parser('test_artists').set_defaults(func=action_test_artist_track)
 
     p_rekordbox_history = subparsers.add_parser('rekordbox_history')
     p_rekordbox_history.add_argument('history_filename')
