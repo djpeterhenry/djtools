@@ -812,7 +812,7 @@ def action_update_db_clips(args, force=True):
 
 def action_export_rekordbox(args):
     USE_REKORDBOX_SAMPLE = False
-    VERSION = 7
+    VERSION = 8
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -1030,10 +1030,11 @@ def action_export_rekordbox(args):
         et_bpm_folder = add_folder(et_filter_rolder, get_bpm_name(bpm))
         matching_files = get_filtered_files(files_with_id, bpm, bpm_range, None)
         add_playlist_for_files(et_bpm_folder, 'All', matching_files)
-        # (key, key+1)
+        
         for key in xrange(1, 13):
-            cam_num_list = [key, get_relative_camelot_key(key, 1)]
-            matching_files = get_filtered_files(files_with_id, bpm, bpm_range, cam_num_list)
+            # (key, key+1)
+            keys = [key, get_relative_camelot_key(key, 1)]
+            matching_files = get_filtered_files(files_with_id, bpm, bpm_range, keys)
             add_playlist_for_files(et_bpm_folder, get_key_name(key), matching_files)
 
     # loose bpm filter
@@ -1044,9 +1045,10 @@ def action_export_rekordbox(args):
         et_bpm_folder = add_folder(et_filter_folder, get_bpm_name(bpm))
         matching_files = get_filtered_files(files_with_id, bpm, bpm_range, None)
         add_playlist_for_files(et_bpm_folder, 'All', matching_files)
-        # (key)
-        for key in xrange(1,13):
-            matching_files = get_filtered_files(files_with_id, bpm, bpm_range, [key])
+
+        for key in xrange(1, 13):
+            keys = [key, get_relative_camelot_key(key, 1)]
+            matching_files = get_filtered_files(files_with_id, bpm, bpm_range, keys)
             add_playlist_for_files(et_bpm_folder, get_key_name(key), matching_files)
 
     # lists
