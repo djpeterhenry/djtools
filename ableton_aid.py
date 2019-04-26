@@ -49,7 +49,8 @@ def get_ts_for(year, month, day):
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
-MP3_SAMPLE_PATH = u'/Volumes/MacHelper/mp3_samples'
+#MP3_SAMPLE_PATH = u'/Volumes/MacHelper/mp3_samples'
+MP3_SAMPLE_PATH = u'/Volumes/music/mp3_samples/'
 
 LISTS_FOLDER = '/Users/peter/github/djpeterhenry.github.io/lists'
 
@@ -812,7 +813,7 @@ def action_update_db_clips(args, force=True):
 
 def action_export_rekordbox(args):
     USE_REKORDBOX_SAMPLE = False
-    VERSION = 9
+    VERSION = 10
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -1045,7 +1046,7 @@ def action_export_rekordbox(args):
     ##########
     # hot damn 5*2
     meta_bpm_range = 10
-    for meta_bpm in xrange(80, 161, meta_bpm_range):
+    for meta_bpm in xrange(80, 159, meta_bpm_range):
         print('{}'.format(meta_bpm))
         meta_bpm_and_range = (meta_bpm, meta_bpm_range)
         et_meta_folder = add_folder(
