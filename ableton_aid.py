@@ -812,7 +812,7 @@ def action_update_db_clips(args, force=True):
 
 def action_export_rekordbox(args):
     USE_REKORDBOX_SAMPLE = False
-    VERSION = 8
+    VERSION = 9
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -1022,34 +1022,38 @@ def action_export_rekordbox(args):
     # playlist for all
     add_playlist_for_files(et_version_node, 'All', files_with_id)
 
-    # tight bpm filter
-    et_filter_rolder = add_folder(et_version_node, 'BPM Filter (2)')
-    bpm_range = 2
-    bpm_centers = [0] + range(80, 161, 2)
-    for bpm in bpm_centers:
-        et_bpm_folder = add_folder(et_filter_rolder, get_bpm_name(bpm))
-        matching_files = get_filtered_files(files_with_id, bpm, bpm_range, None)
-        add_playlist_for_files(et_bpm_folder, 'All', matching_files)
-        
-        for key in xrange(1, 13):
-            # (key, key+1)
-            keys = [key, get_relative_camelot_key(key, 1)]
-            matching_files = get_filtered_files(files_with_id, bpm, bpm_range, keys)
-            add_playlist_for_files(et_bpm_folder, get_key_name(key), matching_files)
+    def add_bpm_folders(et_filter_folder, bpm_range, meta_bpm_and_range=None):
+        bpm_centers = [0] + range(80, 161, bpm_range)
+        for bpm in bpm_centers:
+            print(bpm)
+            if meta_bpm_and_range is not None:
+                print(meta_bpm_and_range)
+                meta_bpm, meta_bpm_range = meta_bpm_and_range
+                if bpm < meta_bpm or bpm >= meta_bpm + meta_bpm_range:
+                    continue
 
-    # loose bpm filter
-    et_filter_folder = add_folder(et_version_node, 'BPM Filter (5)')
-    bpm_range = 5
-    bpm_centers = [0] + range(80, 161, 5)
-    for bpm in bpm_centers:
-        et_bpm_folder = add_folder(et_filter_folder, get_bpm_name(bpm))
-        matching_files = get_filtered_files(files_with_id, bpm, bpm_range, None)
-        add_playlist_for_files(et_bpm_folder, 'All', matching_files)
+            et_bpm_folder = add_folder(et_filter_folder, get_bpm_name(bpm))
+            matching_files = get_filtered_files(files_with_id, bpm, bpm_range, None)
+            add_playlist_for_files(et_bpm_folder, 'All', matching_files)
+            
+            for key in xrange(1, 13):
+                # (key, key+1)
+                keys = [key, get_relative_camelot_key(key, 1)]
+                matching_files = get_filtered_files(files_with_id, bpm, bpm_range, keys)
+                add_playlist_for_files(et_bpm_folder, get_key_name(key), matching_files)
 
-        for key in xrange(1, 13):
-            keys = [key, get_relative_camelot_key(key, 1)]
-            matching_files = get_filtered_files(files_with_id, bpm, bpm_range, keys)
-            add_playlist_for_files(et_bpm_folder, get_key_name(key), matching_files)
+    ##########
+    # hot damn 5*2
+    meta_bpm_range = 10
+    for meta_bpm in xrange(80, 161, meta_bpm_range):
+        print('{}'.format(meta_bpm))
+        meta_bpm_and_range = (meta_bpm, meta_bpm_range)
+        et_meta_folder = add_folder(
+            et_version_node, '{}-{}'.format(meta_bpm, meta_bpm + (meta_bpm_range - 1)))
+        et_filter_folder = add_folder(et_meta_folder, 'BPM Filter (2)')
+        add_bpm_folders(et_filter_folder, 2, meta_bpm_and_range)
+        et_filter_folder = add_folder(et_meta_folder, 'BPM Filter (5)')
+        add_bpm_folders(et_filter_folder, 5, meta_bpm_and_range)
 
     # lists
     et_lists_folder = add_folder(et_version_node, 'Lists')
