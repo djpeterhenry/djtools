@@ -164,6 +164,10 @@ def use_for_rekordbox(record):
     return True
 
 
+def is_vocal(record):
+    return 'vocal' in record['tags']
+
+
 def alc_to_str(alc_filename):
     with gzip.open(alc_filename, 'rb') as f:
         return f.read()
@@ -813,7 +817,7 @@ def action_update_db_clips(args, force=True):
 
 def action_export_rekordbox(args):
     USE_REKORDBOX_SAMPLE = False
-    VERSION = 10
+    VERSION = 11
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -994,7 +998,7 @@ def action_export_rekordbox(args):
         result.set('Name', name)
         return result
 
-    def get_filtered_files(files, bpm, bpm_range, cam_num_list):
+    def get_filtered_files(files, bpm, bpm_range, cam_num_list, vocal):
         matching_files = []
         for f in files:
             record = db_dict[f]
@@ -1002,6 +1006,8 @@ def action_export_rekordbox(args):
                 continue
             cam_num = get_camelot_num(record['key'])
             if cam_num_list and cam_num not in cam_num_list:
+                continue
+            if not (is_vocal(record) or not vocal):
                 continue
             matching_files.append(f)
         return matching_files
@@ -1034,19 +1040,32 @@ def action_export_rekordbox(args):
                     continue
 
             et_bpm_folder = add_folder(et_filter_folder, get_bpm_name(bpm))
-            matching_files = get_filtered_files(files_with_id, bpm, bpm_range, None)
+            matching_files = get_filtered_files(files=files_with_id,
+                                                bpm=bpm, bpm_range=bpm_range,
+                                                cam_num_list=None,
+                                                vocal=False)
             add_playlist_for_files(et_bpm_folder, 'All', matching_files)
-            
+
+            matching_files = get_filtered_files(files=files_with_id,
+                                                bpm=bpm, bpm_range=bpm_range,
+                                                cam_num_list=None,
+                                                vocal=True)
+            add_playlist_for_files(et_bpm_folder, 'Vocal', matching_files)
+
             for key in xrange(1, 13):
                 # (key, key+1)
                 keys = [key, get_relative_camelot_key(key, 1)]
-                matching_files = get_filtered_files(files_with_id, bpm, bpm_range, keys)
-                add_playlist_for_files(et_bpm_folder, get_key_name(key), matching_files)
+                matching_files = get_filtered_files(files=files_with_id,
+                                                    bpm=bpm, bpm_range=bpm_range,
+                                                    cam_num_list=keys,
+                                                    vocal=False)
+                add_playlist_for_files(
+                    et_bpm_folder, get_key_name(key), matching_files)
 
     ##########
     # hot damn 5*2
     meta_bpm_range = 10
-    for meta_bpm in xrange(80, 159, meta_bpm_range):
+    for meta_bpm in [0] + range(80, 159, meta_bpm_range):
         print('{}'.format(meta_bpm))
         meta_bpm_and_range = (meta_bpm, meta_bpm_range)
         et_meta_folder = add_folder(
