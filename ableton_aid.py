@@ -999,16 +999,24 @@ def action_export_rekordbox(args):
         return result
 
     def get_filtered_files(files, bpm, bpm_range, cam_num_list, vocal):
+        """
+        bpm can be None
+        cam_num_list can be None
+        vocal can be None
+        """
         matching_files = []
         for f in files:
             record = db_dict[f]
             if bpm is not None and not matches_bpm_filter(bpm, bpm_range, record['bpm']):
                 continue
             cam_num = get_camelot_num(record['key'])
-            if cam_num_list and cam_num not in cam_num_list:
+            if cam_num_list is not None and cam_num not in cam_num_list:
                 continue
-            if not (is_vocal(record) or not vocal):
-                continue
+            if vocal is not None:
+                if vocal and not is_vocal(record):
+                    continue
+                if not vocal and is_vocal(record):
+                    continue
             matching_files.append(f)
         return matching_files
 
@@ -1043,7 +1051,7 @@ def action_export_rekordbox(args):
             matching_files = get_filtered_files(files=files_with_id,
                                                 bpm=bpm, bpm_range=bpm_range,
                                                 cam_num_list=None,
-                                                vocal=False)
+                                                vocal=None)
             add_playlist_for_files(et_bpm_folder, 'All', matching_files)
 
             matching_files = get_filtered_files(files=files_with_id,
@@ -1067,6 +1075,7 @@ def action_export_rekordbox(args):
     meta_bpm_range = 10
     for meta_bpm in [0] + range(80, 159, meta_bpm_range):
         print('{}'.format(meta_bpm))
+
         meta_bpm_and_range = (meta_bpm, meta_bpm_range)
         et_meta_folder = add_folder(
             et_version_node, '{}-{}'.format(meta_bpm, meta_bpm + (meta_bpm_range - 1)))
