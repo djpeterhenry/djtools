@@ -48,7 +48,8 @@ def get_ts_for(year, month, day):
 #OLD_ALC_TS_CUTOFF = time.mktime(datetime.date(2016, 6, 12).timetuple())
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
-REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
+#REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
+REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 #MP3_SAMPLE_PATH = u'/Volumes/MacHelper/mp3_samples'
 MP3_SAMPLE_PATH = u'/Volumes/music/mp3_samples/'
 
