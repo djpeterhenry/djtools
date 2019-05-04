@@ -817,7 +817,7 @@ def action_update_db_clips(args, force=True):
 
 def action_export_rekordbox(args):
     USE_REKORDBOX_SAMPLE = False
-    VERSION = 11
+    VERSION = 12
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -1071,18 +1071,10 @@ def action_export_rekordbox(args):
                     et_bpm_folder, get_key_name(key), matching_files)
 
     ##########
-    # hot damn 5*2
-    meta_bpm_range = 10
-    for meta_bpm in [0] + range(80, 159, meta_bpm_range):
-        print('{}'.format(meta_bpm))
-
-        meta_bpm_and_range = (meta_bpm, meta_bpm_range)
-        et_meta_folder = add_folder(
-            et_version_node, '{}-{}'.format(meta_bpm, meta_bpm + (meta_bpm_range - 1)))
-        et_filter_folder = add_folder(et_meta_folder, 'BPM Filter (2)')
-        add_bpm_folders(et_filter_folder, 2, meta_bpm_and_range)
-        et_filter_folder = add_folder(et_meta_folder, 'BPM Filter (5)')
-        add_bpm_folders(et_filter_folder, 5, meta_bpm_and_range)
+    et_filter_folder = add_folder(et_version_node, 'BPM Filter (2)')
+    add_bpm_folders(et_filter_folder, 2, meta_bpm_and_range=None)
+    et_filter_folder = add_folder(et_version_node, 'BPM Filter (5)')
+    add_bpm_folders(et_filter_folder, 5, meta_bpm_and_range=None)
 
     # lists
     et_lists_folder = add_folder(et_version_node, 'Lists')
