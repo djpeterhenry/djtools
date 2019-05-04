@@ -1177,13 +1177,24 @@ def update_with_rekordbox_history(db_filename, history_filename):
 
     # get date from filename
     p_filename = re.compile(ur'HISTORY (\d+)-(\d+)-(\d+)\.txt')
+    p_filename_paren = re.compile(ur'HISTORY (\d+)-(\d+)-(\d+) \((\d+)\)\.txt')
     m_filename = p_filename.match(os.path.basename(history_filename))
-    if not m_filename:
+    m_filename_paren = p_filename_paren.match(os.path.basename(history_filename))
+    if m_filename_paren:
+        year = int(m_filename_paren.group(1))
+        month = int(m_filename_paren.group(2))
+        day = int(m_filename_paren.group(3))
+        paren_num = int(m_filename_paren.group(4))
+    elif m_filename:
+        year = int(m_filename.group(1))
+        month = int(m_filename.group(2))
+        day = int(m_filename.group(3))
+        paren_num = None
+    else:    
         return
-    year = int(m_filename.group(1))
-    month = int(m_filename.group(2))
-    day = int(m_filename.group(3))
     date_ts = get_ts_for(year, month, day)
+    if paren_num is not None:
+        date_ts += 1000.0 * paren_num
     # fun print of those later:
     if False:
         for f, record in db_dict.iteritems():
