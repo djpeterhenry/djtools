@@ -818,7 +818,7 @@ def action_update_db_clips(args, force=True):
 
 def action_export_rekordbox(args):
     USE_REKORDBOX_SAMPLE = False
-    VERSION = 12
+    VERSION = 13
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -1170,9 +1170,7 @@ def action_test_artist_track(args):
             print (f)
 
 
-def update_with_rekordbox_history(db_filename, history_filename):
-    db_dict = read_db_file(db_filename)
-
+def update_with_rekordbox_history(db_dict, history_filename):
     p_line = re.compile(ur'\d+\t(.*)\t(.*) \[.*$')
 
     # get date from filename
@@ -1215,14 +1213,18 @@ def update_with_rekordbox_history(db_filename, history_filename):
                     ts_to_write = date_ts + index
                     print ('{}:{}'.format(f, ts_to_write))
                     add_ts(record, ts_to_write)
-    # write
-    write_db_file(db_filename, db_dict)
 
 
 def action_rekordbox_history(args):
+    db_dict = read_db_file(args.db_filename)
+
     for fn in os.listdir(args.history_path):
         history_filepath = os.path.join(args.history_path, fn)
-        update_with_rekordbox_history(args.db_filename, history_filepath)
+        update_with_rekordbox_history(db_dict, history_filepath)
+    
+    # write
+    write_db_file(args.db_filename, db_dict)
+
 
 
 ###########
