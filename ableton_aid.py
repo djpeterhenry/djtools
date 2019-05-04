@@ -1169,14 +1169,14 @@ def action_test_artist_track(args):
             print (f)
 
 
-def action_rekordbox_history(args):
-    db_dict = read_db_file(args.db_filename)
+def update_with_rekordbox_history(db_filename, history_filename):
+    db_dict = read_db_file(db_filename)
 
     p_line = re.compile(ur'\d+\t(.*)\t(.*) \[.*$')
 
     # get date from filename
     p_filename = re.compile(ur'HISTORY (\d+)-(\d+)-(\d+)\.txt')
-    m_filename = p_filename.match(os.path.basename(args.history_filename))
+    m_filename = p_filename.match(os.path.basename(history_filename))
     if not m_filename:
         return
     year = int(m_filename.group(1))
@@ -1191,7 +1191,7 @@ def action_rekordbox_history(args):
                 print (f)
         return
 
-    with codecs.open(args.history_filename, encoding='utf-16le') as h:
+    with codecs.open(history_filename, encoding='utf-16le') as h:
         for index, line in enumerate(h.readlines()[1:]):
             m = p_line.match(line)
             if m:
@@ -1204,7 +1204,13 @@ def action_rekordbox_history(args):
                     print ('{}:{}'.format(f, ts_to_write))
                     add_ts(record, ts_to_write)
     # write
-    write_db_file(args.db_filename, db_dict)
+    write_db_file(db_filename, db_dict)
+
+
+def action_rekordbox_history(args):
+    for fn in os.listdir(args.history_path):
+        history_filepath = os.path.join(args.history_path, fn)
+        update_with_rekordbox_history(args.db_filename, history_filepath)
 
 
 ###########
@@ -1268,7 +1274,7 @@ def parse_args():
     subparsers.add_parser('test_artists').set_defaults(func=action_test_artist_track)
 
     p_rekordbox_history = subparsers.add_parser('rekordbox_history')
-    p_rekordbox_history.add_argument('history_filename')
+    p_rekordbox_history.add_argument('history_path')
     p_rekordbox_history.set_defaults(func=action_rekordbox_history)
 
     return parser.parse_args()
