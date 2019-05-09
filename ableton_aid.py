@@ -817,8 +817,8 @@ def action_update_db_clips(args, force=True):
 
 
 def action_export_rekordbox(args):
-    USE_REKORDBOX_SAMPLE = True
-    VERSION = 17
+    USE_REKORDBOX_SAMPLE = False
+    VERSION = 19
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
