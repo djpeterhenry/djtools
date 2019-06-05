@@ -1,12 +1,7 @@
 #!/usr/bin/env python
-'''
-Created on May 14, 2009
-
-@author: phenry
-'''
+#Created on May 14, 2009
 
 from __future__ import print_function
-
 
 import sys
 import os
@@ -37,7 +32,6 @@ try:
 except:
     pass
 
-
 ABLETON_EXTENSIONS = ['.alc', '.als']
 SAMPLE_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.aiff', '.flac']
 ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
@@ -45,11 +39,13 @@ ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 def get_ts_for(year, month, day):
     return time.mktime(datetime.date(year, month, day).timetuple())
 
-#OLD_ALC_TS_CUTOFF = time.mktime(datetime.date(2016, 6, 12).timetuple())
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
-#REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
-REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
+USE_REKORDBOX_SAMPLE = False
+VERSION = 25
+
+REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
+#REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 #MP3_SAMPLE_PATH = u'/Volumes/MacHelper/mp3_samples'
 MP3_SAMPLE_PATH = u'/Volumes/music/mp3_samples/'
 
@@ -817,9 +813,6 @@ def action_update_db_clips(args, force=True):
 
 
 def action_export_rekordbox(args):
-    USE_REKORDBOX_SAMPLE = False
-    VERSION = 19
-
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
     files = generate_date_plus_alc(files, db_dict)
