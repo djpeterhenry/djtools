@@ -1224,6 +1224,42 @@ def action_rekordbox_history(args):
     write_db_file(args.db_filename, db_dict)
 
 
+def action_cue_to_tracklist(args):
+    db_dict = read_db_file(args.db_filename)
+
+    class Track(object):
+        def __init__(self):
+            self.artist = None
+            self.song = None
+            self.index = None
+        def __str__(self):
+            return '[{}] {} - {}'.format(self.index, self.artist, self.song)
+
+    tracks = []
+    track = Track()
+    # assume [key] on all tracks?
+    p_title = re.compile(ur'\tTITLE "(.*) \[') 
+    p_performer = re.compile(ur'\tPERFORMER "(.*)"')
+    p_index = re.compile(ur'\tINDEX 01 (.*)')
+    with open(args.cue_filename) as f:
+        for line in f.readlines():
+            m_title = p_title.search(line)
+            m_performer = p_performer.search(line)
+            m_index = p_index.search(line)
+            if m_title:
+                track.song = m_title.group(1).strip()
+            elif m_performer:
+                track.artist = m_performer.group(1).strip()
+            elif m_index:
+                track.index = m_index.group(1).strip()
+                tracks.append(track)
+                track = Track()
+    for t in tracks:
+        print (t)
+    with open(args.tracklist_filename, 'w') as w:
+        for t in tracks:
+            w.write('{}\n'.format(str(t)))
+
 
 ###########
 # main
@@ -1288,6 +1324,11 @@ def parse_args():
     p_rekordbox_history = subparsers.add_parser('rekordbox_history')
     p_rekordbox_history.add_argument('history_path')
     p_rekordbox_history.set_defaults(func=action_rekordbox_history)
+
+    p_cue_to_tracklist = subparsers.add_parser('cue_to_tracklist')
+    p_cue_to_tracklist.add_argument('cue_filename')
+    p_cue_to_tracklist.add_argument('tracklist_filename')
+    p_cue_to_tracklist.set_defaults(func=action_cue_to_tracklist)
 
     return parser.parse_args()
 
