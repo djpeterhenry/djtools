@@ -1260,6 +1260,15 @@ def action_cue_to_tracklist(args):
         for t in tracks:
             w.write('{}\n'.format(str(t)))
 
+def action_generate_lists(args):
+    db_dict = read_db_file(args.db_filename)
+    files = get_ableton_files()
+    files = generate_date_plus_alc(files, db_dict)
+
+    with open(os.path.join(args.output_path, 'date_or_add.txt'), 'w') as outfile:
+        for f in files:
+            f_print = os.path.splitext(f)[0]
+            outfile.write('{}\n'.format(f_print))
 
 ###########
 # main
@@ -1329,6 +1338,10 @@ def parse_args():
     p_cue_to_tracklist.add_argument('cue_filename')
     p_cue_to_tracklist.add_argument('tracklist_filename')
     p_cue_to_tracklist.set_defaults(func=action_cue_to_tracklist)
+
+    p_rekordbox_history = subparsers.add_parser('generate_lists')
+    p_rekordbox_history.add_argument('output_path')
+    p_rekordbox_history.set_defaults(func=action_generate_lists)
 
     return parser.parse_args()
 
