@@ -1274,6 +1274,16 @@ def action_generate_lists(args):
             f_print = os.path.splitext(f)[0]
             outfile.write('{}\n'.format(f_print))
 
+def action_touch_list(args):
+    db_dict = read_db_file(args.db_filename)
+    for display, f in get_list_from_file(args.list_file, db_dict):
+        if f is None:
+            continue
+        print (f)
+
+
+
+
 ###########
 # main
 
@@ -1347,6 +1357,10 @@ def parse_args():
     p_rekordbox_history.add_argument('output_path')
     p_rekordbox_history.set_defaults(func=action_generate_lists)
 
+    p_touch_list = subparsers.add_parser('touch_list')
+    p_touch_list.add_argument('list_file')
+    p_touch_list.set_defaults(func=action_touch_list)
+    
     return parser.parse_args()
 
 
