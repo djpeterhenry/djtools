@@ -575,10 +575,14 @@ def get_song_in_db(s, db_dict):
 
 
 def get_list_from_file(filename, db_dict):
+    p_timestamp = re.compile(ur'\[[\d:]+\] (.*)')
     with open(filename) as f:
         song_list = [song.strip() for song in f.readlines()]
         display_and_file = []
         for s in song_list:
+            m_timestamp = p_timestamp.match(s)
+            if m_timestamp:
+                s = m_timestamp.group(1)
             t = get_song_in_db(s, db_dict)
             display_and_file.append(t)
         return display_and_file
