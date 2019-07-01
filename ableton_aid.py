@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#Created on May 14, 2009
+# Created on May 14, 2009
 
 from __future__ import print_function
 
@@ -36,13 +36,14 @@ ABLETON_EXTENSIONS = ['.alc', '.als']
 SAMPLE_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.aiff', '.flac']
 ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 
+
 def get_ts_for(year, month, day):
     return time.mktime(datetime.date(year, month, day).timetuple())
 
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
-USE_REKORDBOX_SAMPLE = False
-VERSION = 25
+USE_REKORDBOX_SAMPLE = True
+VERSION = 27
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
@@ -50,6 +51,7 @@ REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 MP3_SAMPLE_PATH = u'/Volumes/music/mp3_samples/'
 
 LISTS_FOLDER = '/Users/peter/github/djpeterhenry.github.io/lists'
+
 
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
@@ -354,16 +356,6 @@ def get_db_by_ts(db_dict):
     return result
 
 
-def get_files_by_num(files, db_dict):
-    num_file_tuples = []
-    for file in files:
-        record = db_dict[file]
-        num = -len(get_ts_list(record))
-        num_file_tuples.append((num, file))
-    num_file_tuples.sort()
-    return [file for _, file in num_file_tuples]
-
-
 def get_valid_alc_files(db_dict):
     alc_files = get_ableton_files()
     valid_alc_files = [
@@ -477,6 +469,16 @@ def generate_date_plus_alc(valid_alc_files, db_dict):
     return get_files_from_pairs(generate_date_plus_alc_pairs(valid_alc_files, db_dict))
 
 
+def generate_num(files, db_dict):
+    num_file_tuples = []
+    for file in files:
+        record = db_dict[file]
+        num = -len(get_ts_list(record))
+        num_file_tuples.append((num, file))
+    num_file_tuples.sort()
+    return get_files_from_pairs(num_file_tuples)
+
+
 def get_keys_for_camelot_number(camelot_number):
     if camelot_number is None:
         return []
@@ -586,7 +588,6 @@ def get_list_from_file(filename, db_dict):
             t = get_song_in_db(s, db_dict)
             display_and_file.append(t)
         return display_and_file
-
 
 
 ####################################
@@ -821,7 +822,6 @@ def action_export_rekordbox(args):
     files = get_ableton_files()
     files = generate_date_plus_alc(files, db_dict)
 
-
     def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
         et_tempo = ET.SubElement(et_track, 'TEMPO')
         et_tempo.set('Inizio', str(sec_time))
@@ -945,7 +945,8 @@ def action_export_rekordbox(args):
             hot_cue_counter = 0
             # memory cue
             add_position_marker(et_track, 'Start', 0, -1, start_seconds)
-            add_position_marker(et_track, 'Start', 0, hot_cue_counter, start_seconds)
+            add_position_marker(et_track, 'Start', 0,
+                                hot_cue_counter, start_seconds)
             hot_cue_counter += 1
             # hot cue
             #add_position_marker(et_track, 'Start (hot)', 0, 0, start_seconds)
@@ -1073,7 +1074,6 @@ def action_export_rekordbox(args):
         for bpm, bpm_range in bpm_and_range:
             add_bpm_folder(et_filter_folder, bpm, bpm_range)
 
-
     ##########
     # BPM
     et_filter_folder = add_folder(et_version_node, 'BPM Filter')
@@ -1083,7 +1083,7 @@ def action_export_rekordbox(args):
     et_lists_folder = add_folder(et_version_node, 'Lists')
     name_to_file = get_list_name_to_file(LISTS_FOLDER)
     for name, list_file in sorted(name_to_file.iteritems()):
-        l =  get_list_from_file(list_file, db_dict)
+        l = get_list_from_file(list_file, db_dict)
         matching_files = [f for _, f in l if f is not None]
         add_playlist_for_files(et_lists_folder, name, matching_files)
 
@@ -1179,7 +1179,8 @@ def update_with_rekordbox_history(db_dict, history_filename):
     p_filename = re.compile(ur'HISTORY (\d+)-(\d+)-(\d+)\.txt')
     p_filename_paren = re.compile(ur'HISTORY (\d+)-(\d+)-(\d+) \((\d+)\)\.txt')
     m_filename = p_filename.match(os.path.basename(history_filename))
-    m_filename_paren = p_filename_paren.match(os.path.basename(history_filename))
+    m_filename_paren = p_filename_paren.match(
+        os.path.basename(history_filename))
     if m_filename_paren:
         year = int(m_filename_paren.group(1))
         month = int(m_filename_paren.group(2))
@@ -1190,7 +1191,7 @@ def update_with_rekordbox_history(db_dict, history_filename):
         month = int(m_filename.group(2))
         day = int(m_filename.group(3))
         paren_num = None
-    else:    
+    else:
         return
     date_ts = get_ts_for(year, month, day)
     if paren_num is not None:
@@ -1223,7 +1224,7 @@ def action_rekordbox_history(args):
     for fn in os.listdir(args.history_path):
         history_filepath = os.path.join(args.history_path, fn)
         update_with_rekordbox_history(db_dict, history_filepath)
-    
+
     # write
     write_db_file(args.db_filename, db_dict)
 
@@ -1232,17 +1233,19 @@ def action_cue_to_tracklist(args):
     db_dict = read_db_file(args.db_filename)
 
     class Track(object):
+
         def __init__(self):
             self.artist = None
             self.song = None
             self.index = None
+
         def __str__(self):
             return '[{}] {} - {}'.format(self.index, self.artist, self.song)
 
     tracks = []
     track = Track()
     # assume [key] on all tracks?
-    p_title = re.compile(ur'\tTITLE "(.*) \[') 
+    p_title = re.compile(ur'\tTITLE "(.*) \[')
     p_performer = re.compile(ur'\tPERFORMER "(.*)"')
     p_index = re.compile(ur'\tINDEX 01 (.*)')
     with open(args.cue_filename) as f:
@@ -1264,24 +1267,33 @@ def action_cue_to_tracklist(args):
         for t in tracks:
             w.write('{}\n'.format(str(t)))
 
+
 def action_generate_lists(args):
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
-    files = generate_date_plus_alc(files, db_dict)
 
-    with open(os.path.join(args.output_path, 'date_or_add.txt'), 'w') as outfile:
-        for f in files:
-            f_print = os.path.splitext(f)[0]
-            outfile.write('{}\n'.format(f_print))
+    def write_files(filename, files_to_write):
+        with open(os.path.join(args.output_path, filename), 'w') as outfile:
+            for f in files_to_write:
+                f_print = os.path.splitext(f)[0]
+                outfile.write('{}\n'.format(f_print))
+
+    write_files('date_or_add.txt', generate_date_plus_alc(files, db_dict))
+    write_files('add.txt', generate_alc(files, db_dict))
+    write_files('name.txt', files)
+    write_files('num.txt', generate_num(files, db_dict))
+
 
 def action_touch_list(args):
     db_dict = read_db_file(args.db_filename)
-    for display, f in get_list_from_file(args.list_file, db_dict):
+    date_ts = get_ts_for(args.date[0], args.date[1], args.date[2])
+    for counter, (_, f) in enumerate(get_list_from_file(args.list_file, db_dict)):
         if f is None:
             continue
-        print (f)
-
-
+        record = db_dict[f]
+        ts_to_add = date_ts + counter
+        add_ts(record, ts_to_add)
+    write_db_file(args.db_filename, db_dict)
 
 
 ###########
@@ -1342,7 +1354,8 @@ def parse_args():
     p_mp3_samples.set_defaults(func=action_export_mp3_samples)
 
     subparsers.add_parser('test_lists').set_defaults(func=action_test_lists)
-    subparsers.add_parser('test_artists').set_defaults(func=action_test_artist_track)
+    subparsers.add_parser('test_artists').set_defaults(
+        func=action_test_artist_track)
 
     p_rekordbox_history = subparsers.add_parser('rekordbox_history')
     p_rekordbox_history.add_argument('history_path')
@@ -1359,8 +1372,9 @@ def parse_args():
 
     p_touch_list = subparsers.add_parser('touch_list')
     p_touch_list.add_argument('list_file')
+    p_touch_list.add_argument('date', type=int, nargs=3)
     p_touch_list.set_defaults(func=action_touch_list)
-    
+
     return parser.parse_args()
 
 

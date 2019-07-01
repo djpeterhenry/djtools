@@ -979,7 +979,7 @@ class App:
         return [file for _, file in key_file_tuples]
 
     def generate_num(self):
-        return aa.get_files_by_num(self.valid_alc_files, self.db_dict)
+        return aa.generate_num(self.valid_alc_files, self.db_dict)
 
     # TODO(peter): duplicated in ableton_aid
     def generate_sets(self):
