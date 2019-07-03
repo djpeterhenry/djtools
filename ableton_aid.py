@@ -42,8 +42,8 @@ def get_ts_for(year, month, day):
 
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
-USE_REKORDBOX_SAMPLE = True
-VERSION = 27
+USE_REKORDBOX_SAMPLE = False
+VERSION = 28
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
