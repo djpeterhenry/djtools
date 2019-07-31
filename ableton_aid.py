@@ -43,7 +43,7 @@ def get_ts_for(year, month, day):
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
 USE_REKORDBOX_SAMPLE = False
-VERSION = 31
+VERSION = 32
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
@@ -981,15 +981,22 @@ def action_export_rekordbox(args):
     def set_playlist_count(et):
         et.set('Entries', str(len(et.getchildren())))
 
-    def add_playlist_for_files(et_parent, name, files):
-        et_list = ET.SubElement(et_parent, 'NODE')
-        et_list.set('Type', '1')
-        et_list.set('Name', name)
-        et_list.set('KeyType', '0')
-        for f in files:
-            et_track = ET.SubElement(et_list, 'TRACK')
-            et_track.set('Key', str(file_to_id[f]))
-        set_playlist_count(et_list)
+    class PlaylistAdder(object):
+        def __init__(self):
+            self.playlists_added = 0
+
+        def add_playlist_for_files(self, et_parent, name, files):
+            self.playlists_added += 1
+            et_list = ET.SubElement(et_parent, 'NODE')
+            et_list.set('Type', '1')
+            et_list.set('Name', name)
+            et_list.set('KeyType', '0')
+            for f in files:
+                et_track = ET.SubElement(et_list, 'TRACK')
+                et_track.set('Key', str(file_to_id[f]))
+            set_playlist_count(et_list)
+
+    adder = PlaylistAdder()
 
     def add_folder(et_parent, name):
         result = ET.SubElement(et_parent, 'NODE')
@@ -1034,25 +1041,32 @@ def action_export_rekordbox(args):
     et_version_node = add_folder(et_root_node, 'V{:02}'.format(VERSION))
 
     # playlist for all
-    add_playlist_for_files(et_version_node, 'All', files_with_id)
+    adder.add_playlist_for_files(et_version_node, 'All (unfiltered)', files_with_id)
 
     def add_bpm_folder(et_parent_folder, bpm, bpm_range):
         folder_name = get_bpm_name(bpm, bpm_range)
         print(folder_name)
 
         et_bpm_folder = add_folder(et_parent_folder, folder_name)
+
+        # all unfiltered
+        adder.add_playlist_for_files(et_bpm_folder, 'All (unfiltered)', files_with_id)
+
+        # all for bpm
         matching_files = get_filtered_files(files=files_with_id,
                                             bpm=bpm, bpm_range=bpm_range,
                                             cam_num_list=None,
                                             vocal=False)
-        add_playlist_for_files(et_bpm_folder, 'All', matching_files)
+        adder.add_playlist_for_files(et_bpm_folder, 'All', matching_files)
 
+        # vocal for bpm
         matching_files = get_filtered_files(files=files_with_id,
                                             bpm=bpm, bpm_range=bpm_range,
                                             cam_num_list=None,
                                             vocal=True)
-        add_playlist_for_files(et_bpm_folder, 'Vocal', matching_files)
+        adder.add_playlist_for_files(et_bpm_folder, 'Vocal', matching_files)
 
+        # for each key
         for key in xrange(1, 13):
             # (key, key+1)
             keys = [key, get_relative_camelot_key(key, 1)]
@@ -1060,7 +1074,7 @@ def action_export_rekordbox(args):
                                                 bpm=bpm, bpm_range=bpm_range,
                                                 cam_num_list=keys,
                                                 vocal=False)
-            add_playlist_for_files(
+            adder.add_playlist_for_files(
                 et_bpm_folder, get_key_name(key), matching_files)
 
     def add_bpm_folders(et_filter_folder):
@@ -1085,7 +1099,9 @@ def action_export_rekordbox(args):
     for name, list_file in sorted(name_to_file.iteritems()):
         l = get_list_from_file(list_file, db_dict)
         matching_files = [f for _, f in l if f is not None]
-        add_playlist_for_files(et_lists_folder, name, matching_files)
+        adder.add_playlist_for_files(et_lists_folder, name, matching_files)
+
+    print ('Total playlists: {}'.format(adder.playlists_added))
 
     # finalize
     tree = ET.ElementTree(et_dj_playlists)
