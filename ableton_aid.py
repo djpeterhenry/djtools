@@ -43,7 +43,7 @@ def get_ts_for(year, month, day):
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
 USE_REKORDBOX_SAMPLE = False
-VERSION = 32
+VERSION = 33
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
@@ -79,7 +79,6 @@ def get_ableton_files():
 
 
 def get_base_filename(filename, record):
-    pre_padding = ' ' * 2
     divider = ' - '
     file, ext = os.path.splitext(filename)
     result = file
@@ -1080,7 +1079,7 @@ def action_export_rekordbox(args):
     def add_bpm_folders(et_filter_folder):
         # create tuples of (bpm, bpm_range) and sort them
         bpm_and_range = [(0, 0)]
-        for bpm in range(80, 161, 2):
+        for bpm in range(116, 141, 2):
             bpm_and_range.append((bpm, 2))
         for bpm in range(80, 161, 5):
             bpm_and_range.append((bpm, 5))
