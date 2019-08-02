@@ -110,6 +110,9 @@ class App:
         frame_top = Frame(master)
         frame_top.pack(side=TOP, fill=X)
 
+        def just_update(a, b, c):
+            self.update_listbox()
+
         self.entry_filter = EntryText(
             frame_top, text_width=search_width, take_focus=True,
             update_fun=self.update_listbox)
@@ -123,7 +126,7 @@ class App:
             update_fun=self.update_listbox)
 
         self.bpm_star_var = IntVar(master)
-        self.bpm_star_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.bpm_star_var.trace('w', just_update)
         self.bpm_star_button = Checkbutton(
             frame_top, text="*", variable=self.bpm_star_var, takefocus=0)
         self.bpm_star_button.pack(side=LEFT)
@@ -176,31 +179,31 @@ class App:
 
         # new fun extra key bits
         self.key_var_1 = IntVar(master)
-        self.key_var_1.trace('w', lambda a, b, c: self.update_listbox())
+        self.key_var_1.trace('w', just_update)
         self.key_button_1 = Checkbutton(
             frame_edit, text="-1", variable=self.key_var_1, takefocus=0)
         self.key_button_1.pack(side=LEFT)
 
         self.key_var_2 = IntVar(master)
-        self.key_var_2.trace('w', lambda a, b, c: self.update_listbox())
+        self.key_var_2.trace('w', just_update)
         self.key_button_2 = Checkbutton(
             frame_edit, text="1", variable=self.key_var_2, takefocus=0)
         self.key_button_2.pack(side=LEFT)
 
         self.key_var_3 = IntVar(master)
-        self.key_var_3.trace('w', lambda a, b, c: self.update_listbox())
+        self.key_var_3.trace('w', just_update)
         self.key_button_3 = Checkbutton(
             frame_edit, text="2", variable=self.key_var_3, takefocus=0)
         self.key_button_3.pack(side=LEFT)
 
         self.key_var_4 = IntVar(master)
-        self.key_var_4.trace('w', lambda a, b, c: self.update_listbox())
+        self.key_var_4.trace('w', just_update)
         self.key_button_4 = Checkbutton(
             frame_edit, text="4", variable=self.key_var_4, takefocus=0)
         self.key_button_4.pack(side=LEFT)
 
         self.key_var_star = IntVar(master)
-        self.key_var_star.trace('w', lambda a, b, c: self.update_listbox())
+        self.key_var_star.trace('w', just_update)
         self.key_button_star = Checkbutton(
             frame_edit, text="*", variable=self.key_var_star, takefocus=0)
         self.key_button_star.pack(side=LEFT)
@@ -210,48 +213,48 @@ class App:
 
         self.tag_var = StringVar(master)
         self.tag_var.set(tag_list[0])  # needed?
-        self.tag_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.tag_var.trace('w', just_update)
         self.tag_list_menu = OptionMenu(frame_edit, self.tag_var, *tag_list)
         self.tag_list_menu.pack(side=LEFT)
 
         self.tag_invert_var = IntVar(master)
-        self.tag_invert_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.tag_invert_var.trace('w', just_update)
         self.tag_invert_button = Checkbutton(
             frame_edit, text="Invert", variable=self.tag_invert_var, takefocus=0)
         self.tag_invert_button.pack(side=LEFT)
 
         self.tag_vocal_var = IntVar(master)
-        self.tag_vocal_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.tag_vocal_var.trace('w', just_update)
         self.tag_vocal_button = Checkbutton(
             frame_edit, text="[Vocal]", variable=self.tag_vocal_var, takefocus=0)
         self.tag_vocal_button.pack(side=LEFT)
 
         self.tag_ss_var = IntVar(master)
-        self.tag_ss_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.tag_ss_var.trace('w', just_update)
         self.tag_ss_button = Checkbutton(
             frame_edit, text="[SS]", variable=self.tag_ss_var, takefocus=0)
         self.tag_ss_button.pack(side=LEFT)
 
         self.year_var = IntVar(master)
-        self.year_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.year_var.trace('w', just_update)
         self.year_button = Checkbutton(
             frame_edit, text="Year", variable=self.year_var, takefocus=0)
         # self.year_button.pack(side=LEFT)
 
         self.month_var = IntVar(master)
-        self.month_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.month_var.trace('w', just_update)
         self.month_button = Checkbutton(
             frame_edit, text="Mon", variable=self.month_var, takefocus=0)
         # self.month_button.pack(side=LEFT)
 
         self.day_var = IntVar(master)
-        self.day_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.day_var.trace('w', just_update)
         self.day_button = Checkbutton(
             frame_edit, text="Day", variable=self.day_var, takefocus=0)
         # self.day_button.pack(side=LEFT)
 
         self.day_3_var = IntVar(master)
-        self.day_3_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.day_3_var.trace('w', just_update)
         self.day_3_button = Checkbutton(
             frame_edit, text="3-Day", variable=self.day_3_var, takefocus=0)
         # self.day_3_button.pack(side=LEFT)
@@ -264,7 +267,7 @@ class App:
         self.reveal_button.pack(side=LEFT)
 
         self.friends_var = IntVar(master)
-        self.friends_var.trace('w', lambda a, b, c: self.update_listbox())
+        self.friends_var.trace('w', just_update)
         self.friends_button = Checkbutton(
             frame_edit, text="Friends", variable=self.friends_var, takefocus=0)
         # self.friends_button.pack(side=LEFT)
