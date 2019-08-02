@@ -19,6 +19,7 @@ import atexit
 import datetime
 import codecs
 from itertools import groupby
+from enum import Enum
 
 import ableton_aid as aa
 from entry_text import EntryText
@@ -31,7 +32,8 @@ SKIP_BPM = 'ALL BPM'
 LOOK_TAG = 'LOOK'
 GOOD_TAG = 'GOOD'
 
-# print samples is amazing and you should fix it
+
+WhichFiles = Enum('WhichFiles', 'SONGS VOCALS SAMPLES')
 
 
 class App:
@@ -212,7 +214,6 @@ class App:
             frame_edit, text_width=tag_filter_width, update_fun=self.update_listbox)
 
         self.tag_var = StringVar(master)
-        self.tag_var.set(tag_list[0])  # needed?
         self.tag_var.trace('w', just_update)
         self.tag_list_menu = OptionMenu(frame_edit, self.tag_var, *tag_list)
         self.tag_list_menu.pack(side=LEFT)
@@ -234,6 +235,13 @@ class App:
         self.tag_ss_button = Checkbutton(
             frame_edit, text="[SS]", variable=self.tag_ss_var, takefocus=0)
         self.tag_ss_button.pack(side=LEFT)
+
+        self.which_files_var = StringVar(master)
+        self.which_files_var.trace('w', just_update)
+        self.which_files_menu = OptionMenu(
+            frame_edit, self.which_files_var, *[x.name for x in WhichFiles])
+        self.which_files_menu.config(width=10)
+        self.which_files_menu.pack(side=LEFT)
 
         self.year_var = IntVar(master)
         self.year_var.trace('w', just_update)
