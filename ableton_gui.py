@@ -24,6 +24,7 @@ from enum import Enum
 import ableton_aid as aa
 from entry_text import EntryText
 from lists_selector import ListsSelector
+from widgets import Checkbox
 
 
 LOCK_FILEPATH = '/tmp/ableton_gui.lock'
@@ -32,7 +33,7 @@ SKIP_BPM = 'ALL BPM'
 LOOK_TAG = 'LOOK'
 GOOD_TAG = 'GOOD'
 
-
+# use this?
 WhichFiles = Enum('WhichFiles', 'SONGS VOCALS SAMPLES')
 
 
@@ -236,12 +237,12 @@ class App:
             frame_edit, text="[SS]", variable=self.tag_ss_var, takefocus=0)
         self.tag_ss_button.pack(side=LEFT)
 
-        self.which_files_var = StringVar(master)
-        self.which_files_var.trace('w', just_update)
-        self.which_files_menu = OptionMenu(
-            frame_edit, self.which_files_var, *[x.name for x in WhichFiles])
-        self.which_files_menu.config(width=10)
-        self.which_files_menu.pack(side=LEFT)
+        # self.which_files_var = StringVar(master)
+        # self.which_files_var.trace('w', just_update)
+        # self.which_files_menu = OptionMenu(
+        #     frame_edit, self.which_files_var, *[x.name for x in WhichFiles])
+        # self.which_files_menu.config(width=10)
+        # self.which_files_menu.pack(side=LEFT)
 
         self.year_var = IntVar(master)
         self.year_var.trace('w', just_update)
