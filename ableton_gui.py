@@ -34,8 +34,7 @@ LOOK_TAG = 'LOOK'
 GOOD_TAG = 'GOOD'
 
 # use this?
-WhichFiles = Enum('WhichFiles', 'SONGS VOCALS SAMPLES')
-
+WhichOpenMode = Enum('WhichOpenMode', 'Ableton Finder Play')
 
 class App:
     extra_tag_list = [
@@ -78,7 +77,6 @@ class App:
         # other dimensions
         search_width = 8
         init_bpm_range = 3
-        init_key_range = 0
 
         # font (you dream of 'consolas')
         listbox_font = ('courier', 16)
@@ -186,58 +184,11 @@ class App:
         self.tag_list_menu = OptionMenu(frame_edit, self.tag_var, *tag_list)
         self.tag_list_menu.pack(side=LEFT)
 
-        self.tag_invert_var = IntVar(master)
-        self.tag_invert_var.trace('w', just_update)
-        self.tag_invert_button = Checkbutton(
-            frame_edit, text="Invert", variable=self.tag_invert_var, takefocus=0)
-        self.tag_invert_button.pack(side=LEFT)
-
-        self.tag_vocal_var = IntVar(master)
-        self.tag_vocal_var.trace('w', just_update)
-        self.tag_vocal_button = Checkbutton(
-            frame_edit, text="[Vocal]", variable=self.tag_vocal_var, takefocus=0)
-        self.tag_vocal_button.pack(side=LEFT)
-
-        self.tag_ss_var = IntVar(master)
-        self.tag_ss_var.trace('w', just_update)
-        self.tag_ss_button = Checkbutton(
-            frame_edit, text="[SS]", variable=self.tag_ss_var, takefocus=0)
-        self.tag_ss_button.pack(side=LEFT)
-
-        # self.which_files_var = StringVar(master)
-        # self.which_files_var.trace('w', just_update)
-        # self.which_files_menu = OptionMenu(
-        #     frame_edit, self.which_files_var, *[x.name for x in WhichFiles])
-        # self.which_files_menu.config(width=10)
-        # self.which_files_menu.pack(side=LEFT)
-
-        self.year_var = IntVar(master)
-        self.year_var.trace('w', just_update)
-        self.year_button = Checkbutton(
-            frame_edit, text="Year", variable=self.year_var, takefocus=0)
-        # self.year_button.pack(side=LEFT)
-
-        self.month_var = IntVar(master)
-        self.month_var.trace('w', just_update)
-        self.month_button = Checkbutton(
-            frame_edit, text="Mon", variable=self.month_var, takefocus=0)
-        # self.month_button.pack(side=LEFT)
-
-        self.day_var = IntVar(master)
-        self.day_var.trace('w', just_update)
-        self.day_button = Checkbutton(
-            frame_edit, text="Day", variable=self.day_var, takefocus=0)
-        # self.day_button.pack(side=LEFT)
-
-        self.day_3_var = IntVar(master)
-        self.day_3_var.trace('w', just_update)
-        self.day_3_button = Checkbutton(
-            frame_edit, text="3-Day", variable=self.day_3_var, takefocus=0)
-        # self.day_3_button.pack(side=LEFT)
+        self.tag_invert = Checkbox(frame_edit, 'Invert', just_update)
+        self.tag_vocal = Checkbox(frame_edit, '[Vocal]', just_update)
+        self.tag_ss = Checkbox(frame_edit, '[SS]', just_update)
 
         self.reveal_var = IntVar(master)
-        # no need for this:
-        # self.day_3_var.trace('w', lambda a,b,c: self.update_listbox())
         self.reveal_button = Checkbutton(
             frame_edit, text="Reveal", variable=self.reveal_var, takefocus=0)
         self.reveal_button.pack(side=LEFT)
@@ -275,21 +226,18 @@ class App:
         self.listbox.bind("r", lambda _: self.command_tag_remove())
         self.listbox.bind("s", lambda _: self.command_save())
         # self.listbox.bind("x", lambda _ : self.command_x())
-        self.listbox.bind("v", lambda _: self.command_v())
+        self.listbox.bind("v", lambda _: self.tag_vocal.toggle())
         self.listbox.bind("f", lambda _: self.command_copy_filename())
         self.listbox.bind("g", lambda _: self.command_g())
         self.listbox.bind("l", lambda _: self.command_l())
-        self.listbox.bind("n", lambda _: self.command_n())
         self.listbox.bind("j", lambda _: self.command_order_down())
         self.listbox.bind("k", lambda _: self.command_order_up())
-        self.listbox.bind("p", lambda _: self.command_print())
         self.listbox.bind("1", lambda _: self.key_1.toggle())
         self.listbox.bind("2", lambda _: self.key_2.toggle())
         self.listbox.bind("3", lambda _: self.key_3.toggle())
         self.listbox.bind("4", lambda _: self.key_4.toggle())
         self.listbox.bind("9", lambda _: self.bpm_star.toggle())
         self.listbox.bind("0", lambda _: self.key_star.toggle())
-        self.listbox.bind("u", lambda _: self.command_update_key())
 
         self.last_copied_filename = None
 
@@ -353,23 +301,14 @@ class App:
         except AttributeError:
             return
 
-        # ts_list stuff
-        ts_now = time.time()  # get it once at the beginning
-        day_seconds = 60 * 60 * 24
-        month_seconds = day_seconds * 30
-        year_seconds = day_seconds * 365
-
+        # start by clearing
         self.listbox.delete(0, END)
         self.active_alc_files = []
 
         tag = self.tag_var.get()
-        tag_invert = bool(self.tag_invert_var.get())
-        vocal_selected = bool(self.tag_vocal_var.get())
-        ss_selected = bool(self.tag_ss_var.get())
-        year_selected = bool(self.year_var.get())
-        month_selected = bool(self.month_var.get())
-        day_selected = bool(self.day_var.get())
-        day_3_selected = bool(self.day_3_var.get())
+        tag_invert = bool(self.tag_invert.get())
+        vocal_selected = bool(self.tag_vocal.get())
+        ss_selected = bool(self.tag_ss.get())
 
         # prepare min / max filters
         min_plays = self.min_amount.get_int()
@@ -437,7 +376,6 @@ class App:
             list_to_use = lists_selector_song_list
             do_vocal_check = False
 
-        select_index = 0
         filename_pairs_list = []  # insert them all at the end for speed?
         last_filename = None
         for filename in list_to_use:
@@ -519,20 +457,6 @@ class App:
             is_x = 'x' in tag_list and tag != 'x'
             if is_x:
                 keep = False
-
-            # time stuff
-            if len(ts_list) > 0:
-                seconds = ts_now - ts_list[-1]
-                # only filter down if older than 10 minutes
-                if seconds > 60 * 10:
-                    if year_selected and seconds < year_seconds:
-                        keep = False
-                    if month_selected and seconds < month_seconds:
-                        keep = False
-                    if day_selected and seconds < day_seconds:
-                        keep = False
-                    if day_3_selected and seconds < 3 * day_seconds:
-                        keep = False
 
             # take action, fool!
             if not keep:
@@ -737,16 +661,6 @@ class App:
         tag = 'x'
         self.add_tag_to_filename(filename, tag)
 
-    def command_v(self):
-        self.tag_vocal_var.set(not bool(self.tag_vocal_var.get()))
-
-    def command_update_key(self):
-        filename = self.get_selected_filename()
-        if not filename:
-            return
-        record = self.db_dict[filename]
-        record['key'] = ''
-
     def command_g(self):
         filename = self.get_selected_filename()
         if not filename:
@@ -760,28 +674,6 @@ class App:
             return
         tag = LOOK_TAG
         self.add_tag_to_filename(filename, tag)
-
-    def command_n(self):
-        filename = self.get_selected_filename()
-        if not filename:
-            return
-        tag = '-NN'
-        self.add_tag_to_filename(filename, tag)
-
-    def command_print(self):
-        index = self.get_selected_index()
-        if index is None:
-            return
-        count = 100
-        reverse = True
-        result = []
-        for i in xrange(index, index + count):
-            filename = self.get_filename_for_index(i)
-            result.append(filename)
-        if reverse:
-            result.reverse()
-        for f in result:
-            print f
 
     def command_clear_min_max(self):
         print 'clear min max'
