@@ -59,7 +59,7 @@ class App:
     ]
 
     def get_order_list(self):
-        # Supported: 'sets' 'key' 'name'
+        # Supported: 'key' 'name'
         # return ['bpm', 'alc', 'sample', 'date', 'date+alc', 'num', 'random']
         return ['date+alc', 'num', 'alc', 'random']
 
@@ -247,12 +247,6 @@ class App:
             frame_edit, text="Reveal", variable=self.reveal_var, takefocus=0)
         self.reveal_button.pack(side=LEFT)
 
-        self.friends_var = IntVar(master)
-        self.friends_var.trace('w', just_update)
-        self.friends_button = Checkbutton(
-            frame_edit, text="Friends", variable=self.friends_var, takefocus=0)
-        # self.friends_button.pack(side=LEFT)
-
         min_label = Label(frame_edit, text="M:")
         min_label.pack(side=LEFT)
         self.min_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
@@ -381,33 +375,10 @@ class App:
         month_selected = bool(self.month_var.get())
         day_selected = bool(self.day_var.get())
         day_3_selected = bool(self.day_3_var.get())
-        friends_selected = bool(self.friends_var.get())
 
         # prepare min / max filters
         min_plays = self.min_amount.get_int()
         max_plays = self.max_amount.get_int()
-
-        # prepare friends filter
-        # TODO: BROKEN
-        # NEEDS print "searching for:", self.listbox_target_string, "or",
-        # self.listbox_target_filename
-        friends_set = None
-        max_friend_diff = 60 * 5
-        if friends_selected:
-            selected_filename = self.get_selected_filename()
-            print 'friends_selected: selected_filename: ', selected_filename
-            if selected_filename:
-                friends_set = set()  # empty will also be like "None"
-                target_ts_list = aa.get_ts_list(
-                    self.db_dict[selected_filename])
-                print 'selected_filename', selected_filename
-                print 'target_ts_list', target_ts_list
-                for ts in target_ts_list:
-                    for ts_other, f_list in self.ts_db_dict.iteritems():
-                        diff = abs(ts_other - ts)
-                        if diff < max_friend_diff:
-                            for f in f_list:
-                                friends_set.add(f)
 
         # prepare key filter
         # split = self.key_filter_string.split()
@@ -464,10 +435,7 @@ class App:
             tag_filter = self.entry_tag_filter.stringvar.get()
 
         # just in case this is expensive...
-        # also to allow vocals through for sets
         do_vocal_check = True
-        if self.order_var.get() == 'sets':
-            do_vocal_check = False
 
         # possibly override list to use with selected song list
         list_to_use = self.list_to_use
@@ -507,10 +475,6 @@ class App:
             is_vocal = 'vocal' in tag_list
             if do_vocal_check:
                 if is_vocal != vocal_selected:
-                    keep = False
-
-            if friends_set:
-                if filename not in friends_set:
                     keep = False
 
             if filter_string:
@@ -891,8 +855,6 @@ class App:
             self.list_to_use = self.generate_key()
         elif (self.order_var.get() == 'num'):
             self.list_to_use = self.generate_num()
-        elif (self.order_var.get() == 'sets'):
-            self.list_to_use = self.generate_sets
         print "[time] generate_and_set_from_current_button:", str(time.time() - t)
         self.update_listbox()
 
@@ -937,22 +899,6 @@ class App:
 
     def generate_num(self):
         return aa.generate_num(self.valid_alc_files, self.db_dict)
-
-    # TODO(peter): duplicated in ableton_aid
-    def generate_sets(self):
-        ts_db_dict = aa.get_db_by_ts(self.db_dict)
-        result = []
-        ts_last = time.time()
-        for ts, file_list in sorted(ts_db_dict.iteritems(), reverse=True):
-            if not file_list:
-                continue
-            if ts_last - ts > 10 * 60:
-                pretty_date = datetime.date.fromtimestamp(ts).isoformat()
-                result.append('--- %s' % pretty_date)
-            ts_last = ts
-            for f in file_list:
-                result.append(f)
-        return result
 
 
 def parse_args():
