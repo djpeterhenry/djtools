@@ -11,3 +11,6 @@ class Checkbox(object):
 
     def get(self):
         return self.var.get()
+
+    def toggle(self):
+        self.var.set(not bool(self.get()))

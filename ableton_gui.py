@@ -128,11 +128,7 @@ class App:
             int_only=True, initial_value=str(init_bpm_range), int_min=0, int_max=9,
             update_fun=self.update_listbox)
 
-        self.bpm_star_var = IntVar(master)
-        self.bpm_star_var.trace('w', just_update)
-        self.bpm_star_button = Checkbutton(
-            frame_top, text="*", variable=self.bpm_star_var, takefocus=0)
-        self.bpm_star_button.pack(side=LEFT)
+        self.bpm_star = Checkbox(frame_top, '*', just_update)
 
         self.order_list = self.get_order_list()
         self.order_var = StringVar(frame_top)
@@ -181,35 +177,11 @@ class App:
             update_fun=self.update_listbox)
 
         # new fun extra key bits
-        self.key_var_1 = IntVar(master)
-        self.key_var_1.trace('w', just_update)
-        self.key_button_1 = Checkbutton(
-            frame_edit, text="-1", variable=self.key_var_1, takefocus=0)
-        self.key_button_1.pack(side=LEFT)
-
-        self.key_var_2 = IntVar(master)
-        self.key_var_2.trace('w', just_update)
-        self.key_button_2 = Checkbutton(
-            frame_edit, text="1", variable=self.key_var_2, takefocus=0)
-        self.key_button_2.pack(side=LEFT)
-
-        self.key_var_3 = IntVar(master)
-        self.key_var_3.trace('w', just_update)
-        self.key_button_3 = Checkbutton(
-            frame_edit, text="2", variable=self.key_var_3, takefocus=0)
-        self.key_button_3.pack(side=LEFT)
-
-        self.key_var_4 = IntVar(master)
-        self.key_var_4.trace('w', just_update)
-        self.key_button_4 = Checkbutton(
-            frame_edit, text="4", variable=self.key_var_4, takefocus=0)
-        self.key_button_4.pack(side=LEFT)
-
-        self.key_var_star = IntVar(master)
-        self.key_var_star.trace('w', just_update)
-        self.key_button_star = Checkbutton(
-            frame_edit, text="*", variable=self.key_var_star, takefocus=0)
-        self.key_button_star.pack(side=LEFT)
+        self.key_1 = Checkbox(frame_edit, '-1', just_update)
+        self.key_2 = Checkbox(frame_edit, '1', just_update)
+        self.key_3 = Checkbox(frame_edit, '2', just_update)
+        self.key_4 = Checkbox(frame_edit, '4', just_update)
+        self.key_star = Checkbox(frame_edit, '*', just_update)
 
         self.entry_tag_filter = EntryText(
             frame_edit, text_width=tag_filter_width, update_fun=self.update_listbox)
@@ -322,12 +294,12 @@ class App:
         self.listbox.bind("j", lambda _: self.command_order_down())
         self.listbox.bind("k", lambda _: self.command_order_up())
         self.listbox.bind("p", lambda _: self.command_print())
-        self.listbox.bind("0", lambda _: self.command_0())
-        self.listbox.bind("1", lambda _: self.command_1())
-        self.listbox.bind("2", lambda _: self.command_2())
-        self.listbox.bind("3", lambda _: self.command_3())
-        self.listbox.bind("4", lambda _: self.command_4())
-        self.listbox.bind("9", lambda _: self.command_9())
+        self.listbox.bind("1", lambda _: self.key_1.toggle())
+        self.listbox.bind("2", lambda _: self.key_2.toggle())
+        self.listbox.bind("3", lambda _: self.key_3.toggle())
+        self.listbox.bind("4", lambda _: self.key_4.toggle())
+        self.listbox.bind("9", lambda _: self.bpm_star.toggle())
+        self.listbox.bind("0", lambda _: self.key_star.toggle())
         self.listbox.bind("u", lambda _: self.command_update_key())
 
         self.last_copied_filename = None
@@ -464,7 +436,7 @@ class App:
         # currently just need acceptable camelot numbers (ignore major minor)
         cam_filter_numbers = []
         key_filter_range = 0
-        do_key_filter = not self.key_var_star.get()
+        do_key_filter = not self.key_star.get()
         if do_key_filter and cam_filter and key_filter_range is not None:
             cam_filter_num = int(cam_filter[:-1])
             cam_filter_numbers.append(cam_filter_num)
@@ -474,19 +446,19 @@ class App:
                 cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, i))
                 cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, -i))
             # add variables
-            if self.key_var_1.get():
+            if self.key_1.get():
                 cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, -1))
-            if self.key_var_2.get():
+            if self.key_2.get():
                 cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, 1))
-            if self.key_var_3.get():
+            if self.key_3.get():
                 cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, 2))
-            if self.key_var_4.get():
+            if self.key_4.get():
                 cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, 4))
 
         filter_string = self.entry_filter.stringvar.get()
         filter_bpm = self.entry_bpm.get_int()
         filter_bpm_range = self.entry_bpm_range.get_int() or 0
-        filter_bpm_star = self.bpm_star_var.get()
+        filter_bpm_star = self.bpm_star.get()
         tag_filter = None
         if self.entry_tag_filter:
             tag_filter = self.entry_tag_filter.stringvar.get()
@@ -822,35 +794,8 @@ class App:
         tag = 'x'
         self.add_tag_to_filename(filename, tag)
 
-    def command_key_unused(self):
-        filepath = self.get_selected_filepath()
-        if not filepath:
-            return
-        found_key = aa.get_key_from_alc(filepath)
-        if not aa.get_camelot_key(found_key):
-            return
-        self.stringvar_key.set(found_key)
-
     def command_v(self):
         self.tag_vocal_var.set(not bool(self.tag_vocal_var.get()))
-
-    def command_0(self):
-        self.key_var_star.set(not bool(self.key_var_star.get()))
-
-    def command_1(self):
-        self.key_var_1.set(not bool(self.key_var_1.get()))
-
-    def command_2(self):
-        self.key_var_2.set(not bool(self.key_var_2.get()))
-
-    def command_3(self):
-        self.key_var_3.set(not bool(self.key_var_3.get()))
-
-    def command_4(self):
-        self.key_var_4.set(not bool(self.key_var_4.get()))
-
-    def command_9(self):
-        self.bpm_star_var.set(not bool(self.bpm_star_var.get()))
 
     def command_update_key(self):
         filename = self.get_selected_filename()
