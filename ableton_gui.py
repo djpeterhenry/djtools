@@ -77,7 +77,6 @@ class App:
 
         # other dimensions
         search_width = 8
-        tag_filter_width = 5
         init_bpm_range = 3
         init_key_range = 0
 
@@ -162,7 +161,6 @@ class App:
         # extra stuff...put it first on line 2
         self.entry_bpm_edit = None
         self.entry_key_edit = None
-        self.entry_tag_filter = None
 
         if include_extra:
             self.entry_bpm_edit = EntryText(
@@ -182,9 +180,6 @@ class App:
         self.key_3 = Checkbox(frame_edit, '2', just_update)
         self.key_4 = Checkbox(frame_edit, '4', just_update)
         self.key_star = Checkbox(frame_edit, '*', just_update)
-
-        self.entry_tag_filter = EntryText(
-            frame_edit, text_width=tag_filter_width, update_fun=self.update_listbox)
 
         self.tag_var = StringVar(master)
         self.tag_var.trace('w', just_update)
@@ -430,9 +425,6 @@ class App:
         filter_bpm = self.entry_bpm.get_int()
         filter_bpm_range = self.entry_bpm_range.get_int() or 0
         filter_bpm_star = self.bpm_star.get()
-        tag_filter = None
-        if self.entry_tag_filter:
-            tag_filter = self.entry_tag_filter.stringvar.get()
 
         # just in case this is expensive...
         do_vocal_check = True
@@ -491,19 +483,6 @@ class App:
                 if filter_bpm_star:
                     bpm_range += 10
                 if not aa.matches_bpm_filter(filter_bpm, bpm_range, bpm):
-                    keep = False
-
-            # changing this to: some tag must have all bits of my search
-            if tag_filter:
-                any_success = False
-                for t in (x.upper() for x in tag_list):
-                    found_all_split = True
-                    for s in (x.upper() for x in tag_filter.split()):
-                        if s not in t:
-                            found_all_split = False
-                    if found_all_split:
-                        any_success = True
-                if not any_success:
                     keep = False
 
             if tag:
@@ -832,7 +811,6 @@ class App:
         self.entry_filter.clear()
         self.entry_bpm.clear()
         self.entry_key_filter.clear()
-        self.entry_tag_filter.clear()
         # TODO CLEAR TAG DROPDOWN
 
     def generate_and_set_from_current_button(self):
