@@ -228,6 +228,7 @@ class App:
         # self.listbox.bind("x", lambda _ : self.command_x())
         self.listbox.bind("v", lambda _: self.tag_vocal.toggle())
         self.listbox.bind("f", lambda _: self.command_copy_filename())
+        self.listbox.bind("p", lambda _: self.command_play_filename())
         self.listbox.bind("g", lambda _: self.command_g())
         self.listbox.bind("l", lambda _: self.command_l())
         self.listbox.bind("j", lambda _: self.command_order_down())
@@ -555,12 +556,6 @@ class App:
             return None
         return self.active_alc_files[index]
 
-    def get_selected_filepath(self):
-        filename = self.get_selected_filename()
-        if not filename:
-            return None
-        return os.path.abspath(filename)
-
     def get_filename_for_index(self, index):
         result = None
         try:
@@ -574,28 +569,47 @@ class App:
         ts = time.time()
         aa.add_ts(record, ts)
 
+    # deprecated:
     def command_copy(self):
-        filename_path = self.get_selected_filepath()
-        if not filename_path:
-            return
-        command = 'osascript -e "set the clipboard to POSIX file \\"%s\\""' % filename_path
-        print command
-        subprocess.call(command, shell=True)
-        # also record select in database
         filename = self.get_selected_filename()
         if not filename:
-            return  # impossible
+            return
+        self.file_action_copy_ableton(filename)
+        # and finally reveal if wanted
+        if bool(self.reveal_var.get()):
+            self.file_action_reveal(filename)
+
+    def file_action(self):
+        filename = self.get_selected_filename()
+        if not filename:
+            return
+        # switch here
+        self.file_action_copy_ableton(filename)
+
+    def add_ts_from_copy(self, filename):
         if filename == self.last_copied_filename:
             return
         self.last_copied_filename = filename
         self.ts_filename(filename)
-        # and finally reveal if wanted
-        if bool(self.reveal_var.get()):
-            try:
-                sample = aa.get_sample(self.db_dict[filename])
-                aa.reveal_file(sample)
-            except KeyError as e:
-                print (e)
+
+    def file_action_copy_ableton(self, filename):
+        filename_path = os.path.abspath(filename)
+        command = 'osascript -e "set the clipboard to POSIX file \\"%s\\""' % filename_path
+        subprocess.call(command, shell=True)
+        self.add_ts_from_copy(filename)
+
+    def file_action_reveal(self, filename):
+        sample = aa.get_sample(self.db_dict[filename])
+        aa.reveal_file(sample)
+        self.add_ts_from_copy(filename)
+
+    def file_action_copy_filename(self, filename):
+        self.set_clipboard_data(filename)
+
+    def file_action_play_vlc(self, filename):
+        sample = aa.get_sample(self.db_dict[filename])
+        command = ['open', sample]
+        subprocess.call(command)
 
     # should be classmethod
     def set_clipboard_data(self, data):
@@ -604,11 +618,19 @@ class App:
         p.stdin.close()
         retcode = p.wait()
 
+    # for use with f shortcut key
     def command_copy_filename(self):
         filename = self.get_selected_filename()
         if not filename:
             return
-        self.set_clipboard_data(filename)
+        self.file_action_copy_filename(filename)
+
+    # for use with p shortcut key
+    def command_play_filename(self):
+        filename = self.get_selected_filename()
+        if not filename:
+            return
+        self.file_action_play_vlc(filename)
 
     def command_tag_add(self):
         filename = self.get_selected_filename()
