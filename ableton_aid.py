@@ -512,6 +512,13 @@ def update_db_clips(valid_alc_files, db_dict, force=False):
         print ('Updated:', f)
 
 
+def update_db_clips_safe(db_filename):
+    db_dict = read_db_file(db_filename)
+    valid_alc_files = get_valid_alc_files(db_dict)
+    update_db_clips(valid_alc_files, db_dict)
+    write_db_file(db_filename, db_dict)
+
+
 def get_artist_and_track(filename):
     delimiter = ' - '
     split = os.path.splitext(filename)[0].split(delimiter)
@@ -808,12 +815,6 @@ def action_print_audioclip(args):
     assert_exists(args.alc_filename)
     print (get_audioclip_from_alc(args.alc_filename))
 
-
-def update_db_clips_safe(db_filename):
-    db_dict = read_db_file(db_filename)
-    valid_alc_files = get_valid_alc_files(db_dict)
-    update_db_clips(valid_alc_files, db_dict)
-    write_db_file(db_filename, db_dict)
 
 def action_export_rekordbox(args):
     update_db_clips_safe(args.db_filename)
