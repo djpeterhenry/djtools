@@ -815,8 +815,15 @@ def action_update_db_clips(args, force=True):
     update_db_clips(valid_alc_files, db_dict, force)
     write_db_file(args.db_filename, db_dict)
 
+def update_db_clips_safe(db_filename):
+    db_dict = read_db_file(db_filename)
+    valid_alc_files = get_valid_alc_files(db_dict)
+    update_db_clips(valid_alc_files, db_dict)
+    write_db_file(db_filename, db_dict)
 
 def action_export_rekordbox(args):
+    update_db_clips_safe(args.db_filename)
+
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
     files = generate_date_plus_alc(files, db_dict)
@@ -1108,6 +1115,8 @@ def action_export_rekordbox(args):
 
 
 def action_export_rekordbox_samples(args):
+    update_db_clips_safe(args.db_filename)
+
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
     for f in files:
