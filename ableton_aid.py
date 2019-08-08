@@ -809,12 +809,6 @@ def action_print_audioclip(args):
     print (get_audioclip_from_alc(args.alc_filename))
 
 
-def action_update_db_clips(args, force=True):
-    db_dict = read_db_file(args.db_filename)
-    valid_alc_files = get_valid_alc_files(db_dict)
-    update_db_clips(valid_alc_files, db_dict, force)
-    write_db_file(args.db_filename, db_dict)
-
 def update_db_clips_safe(db_filename):
     db_dict = read_db_file(db_filename)
     valid_alc_files = get_valid_alc_files(db_dict)
@@ -1363,9 +1357,6 @@ def parse_args():
     p_audioclip = subparsers.add_parser('print_audioclip')
     p_audioclip.add_argument('alc_filename')
     p_audioclip.set_defaults(func=action_print_audioclip)
-
-    subparsers.add_parser('update_db_clips').set_defaults(
-        func=action_update_db_clips)
 
     p_rekordbox = subparsers.add_parser('export_rekordbox')
     p_rekordbox.add_argument('rekordbox_filename')
