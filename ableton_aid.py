@@ -43,7 +43,7 @@ def get_ts_for(year, month, day):
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
 USE_REKORDBOX_SAMPLE = False
-VERSION = 33
+VERSION = 34
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
@@ -1082,7 +1082,7 @@ def action_export_rekordbox(args):
         # create tuples of (bpm, bpm_range) and sort them
         bpm_and_range = [(0, 0)]
         for bpm in range(116, 141, 2):
-            bpm_and_range.append((bpm, 2))
+            bpm_and_range.append((bpm, 3))
         for bpm in range(80, 161, 5):
             bpm_and_range.append((bpm, 5))
         bpm_and_range.sort()
