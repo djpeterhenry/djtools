@@ -703,7 +703,6 @@ def action_list_sets(args):
 
 
 def action_key_frequency(args):
-    date_file_tuples = []
     db_dict = read_db_file(args.db_filename)
     alc_file_set = set(get_ableton_files())
     key_frequency = {}
@@ -1249,8 +1248,6 @@ def action_rekordbox_history(args):
 
 
 def action_cue_to_tracklist(args):
-    db_dict = read_db_file(args.db_filename)
-
     class Track(object):
 
         def __init__(self):
