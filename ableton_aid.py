@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # Created on May 14, 2009
-
 from __future__ import print_function
+
+VERSION = 38
 
 import sys
 import os
@@ -41,9 +42,6 @@ def get_ts_for(year, month, day):
     return time.mktime(datetime.date(year, month, day).timetuple())
 
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
-
-USE_REKORDBOX_SAMPLE = False
-VERSION = 34
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
@@ -814,8 +812,13 @@ def action_print_audioclip(args):
     assert_exists(args.alc_filename)
     print (get_audioclip_from_alc(args.alc_filename))
 
+def action_export_rekordbox_local(args):
+    action_export_rekordbox(args, False)
 
-def action_export_rekordbox(args):
+def action_export_rekordbox_usb(args):
+    action_export_rekordbox(args, True)
+
+def action_export_rekordbox(args, use_rekordbox_sample):
     update_db_clips_safe(args.db_filename)
 
     db_dict = read_db_file(args.db_filename)
@@ -855,7 +858,7 @@ def action_export_rekordbox(args):
         record = db_dict[f]
         if not use_for_rekordbox(record):
             continue
-        if USE_REKORDBOX_SAMPLE:
+        if use_rekordbox_sample:
             sample = get_existing_rekordbox_sample(record)
         else:
             sample = get_sample_unicode(record)
@@ -1123,12 +1126,13 @@ def action_export_rekordbox_samples(args):
             print ('Failed to get sample for {}'.format(f))
             continue
         _, sample_ext = os.path.splitext(sample)
-        # convert flac, copy others
-        if sample_ext.lower() == '.flac':
+        # convert flac and mp4 (could be video)
+        if sample_ext.lower() in ('.flac', '.mp4'):
             target = get_export_sample_path(f, '.aiff', REKORDBOX_SAMPLE_PATH)
             if not os.path.exists(target):
                 cmd = ['ffmpeg', '-i', sample, target]
                 subprocess.check_call(cmd)
+        # copy others
         else:
             target = get_export_sample_path(
                 f, sample_ext, REKORDBOX_SAMPLE_PATH)
@@ -1356,9 +1360,13 @@ def parse_args():
     p_audioclip.add_argument('alc_filename')
     p_audioclip.set_defaults(func=action_print_audioclip)
 
-    p_rekordbox = subparsers.add_parser('export_rekordbox')
+    p_rekordbox = subparsers.add_parser('export_rekordbox_local')
     p_rekordbox.add_argument('rekordbox_filename')
-    p_rekordbox.set_defaults(func=action_export_rekordbox)
+    p_rekordbox.set_defaults(func=action_export_rekordbox_local)
+
+    p_rekordbox = subparsers.add_parser('export_rekordbox_usb')
+    p_rekordbox.add_argument('rekordbox_filename')
+    p_rekordbox.set_defaults(func=action_export_rekordbox_usb)
 
     p_rb_samples = subparsers.add_parser('export_rekordbox_samples')
     p_rb_samples.set_defaults(func=action_export_rekordbox_samples)
