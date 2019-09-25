@@ -2,7 +2,7 @@
 # Created on May 14, 2009
 from __future__ import print_function
 
-VERSION = 38
+VERSION = 39
 
 import sys
 import os
@@ -819,7 +819,10 @@ def action_export_rekordbox_usb(args):
     action_export_rekordbox(args, True)
 
 def action_export_rekordbox(args, use_rekordbox_sample):
-    update_db_clips_safe(args.db_filename)
+    if use_rekordbox_sample:
+        export_rekordbox_samples(args.db_filename)
+    else:
+        update_db_clips_safe(args.db_filename)
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -1055,14 +1058,25 @@ def action_export_rekordbox(args, use_rekordbox_sample):
         # all unfiltered
         adder.add_playlist_for_files(et_bpm_folder, 'All (unfiltered)', files_with_id)
 
-        # all for bpm
+        # all for bpm (various orders)
         matching_files = get_filtered_files(files=files_with_id,
                                             bpm=bpm, bpm_range=bpm_range,
                                             cam_num_list=None,
                                             vocal=False)
+        # default order (touch)
         adder.add_playlist_for_files(et_bpm_folder, 'All', matching_files)
+        # by newest
+        matching_files_by_newest = generate_alc(matching_files, db_dict)
+        adder.add_playlist_for_files(et_bpm_folder, 'All (new)', matching_files_by_newest)
+        # by num
+        matching_files_by_num = generate_num(matching_files, db_dict)
+        adder.add_playlist_for_files(et_bpm_folder, 'All (num)', matching_files_by_num)
+        # by random
+        matching_files_random = list(matching_files)
+        random.shuffle(matching_files_random)
+        adder.add_playlist_for_files(et_bpm_folder, 'All (random)', matching_files_random)
 
-        # vocal for bpm
+        # vocal for bpm (default order)
         matching_files = get_filtered_files(files=files_with_id,
                                             bpm=bpm, bpm_range=bpm_range,
                                             cam_num_list=None,
@@ -1111,10 +1125,10 @@ def action_export_rekordbox(args, use_rekordbox_sample):
     tree.write(args.rekordbox_filename, encoding='utf-8', xml_declaration=True)
 
 
-def action_export_rekordbox_samples(args):
-    update_db_clips_safe(args.db_filename)
+def export_rekordbox_samples(db_filename):
+    update_db_clips_safe(db_filename)
 
-    db_dict = read_db_file(args.db_filename)
+    db_dict = read_db_file(db_filename)
     files = get_ableton_files()
     for f in files:
         record = db_dict[f]
@@ -1140,7 +1154,11 @@ def action_export_rekordbox_samples(args):
                 shutil.copy(sample, target)
         assert os.path.exists(target)
         record['rekordbox_sample'] = target.decode('utf-8')
-    write_db_file(args.db_filename, db_dict)
+    write_db_file(db_filename, db_dict)
+
+
+def action_export_rekordbox_samples(args):
+    export_rekordbox_samples(args.db_filename)
 
 
 def action_export_mp3_samples(args):
