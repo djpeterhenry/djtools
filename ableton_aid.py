@@ -2,7 +2,7 @@
 # Created on May 14, 2009
 from __future__ import print_function
 
-VERSION = 39
+VERSION = 40
 
 import sys
 import os
@@ -474,6 +474,12 @@ def generate_num(files, db_dict):
         num_file_tuples.append((num, file))
     num_file_tuples.sort()
     return get_files_from_pairs(num_file_tuples)
+
+
+def generate_random(files):
+    files_copy = list(files)
+    random.shuffle(files_copy)
+    return files_copy
 
 
 def get_keys_for_camelot_number(camelot_number):
@@ -1047,7 +1053,11 @@ def action_export_rekordbox(args, use_rekordbox_sample):
     et_version_node = add_folder(et_root_node, 'V{:02}'.format(VERSION))
 
     # playlist for all
-    adder.add_playlist_for_files(et_version_node, 'All (unfiltered)', files_with_id)
+    adder.add_playlist_for_files(et_version_node, 'All (touch)', files_with_id)
+    adder.add_playlist_for_files(et_version_node, 'All (new)', generate_alc(files_with_id, db_dict))
+    adder.add_playlist_for_files(et_version_node, 'All (num)', generate_num(files_with_id, db_dict))
+    adder.add_playlist_for_files(et_version_node, 'All (random)', generate_random(files_with_id))
+    
 
     def add_bpm_folder(et_parent_folder, bpm, bpm_range):
         folder_name = get_bpm_name(bpm, bpm_range)
@@ -1056,7 +1066,7 @@ def action_export_rekordbox(args, use_rekordbox_sample):
         et_bpm_folder = add_folder(et_parent_folder, folder_name)
 
         # all unfiltered
-        adder.add_playlist_for_files(et_bpm_folder, 'All (unfiltered)', files_with_id)
+        adder.add_playlist_for_files(et_bpm_folder, 'All BPM', files_with_id)
 
         # all for bpm (various orders)
         matching_files = get_filtered_files(files=files_with_id,
@@ -1064,17 +1074,14 @@ def action_export_rekordbox(args, use_rekordbox_sample):
                                             cam_num_list=None,
                                             vocal=False)
         # default order (touch)
-        adder.add_playlist_for_files(et_bpm_folder, 'All', matching_files)
-        # by newest
-        matching_files_by_newest = generate_alc(matching_files, db_dict)
-        adder.add_playlist_for_files(et_bpm_folder, 'All (new)', matching_files_by_newest)
-        # by num
-        matching_files_by_num = generate_num(matching_files, db_dict)
-        adder.add_playlist_for_files(et_bpm_folder, 'All (num)', matching_files_by_num)
-        # by random
-        matching_files_random = list(matching_files)
-        random.shuffle(matching_files_random)
-        adder.add_playlist_for_files(et_bpm_folder, 'All (random)', matching_files_random)
+        adder.add_playlist_for_files(
+            et_bpm_folder, 'All (touch)', matching_files)
+        adder.add_playlist_for_files(
+            et_bpm_folder, 'All (new)', generate_alc(matching_files, db_dict))
+        adder.add_playlist_for_files(
+            et_bpm_folder, 'All (num)', generate_num(matching_files, db_dict))
+        adder.add_playlist_for_files(
+            et_bpm_folder, 'All (random)', generate_random(matching_files))
 
         # vocal for bpm (default order)
         matching_files = get_filtered_files(files=files_with_id,
