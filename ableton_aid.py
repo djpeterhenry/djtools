@@ -2,7 +2,7 @@
 # Created on May 14, 2009
 from __future__ import print_function
 
-VERSION = 40
+VERSION = 41
 
 import sys
 import os
@@ -44,7 +44,11 @@ def get_ts_for(year, month, day):
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
-#REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
+REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
+
+REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
+REKORDBOX_LOCAL_SAMPLE_KEY = 'rekordbox_local_sample'
+
 #MP3_SAMPLE_PATH = u'/Volumes/MacHelper/mp3_samples'
 MP3_SAMPLE_PATH = u'/Volumes/music/mp3_samples/'
 
@@ -550,9 +554,9 @@ def get_export_sample_path(f, sample_ext, target_path):
     return os.path.join(target_path, f_base + sample_ext).encode('utf-8')
 
 
-def get_existing_rekordbox_sample(record):
+def get_existing_rekordbox_sample(record, sample_key):
     try:
-        sample = record['rekordbox_sample']
+        sample = record[sample_key]
         if os.path.exists(sample):
             return sample
     except:
@@ -829,9 +833,17 @@ def action_export_rekordbox_usb(args):
 
 def action_export_rekordbox(args, is_for_usb):
     if is_for_usb:
-        export_rekordbox_samples(args.db_filename)
+        export_rekordbox_samples(args.db_filename,
+                                 sample_path=REKORDBOX_SAMPLE_PATH,
+                                 sample_key=REKORDBOX_SAMPLE_KEY,
+                                 always_copy=True,
+                                 convert_flac=True)
     else:
-        update_db_clips_safe(args.db_filename)
+        export_rekordbox_samples(args.db_filename,
+                                 sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
+                                 sample_key=REKORDBOX_LOCAL_SAMPLE_KEY,
+                                 always_copy=False,
+                                 convert_flac=False)
 
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()
@@ -871,9 +883,9 @@ def action_export_rekordbox(args, is_for_usb):
         if not use_for_rekordbox(record):
             continue
         if is_for_usb:
-            sample = get_existing_rekordbox_sample(record)
+            sample = get_existing_rekordbox_sample(record, sample_key=REKORDBOX_SAMPLE_KEY)
         else:
-            sample = get_sample_unicode(record)
+            sample = get_existing_rekordbox_sample(record, sample_key=REKORDBOX_LOCAL_SAMPLE_KEY)
         if sample is None:
             print ('Error getting sample for {}'.format(f))
             continue
@@ -1135,8 +1147,12 @@ def action_export_rekordbox(args, is_for_usb):
     tree.write(args.rekordbox_filename, encoding='utf-8', xml_declaration=True)
 
 
-def export_rekordbox_samples(db_filename):
+def export_rekordbox_samples(db_filename, sample_path, sample_key, always_copy, convert_flac):
     update_db_clips_safe(db_filename)
+
+    extensions_to_convert = ['.mp4', '.m4a']
+    if convert_flac:
+        extensions_to_convert.append('.flac')
 
     db_dict = read_db_file(db_filename)
     files = get_ableton_files()
@@ -1151,19 +1167,21 @@ def export_rekordbox_samples(db_filename):
             continue
         _, sample_ext = os.path.splitext(sample)
         # convert flac and mp4 (could be video)
-        if sample_ext.lower() in ('.flac', '.mp4', '.m4a'):
-            target = get_export_sample_path(f, '.aiff', REKORDBOX_SAMPLE_PATH)
+        if sample_ext.lower() in extensions_to_convert:
+            target = get_export_sample_path(f, '.aiff', sample_path)
             if not os.path.exists(target):
                 cmd = ['ffmpeg', '-i', sample, target]
                 subprocess.check_call(cmd)
         # copy others
-        else:
+        elif always_copy:
             target = get_export_sample_path(
-                f, sample_ext, REKORDBOX_SAMPLE_PATH)
+                f, sample_ext, sample_path)
             if not os.path.exists(target):
                 shutil.copy(sample, target)
+        else:
+            target = sample.encode('utf-8')
         assert os.path.exists(target)
-        record['rekordbox_sample'] = target.decode('utf-8')
+        record[sample_key] = target.decode('utf-8')
     write_db_file(db_filename, db_dict)
 
 
