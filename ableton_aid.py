@@ -818,14 +818,17 @@ def action_print_audioclip(args):
     assert_exists(args.alc_filename)
     print (get_audioclip_from_alc(args.alc_filename))
 
+
 def action_export_rekordbox_local(args):
-    action_export_rekordbox(args, False)
+    action_export_rekordbox(args, is_for_usb=False)
+
 
 def action_export_rekordbox_usb(args):
-    action_export_rekordbox(args, True)
+    action_export_rekordbox(args, is_for_usb=True)
 
-def action_export_rekordbox(args, use_rekordbox_sample):
-    if use_rekordbox_sample:
+
+def action_export_rekordbox(args, is_for_usb):
+    if is_for_usb:
         export_rekordbox_samples(args.db_filename)
     else:
         update_db_clips_safe(args.db_filename)
@@ -867,7 +870,7 @@ def action_export_rekordbox(args, use_rekordbox_sample):
         record = db_dict[f]
         if not use_for_rekordbox(record):
             continue
-        if use_rekordbox_sample:
+        if is_for_usb:
             sample = get_existing_rekordbox_sample(record)
         else:
             sample = get_sample_unicode(record)
@@ -1148,7 +1151,7 @@ def export_rekordbox_samples(db_filename):
             continue
         _, sample_ext = os.path.splitext(sample)
         # convert flac and mp4 (could be video)
-        if sample_ext.lower() in ('.flac', '.mp4'):
+        if sample_ext.lower() in ('.flac', '.mp4', '.m4a'):
             target = get_export_sample_path(f, '.aiff', REKORDBOX_SAMPLE_PATH)
             if not os.path.exists(target):
                 cmd = ['ffmpeg', '-i', sample, target]
@@ -1162,10 +1165,6 @@ def export_rekordbox_samples(db_filename):
         assert os.path.exists(target)
         record['rekordbox_sample'] = target.decode('utf-8')
     write_db_file(db_filename, db_dict)
-
-
-def action_export_rekordbox_samples(args):
-    export_rekordbox_samples(args.db_filename)
 
 
 def action_export_mp3_samples(args):
@@ -1341,6 +1340,27 @@ def action_touch_list(args):
     write_db_file(args.db_filename, db_dict)
 
 
+def list_m4a(db_filename):
+    db_dict = read_db_file(db_filename)
+    files = get_ableton_files()
+    for f in files:
+        record = db_dict[f]
+        if not use_for_rekordbox(record):
+            continue
+        sample = get_sample_unicode(record)
+        if sample is None:
+            print ('Failed to get sample for {}'.format(f))
+            continue
+        _, sample_ext = os.path.splitext(sample)
+        if sample_ext not in ('.m4a',):
+            continue
+        print (f)
+        print (sample)
+
+
+def action_list_m4a(args):
+    list_m4a(args.db_filename)
+
 ###########
 # main
 
@@ -1393,9 +1413,6 @@ def parse_args():
     p_rekordbox.add_argument('rekordbox_filename')
     p_rekordbox.set_defaults(func=action_export_rekordbox_usb)
 
-    p_rb_samples = subparsers.add_parser('export_rekordbox_samples')
-    p_rb_samples.set_defaults(func=action_export_rekordbox_samples)
-
     p_mp3_samples = subparsers.add_parser('export_mp3_samples')
     p_mp3_samples.set_defaults(func=action_export_mp3_samples)
 
@@ -1420,6 +1437,8 @@ def parse_args():
     p_touch_list.add_argument('list_file')
     p_touch_list.add_argument('date', type=int, nargs=3)
     p_touch_list.set_defaults(func=action_touch_list)
+
+    subparsers.add_parser('list_m4a').set_defaults(func=action_list_m4a)
 
     return parser.parse_args()
 
