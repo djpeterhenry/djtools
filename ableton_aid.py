@@ -846,7 +846,7 @@ def action_export_rekordbox(args, is_for_usb):
                                  convert_flac=False)
 
     db_dict = read_db_file(args.db_filename)
-    files = get_ableton_files()
+    files = get_valid_alc_files(db_dict)
     files = generate_date_plus_alc(files, db_dict)
 
     def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
@@ -1155,7 +1155,7 @@ def export_rekordbox_samples(db_filename, sample_path, sample_key, always_copy, 
         extensions_to_convert.append('.flac')
 
     db_dict = read_db_file(db_filename)
-    files = get_ableton_files()
+    files = get_valid_alc_files(db_dict)
     for f in files:
         record = db_dict[f]
         if not use_for_rekordbox(record):
