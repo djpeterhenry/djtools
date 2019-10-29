@@ -918,14 +918,13 @@ def action_export_rekordbox(args, is_for_usb):
         # abuse album for random
         et_track.set('Album', str(random.randint(0, 2**31)))
 
-        first_bpm = None
-
         clip = record['clip']
         warp_markers = clip['warp_markers']
 
         # maybe these need to be in order?
         beat_grid_markers = []
 
+        first_bpm = None
         for warp_index in xrange(len(warp_markers) - 1):
             this_marker = warp_markers[warp_index]
             this_beat_time = this_marker['beat_time']
@@ -951,13 +950,7 @@ def action_export_rekordbox(args, is_for_usb):
             start_seconds = get_seconds_for_beat(
                 first_marker_beat, first_marker_sec, start_beat, first_bpm)
 
-            # NOTE(peter): this may be wrong if the bpm changes a lot...
-            #end_beat = clip['end']
-            #end_seconds = get_seconds_for_beat(first_marker_beat, first_marker_sec, end_beat, first_bpm)
-            #et_track.set('TotalTime', str(end_seconds - start_seconds))
             # Go back to just setting 20:00 for all tracks because it wants full sample length
-            # Better would be extracting full sample duration and using that,
-            # but needlessly slow
             et_track.set('TotalTime', str(60 * 20))
 
             if start_beat < first_marker_beat:
