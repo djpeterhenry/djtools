@@ -176,15 +176,9 @@ def alc_to_str(alc_filename):
 def alc_to_xml(alc_filename):
     return ET.fromstring(alc_to_str(alc_filename))
 
-
-def get_audioclip_from_alc(alc_filename):
-    xml_root = alc_to_xml(alc_filename)
-    # just find the first AudioClip for now
-    xml_clip = xml_root.find('.//AudioClip')
-    if xml_clip is None:
-        return None
+def get_xml_clip_info(xml_clip, alc_ts):
     result = {}
-    result['alc_ts'] = os.path.getmtime(alc_filename)
+    result['alc_ts'] = alc_ts
     xml_warp_markers = xml_clip.find('WarpMarkers')
     result['warp_markers'] = []
     for marker in xml_warp_markers:
@@ -205,7 +199,26 @@ def get_audioclip_from_alc(alc_filename):
         result['sample'] = sample_filepath
         result['sample_ts'] = os.path.getmtime(sample_filepath)
     else:
-        print ('Sample failed: {}'.format(alc_filename))
+        return None
+    return result
+
+
+def get_audioclip_from_alc(alc_filename):
+    xml_root = alc_to_xml(alc_filename)
+    alc_ts = os.path.getmtime(alc_filename)
+    # just find the first AudioClip for now
+    xml_clip = xml_root.find('.//AudioClip')
+    if xml_clip is None:
+        return None
+    return get_xml_clip_info(xml_clip, alc_ts)
+
+
+def get_audioclips_from_als(als_filename):
+    xml_root = alc_to_xml(als_filename)
+    alc_ts = os.path.getmtime(als_filename)
+    result = []
+    for xml_clip in xml_root.findall('.//AudioClip'):
+        result.append(get_xml_clip_info(xml_clip, alc_ts))
     return result
 
 
@@ -823,6 +836,11 @@ def action_print_audioclip(args):
     print (get_audioclip_from_alc(args.alc_filename))
 
 
+def action_print_audioclips(args):
+    assert_exists(args.als_filename)
+    print (get_audioclips_from_als(args.als_filename))
+
+
 def action_export_rekordbox_local(args):
     action_export_rekordbox(args, is_for_usb=False)
 
@@ -1415,6 +1433,10 @@ def parse_args():
     p_audioclip = subparsers.add_parser('print_audioclip')
     p_audioclip.add_argument('alc_filename')
     p_audioclip.set_defaults(func=action_print_audioclip)
+
+    p_audioclip = subparsers.add_parser('print_audioclips')
+    p_audioclip.add_argument('als_filename')
+    p_audioclip.set_defaults(func=action_print_audioclips)
 
     p_rekordbox = subparsers.add_parser('export_rekordbox_local')
     p_rekordbox.add_argument('rekordbox_filename')
