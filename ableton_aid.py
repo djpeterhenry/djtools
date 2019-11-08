@@ -523,12 +523,21 @@ def assert_exists(filename):
 def update_db_clips(valid_alc_files, db_dict, force=False):
     for f in valid_alc_files:
         record = db_dict[f]
-        alc_ts = os.path.getmtime(f)
-        if not force and record.get('alc_ts') == alc_ts:
-            continue
-        # we need to parse and update the clips
-        record['clip'] = get_audioclip_from_alc(f)
-        record['alc_ts'] = alc_ts
+        f_ts = os.path.getmtime(f)
+        if os.path.splitext(f)[1] == '.alc':
+            if not force and record.get('alc_ts') == f_ts:
+                continue
+            # It's ALC and we need to parse and update the clip
+            record['clip'] = get_audioclip_from_alc(f)
+            record['alc_ts'] = f_ts
+        elif os.path.splitext(f)[1] == '.als':
+            if not force and record.get('als_ts') == f_ts:
+                continue
+            # It's ALS and we need to parse and update the clips
+            record['clips'] = get_audioclips_from_als(f)
+            record['als_ts'] = f_ts
+        else:
+            print ('Unknown ableton extension: ', f)
         print ('Updated:', f)
 
 
