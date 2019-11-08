@@ -176,9 +176,8 @@ def alc_to_str(alc_filename):
 def alc_to_xml(alc_filename):
     return ET.fromstring(alc_to_str(alc_filename))
 
-def get_xml_clip_info(xml_clip, alc_ts):
+def get_xml_clip_info(xml_clip):
     result = {}
-    result['alc_ts'] = alc_ts
     xml_warp_markers = xml_clip.find('WarpMarkers')
     result['warp_markers'] = []
     for marker in xml_warp_markers:
@@ -205,20 +204,18 @@ def get_xml_clip_info(xml_clip, alc_ts):
 
 def get_audioclip_from_alc(alc_filename):
     xml_root = alc_to_xml(alc_filename)
-    alc_ts = os.path.getmtime(alc_filename)
     # just find the first AudioClip for now
     xml_clip = xml_root.find('.//AudioClip')
     if xml_clip is None:
         return None
-    return get_xml_clip_info(xml_clip, alc_ts)
+    return get_xml_clip_info(xml_clip)
 
 
 def get_audioclips_from_als(als_filename):
     xml_root = alc_to_xml(als_filename)
-    alc_ts = os.path.getmtime(als_filename)
     result = []
     for xml_clip in xml_root.findall('.//AudioClip'):
-        result.append(get_xml_clip_info(xml_clip, alc_ts))
+        result.append(get_xml_clip_info(xml_clip))
     return result
 
 
@@ -421,7 +418,7 @@ def get_last_ts(record):
 
 def get_alc_ts(record):
     try:
-        alc_ts = record['clip']['alc_ts']
+        alc_ts = record['alc_ts']
         if alc_ts < OLD_ALC_TS_CUTOFF and 'old_alc_ts' in record:
             return record['old_alc_ts']
         return alc_ts
@@ -527,9 +524,11 @@ def update_db_clips(valid_alc_files, db_dict, force=False):
     for f in valid_alc_files:
         record = db_dict[f]
         alc_ts = os.path.getmtime(f)
-        if not force and 'clip' in record and record['clip']['alc_ts'] == alc_ts:
+        if not force and record.get('alc_ts') == alc_ts:
             continue
+        # we need to parse and update the clips
         record['clip'] = get_audioclip_from_alc(f)
+        record['alc_ts'] = alc_ts
         print ('Updated:', f)
 
 
