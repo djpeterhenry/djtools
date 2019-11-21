@@ -54,6 +54,8 @@ MP3_SAMPLE_PATH = u'/Volumes/music/mp3_samples/'
 
 LISTS_FOLDER = '/Users/peter/github/djpeterhenry.github.io/lists'
 
+COLLECTION_FOLDER = "/Users/peter/github/djpeterhenry.github.io/collection"
+
 
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
@@ -1166,6 +1168,7 @@ def action_export_rekordbox(args, is_for_usb):
 
 def export_rekordbox_samples(db_filename, sample_path, sample_key, always_copy, convert_flac):
     update_db_clips_safe(db_filename)
+    generate_lists(db_filename)
 
     extensions_to_convert = ['.mp4', '.m4a']
     if convert_flac:
@@ -1347,12 +1350,12 @@ def action_cue_to_tracklist(args):
             w.write('{}\n'.format(str(t)))
 
 
-def action_generate_lists(args):
-    db_dict = read_db_file(args.db_filename)
+def generate_lists(db_filename, output_path = COLLECTION_FOLDER):
+    db_dict = read_db_file(db_filename)
     files = get_ableton_files()
 
     def write_files(filename, files_to_write):
-        with open(os.path.join(args.output_path, filename), 'w') as outfile:
+        with open(os.path.join(output_path, filename), 'w') as outfile:
             for f in files_to_write:
                 f_print = os.path.splitext(f)[0]
                 outfile.write('{}\n'.format(f_print))
@@ -1360,8 +1363,10 @@ def action_generate_lists(args):
     write_files('date_or_add.txt', generate_date_plus_alc(files, db_dict))
     write_files('add.txt', generate_alc(files, db_dict))
     write_files('name.txt', files)
-    write_files('num.txt', generate_num(files, db_dict))
+    write_files('num.txt', generate_num(files, db_dict))    
 
+def action_generate_lists(args):
+    generate_lists(args.db_filename, args.output_path)
 
 def action_touch_list(args):
     db_dict = read_db_file(args.db_filename)
