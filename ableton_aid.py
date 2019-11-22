@@ -110,7 +110,7 @@ def get_base_filename(filename, record):
     if ext not in ['.alc']:
         result = '%s (%s)' % (result, ext[1:].upper())
     # add vocal:
-    if 'vocal' in record['tags']:
+    if is_vocal(record):
         result = result + ' [Vocal]'
     return result
 
@@ -168,6 +168,18 @@ def use_for_rekordbox(record):
 
 def is_vocal(record):
     return 'vocal' in record['tags']
+
+
+def has_extension(f, extension):
+    return os.path.splitext(f)[1] == extension
+
+
+def is_alc_file(f):
+    return has_extension(f, '.alc')
+
+
+def is_als_file(f):
+    return has_extension(f, '.als')
 
 
 def alc_to_str(alc_filename):
@@ -522,20 +534,20 @@ def assert_exists(filename):
         raise ValueError('File does not exist: {}'.format(filename))
 
 
-def update_db_clips(valid_alc_files, db_dict, force=False):
+def update_db_clips(valid_alc_files, db_dict, force_als=False):
+    print ('update_db_clips')
     for f in valid_alc_files:
         record = db_dict[f]
         f_ts = os.path.getmtime(f)
-        extension = os.path.splitext(f)[1]
         # Get the first clip for key/update purposes from both alc and als
-        if extension in ('.alc', '.als'):
-            if force or record.get('alc_ts') != f_ts:
+        if is_alc_file(f) or is_als_file(f):
+            if record.get('alc_ts') != f_ts:
                 record['clip'] = get_audioclip_from_alc(f)
                 record['alc_ts'] = f_ts
                 print ('Updated clip:', f)
         # If it's an als file, get the "clips" as well
-        if extension == '.als':
-            if force or record.get('als_ts') != f_ts:
+        if is_als_file(f):
+            if force_als or record.get('als_ts') != f_ts:
                 record['clips'] = get_audioclips_from_als(f)
                 record['als_ts'] = f_ts
                 print ('Updated clips:', f)
@@ -785,8 +797,6 @@ def action_transfer_ts(args):
 
         print (f, "plays:", ts_len)
 
-        e = os.path.splitext(f)[1]
-
         # cutoff=0.4, n=10
         close = difflib.get_close_matches(f, alc_file_list, cutoff=0.3, n=10)
         for index, other in enumerate(close):
@@ -918,6 +928,10 @@ def action_export_rekordbox(args, is_for_usb):
 
         et_track = ET.SubElement(et_collection, 'TRACK')
         artist, track = get_artist_and_track(f)
+
+        # Optionally put [Vocal] in the track name
+        if is_vocal(record):
+            track = '{} [Vocal]'.format(track)
 
         # Put camelot key in track name
         cam_key = get_camelot_key(record['key'])
@@ -1180,7 +1194,7 @@ def export_rekordbox_samples(db_filename, sample_path, sample_key, always_copy, 
         record = db_dict[f]
         if not use_for_rekordbox(record):
             continue
-        print ('Starting', f)
+        print ('Checking sample:', f)
         sample = get_sample_unicode(record)
         if sample is None:
             print ('Failed to get sample for {}'.format(f))
