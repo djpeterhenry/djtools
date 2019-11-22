@@ -958,6 +958,9 @@ def action_export_rekordbox(args, is_for_usb):
         # abuse album for random
         et_track.set('Album', str(random.randint(0, 2**31)))
 
+        # Go back to just setting 20:00 for all tracks because it wants full sample length
+        et_track.set('TotalTime', str(60 * 20))
+
         clip = record['clip']
         warp_markers = clip['warp_markers']
 
@@ -990,9 +993,6 @@ def action_export_rekordbox(args, is_for_usb):
             start_seconds = get_seconds_for_beat(
                 first_marker_beat, first_marker_sec, start_beat, first_bpm)
 
-            # Go back to just setting 20:00 for all tracks because it wants full sample length
-            et_track.set('TotalTime', str(60 * 20))
-
             if start_beat < first_marker_beat:
                 beat_grid_markers.append(
                     dict(sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat))
@@ -1005,12 +1005,11 @@ def action_export_rekordbox(args, is_for_usb):
             hot_cue_counter = 0
             # memory cue
             add_position_marker(et_track, 'Start', 0, -1, start_seconds)
+            # hot cue
             add_position_marker(et_track, 'Start', 0,
                                 hot_cue_counter, start_seconds)
             hot_cue_counter += 1
-            # hot cue
-            #add_position_marker(et_track, 'Start (hot)', 0, 0, start_seconds)
-            # loop hot and memory queues
+            # memory and hot cues for loop as well
             loop_start_beat = clip['loop_start']
             loop_end_beat = clip['loop_end']
             loop_start_sec = get_seconds_for_beat(
