@@ -198,10 +198,12 @@ def get_xml_clip_info(xml_clip):
         result['warp_markers'].append(dict(sec_time=float(marker.get('SecTime')),
                                            beat_time=float(marker.get('BeatTime'))))
     xml_loop = xml_clip.find('Loop')
-    result['start'] = float(xml_loop.find('LoopStart').get('Value'))
-    result['end'] = float(xml_loop.find('LoopEnd').get('Value'))
-    result['loop_start'] = float(xml_loop.find('HiddenLoopStart').get('Value'))
-    result['loop_end'] = float(xml_loop.find('HiddenLoopEnd').get('Value'))
+    result['loop_start'] = float(xml_loop.find('LoopStart').get('Value'))
+    result['loop_end'] = float(xml_loop.find('LoopEnd').get('Value'))
+    result['start_relative'] = float(xml_loop.find('StartRelative').get('Value'))
+    result['loop_on'] = True if xml_loop.find('LoopOn').get('Value') == 'true' else False
+    result['hidden_loop_start'] = float(xml_loop.find('HiddenLoopStart').get('Value'))
+    result['hidden_loop_end'] = float(xml_loop.find('HiddenLoopEnd').get('Value'))
     # also sample info
     xml_fileref = xml_clip.find('SampleRef/FileRef')
     relative_path = os.path.join(
@@ -534,14 +536,14 @@ def assert_exists(filename):
         raise ValueError('File does not exist: {}'.format(filename))
 
 
-def update_db_clips(valid_alc_files, db_dict, force_als=False):
+def update_db_clips(valid_alc_files, db_dict, force_alc=False, force_als=False):
     print ('update_db_clips')
     for f in valid_alc_files:
         record = db_dict[f]
         f_ts = os.path.getmtime(f)
         # Get the first clip for key/update purposes from both alc and als
         if is_alc_file(f) or is_als_file(f):
-            if record.get('alc_ts') != f_ts:
+            if force_alc or record.get('alc_ts') != f_ts:
                 record['clip'] = get_audioclip_from_alc(f)
                 record['alc_ts'] = f_ts
                 print ('Updated clip:', f)
@@ -989,7 +991,7 @@ def action_export_rekordbox(args, is_for_usb):
             first_marker_beat = first_marker['beat_time']
             first_marker_sec = first_marker['sec_time']
 
-            start_beat = clip['start']
+            start_beat = clip['loop_start'] + clip['start_relative']
             start_seconds = get_seconds_for_beat(
                 first_marker_beat, first_marker_sec, start_beat, first_bpm)
 
@@ -1010,8 +1012,8 @@ def action_export_rekordbox(args, is_for_usb):
                                 hot_cue_counter, start_seconds)
             hot_cue_counter += 1
             # memory and hot cues for loop as well
-            loop_start_beat = clip['loop_start']
-            loop_end_beat = clip['loop_end']
+            loop_start_beat = clip['hidden_loop_start']
+            loop_end_beat = clip['hidden_loop_end']
             loop_start_sec = get_seconds_for_beat(
                 first_marker_beat, first_marker_sec, loop_start_beat, first_bpm)
             loop_end_sec = get_seconds_for_beat(
