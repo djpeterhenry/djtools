@@ -2,7 +2,7 @@
 # Created on May 14, 2009
 from __future__ import print_function
 
-VERSION = 41
+VERSION = 42
 
 import sys
 import os
@@ -1162,17 +1162,17 @@ def action_export_rekordbox(args, is_for_usb):
             add_bpm_folder(et_filter_folder, bpm, bpm_range)
 
     ##########
-    # BPM
-    et_filter_folder = add_folder(et_version_node, 'BPM Filter')
-    add_bpm_folders(et_filter_folder)
-
-    # lists
+    # Lists
     et_lists_folder = add_folder(et_version_node, 'Lists')
     name_to_file = get_list_name_to_file(LISTS_FOLDER)
     for name, list_file in sorted(name_to_file.iteritems()):
         l = get_list_from_file(list_file, db_dict)
         matching_files = [f for _, f in l if f is not None]
         adder.add_playlist_for_files(et_lists_folder, name, matching_files)
+
+    # BPM
+    et_filter_folder = add_folder(et_version_node, 'BPM Filter')
+    add_bpm_folders(et_filter_folder)
 
     print ('Total playlists: {}'.format(adder.playlists_added))
 
