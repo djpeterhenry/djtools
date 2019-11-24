@@ -80,11 +80,44 @@ def get_seconds_for_beat(ref_beat, ref_sec, desired_beat, bpm):
     spb = 60.0 / bpm
     return ref_sec + beat_diff * spb
 
+
 def set_folder_count(et):
     et.set('Count', str(len(et.getchildren())))
 
+
 def set_playlist_count(et):
     et.set('Entries', str(len(et.getchildren())))
+
+
+def add_folder(et_parent, name):
+    result = ET.SubElement(et_parent, 'NODE')
+    result.set('Type', '0')
+    result.set('Name', name)
+    return result
+
+
+def get_filtered_files(db_dict, files, bpm, bpm_range, cam_num_list, vocal):
+    """
+    bpm can be None
+    cam_num_list can be None
+    vocal can be None
+    """
+    matching_files = []
+    for f in files:
+        record = db_dict[f]
+        if bpm is not None and not aa.matches_bpm_filter(bpm, bpm_range, record['bpm']):
+            continue
+        cam_num = aa.get_camelot_num(record['key'])
+        if cam_num_list is not None and cam_num not in cam_num_list:
+            continue
+        if vocal is not None:
+            if vocal and not aa.is_vocal(record):
+                continue
+            if not vocal and aa.is_vocal(record):
+                continue
+        matching_files.append(f)
+    return matching_files
+
 
 class PlaylistAdder(object):
 
@@ -258,34 +291,6 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
 
     adder = PlaylistAdder(file_to_id)
 
-    def add_folder(et_parent, name):
-        result = ET.SubElement(et_parent, 'NODE')
-        result.set('Type', '0')
-        result.set('Name', name)
-        return result
-
-    def get_filtered_files(files, bpm, bpm_range, cam_num_list, vocal):
-        """
-        bpm can be None
-        cam_num_list can be None
-        vocal can be None
-        """
-        matching_files = []
-        for f in files:
-            record = db_dict[f]
-            if bpm is not None and not aa.matches_bpm_filter(bpm, bpm_range, record['bpm']):
-                continue
-            cam_num = aa.get_camelot_num(record['key'])
-            if cam_num_list is not None and cam_num not in cam_num_list:
-                continue
-            if vocal is not None:
-                if vocal and not aa.is_vocal(record):
-                    continue
-                if not vocal and aa.is_vocal(record):
-                    continue
-            matching_files.append(f)
-        return matching_files
-
     def get_bpm_name(bpm, bpm_range):
         return '{:03d} ({}) BPM'.format(bpm, bpm_range)
 
@@ -319,7 +324,8 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
         adder.add_playlist_for_files(et_bpm_folder, 'All BPM', files_with_id)
 
         # all for bpm (various orders)
-        matching_files = get_filtered_files(files=files_with_id,
+        matching_files = get_filtered_files(db_dict=db_dict,
+                                            files=files_with_id,
                                             bpm=bpm, bpm_range=bpm_range,
                                             cam_num_list=None,
                                             vocal=False)
@@ -334,7 +340,8 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
             et_bpm_folder, 'All (random)', aa.generate_random(matching_files))
 
         # vocal for bpm (default order)
-        matching_files = get_filtered_files(files=files_with_id,
+        matching_files = get_filtered_files(db_dict=db_dict,
+                                            files=files_with_id,
                                             bpm=bpm, bpm_range=bpm_range,
                                             cam_num_list=None,
                                             vocal=True)
@@ -344,7 +351,8 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
         for key in xrange(1, 13):
             # (key, key+1)
             keys = [key, aa.get_relative_camelot_key(key, 1)]
-            matching_files = get_filtered_files(files=files_with_id,
+            matching_files = get_filtered_files(db_dict=db_dict,
+                                                files=files_with_id,
                                                 bpm=bpm, bpm_range=bpm_range,
                                                 cam_num_list=keys,
                                                 vocal=False)
