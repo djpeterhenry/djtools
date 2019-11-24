@@ -16,6 +16,7 @@ REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
 REKORDBOX_LOCAL_SAMPLE_KEY = 'rekordbox_local_sample'
 
+
 def export_rekordbox_samples(db_filename, sample_path, sample_key, always_copy, convert_flac):
     aa.update_db_clips_safe(db_filename)
     aa.generate_lists(db_filename)
@@ -53,7 +54,57 @@ def export_rekordbox_samples(db_filename, sample_path, sample_key, always_copy, 
         record[sample_key] = target.decode('utf-8')
     aa.write_db_file(db_filename, db_dict)
 
-def export_rekordbox(db_filename, rekordbox_filename, is_for_usb):
+
+def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
+    et_tempo = ET.SubElement(et_track, 'TEMPO')
+    et_tempo.set('Inizio', str(sec_time))
+    et_tempo.set('Bpm', str(bpm))
+    et_tempo.set('Metro', '4/4')
+    # round beat time to nearest beat and mod 4?
+    nearest_beat = (int(round(beat_time)) % 4) + 1
+    et_tempo.set('Battito', str(nearest_beat))
+
+
+def add_position_marker(et_track, name, type, num, start_seconds, end_seconds=None):
+    et_position = ET.SubElement(et_track, 'POSITION_MARK')
+    et_position.set('Name', name)
+    et_position.set('Type', str(type))
+    et_position.set('Start', str(start_seconds))
+    if end_seconds is not None:
+        et_position.set('End', str(end_seconds))
+    et_position.set('Num', str(num))
+
+
+def get_seconds_for_beat(ref_beat, ref_sec, desired_beat, bpm):
+    beat_diff = desired_beat - ref_beat
+    spb = 60.0 / bpm
+    return ref_sec + beat_diff * spb
+
+def set_folder_count(et):
+    et.set('Count', str(len(et.getchildren())))
+
+def set_playlist_count(et):
+    et.set('Entries', str(len(et.getchildren())))
+
+class PlaylistAdder(object):
+
+    def __init__(self, file_to_id):
+        self.playlists_added = 0
+        self.file_to_id = file_to_id
+
+    def add_playlist_for_files(self, et_parent, name, files):
+        self.playlists_added += 1
+        et_list = ET.SubElement(et_parent, 'NODE')
+        et_list.set('Type', '1')
+        et_list.set('Name', name)
+        et_list.set('KeyType', '0')
+        for f in files:
+            et_track = ET.SubElement(et_list, 'TRACK')
+            et_track.set('Key', str(self.file_to_id[f]))
+        set_playlist_count(et_list)
+
+
+def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
     if is_for_usb:
         export_rekordbox_samples(db_filename,
                                  sample_path=REKORDBOX_SAMPLE_PATH,
@@ -75,29 +126,6 @@ def export_rekordbox(db_filename, rekordbox_filename, is_for_usb):
     #files = [f for f in files if 'Everything But The Girl - Lullaby Of Clubland.als' in f]
     #print (files)
 
-    def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
-        et_tempo = ET.SubElement(et_track, 'TEMPO')
-        et_tempo.set('Inizio', str(sec_time))
-        et_tempo.set('Bpm', str(bpm))
-        et_tempo.set('Metro', '4/4')
-        # round beat time to nearest beat and mod 4?
-        nearest_beat = (int(round(beat_time)) % 4) + 1
-        et_tempo.set('Battito', str(nearest_beat))
-
-    def add_position_marker(et_track, name, type, num, start_seconds, end_seconds=None):
-        et_position = ET.SubElement(et_track, 'POSITION_MARK')
-        et_position.set('Name', name)
-        et_position.set('Type', str(type))
-        et_position.set('Start', str(start_seconds))
-        if end_seconds is not None:
-            et_position.set('End', str(end_seconds))
-        et_position.set('Num', str(num))
-
-    def get_seconds_for_beat(ref_beat, ref_sec, desired_beat, bpm):
-        beat_diff = desired_beat - ref_beat
-        spb = 60.0 / bpm
-        return ref_sec + beat_diff * spb
-
     num_added = 0
     et_dj_playlists = ET.Element('DJ_PLAYLISTS')
     et_collection = ET.SubElement(et_dj_playlists, 'COLLECTION')
@@ -109,9 +137,11 @@ def export_rekordbox(db_filename, rekordbox_filename, is_for_usb):
         if not aa.use_for_rekordbox(record):
             continue
         if is_for_usb:
-            sample = aa.get_existing_rekordbox_sample(record, sample_key=REKORDBOX_SAMPLE_KEY)
+            sample = aa.get_existing_rekordbox_sample(
+                record, sample_key=REKORDBOX_SAMPLE_KEY)
         else:
-            sample = aa.get_existing_rekordbox_sample(record, sample_key=REKORDBOX_LOCAL_SAMPLE_KEY)
+            sample = aa.get_existing_rekordbox_sample(
+                record, sample_key=REKORDBOX_LOCAL_SAMPLE_KEY)
         if sample is None:
             print ('Error getting sample for {}'.format(f))
             continue
@@ -143,12 +173,14 @@ def export_rekordbox(db_filename, rekordbox_filename, is_for_usb):
         et_track.set('DateAdded', aa.get_date_from_ts(aa.get_alc_ts(record)))
 
         # abuse comment for alc+date
-        et_track.set('Comments', aa.get_date_from_ts(aa.get_alc_or_last_ts(record)))
+        et_track.set('Comments', aa.get_date_from_ts(
+            aa.get_alc_or_last_ts(record)))
 
         # abuse album for random
         et_track.set('Album', str(random.randint(0, 2**31)))
 
-        # Go back to just setting 20:00 for all tracks because it wants full sample length
+        # Go back to just setting 20:00 for all tracks because it wants full
+        # sample length
         et_track.set('TotalTime', str(60 * 20))
 
         clip = record['clip']
@@ -224,28 +256,7 @@ def export_rekordbox(db_filename, rekordbox_filename, is_for_usb):
     # this is great...add this at the end!
     et_collection.set('Entries', str(num_added))
 
-    def set_folder_count(et):
-        et.set('Count', str(len(et.getchildren())))
-
-    def set_playlist_count(et):
-        et.set('Entries', str(len(et.getchildren())))
-
-    class PlaylistAdder(object):
-        def __init__(self):
-            self.playlists_added = 0
-
-        def add_playlist_for_files(self, et_parent, name, files):
-            self.playlists_added += 1
-            et_list = ET.SubElement(et_parent, 'NODE')
-            et_list.set('Type', '1')
-            et_list.set('Name', name)
-            et_list.set('KeyType', '0')
-            for f in files:
-                et_track = ET.SubElement(et_list, 'TRACK')
-                et_track.set('Key', str(file_to_id[f]))
-            set_playlist_count(et_list)
-
-    adder = PlaylistAdder()
+    adder = PlaylistAdder(file_to_id)
 
     def add_folder(et_parent, name):
         result = ET.SubElement(et_parent, 'NODE')
@@ -291,10 +302,13 @@ def export_rekordbox(db_filename, rekordbox_filename, is_for_usb):
 
     # playlist for all
     adder.add_playlist_for_files(et_version_node, 'All (touch)', files_with_id)
-    adder.add_playlist_for_files(et_version_node, 'All (new)', aa.generate_alc(files_with_id, db_dict))
-    adder.add_playlist_for_files(et_version_node, 'All (num)', aa.generate_num(files_with_id, db_dict))
-    adder.add_playlist_for_files(et_version_node, 'All (random)', aa.generate_random(files_with_id))
-    
+    adder.add_playlist_for_files(
+        et_version_node, 'All (new)', aa.generate_alc(files_with_id, db_dict))
+    adder.add_playlist_for_files(
+        et_version_node, 'All (num)', aa.generate_num(files_with_id, db_dict))
+    adder.add_playlist_for_files(
+        et_version_node, 'All (random)', aa.generate_random(files_with_id))
+
     def add_bpm_folder(et_parent_folder, bpm, bpm_range):
         folder_name = get_bpm_name(bpm, bpm_range)
         print(folder_name)
@@ -354,7 +368,8 @@ def export_rekordbox(db_filename, rekordbox_filename, is_for_usb):
     name_to_file = aa.get_list_name_to_file(aa.LISTS_FOLDER)
     for name, list_file in sorted(name_to_file.iteritems()):
         l = aa.get_list_from_file(list_file, db_dict)
-        matching_files = [f for _, f in l if f is not None and f in files_with_id]
+        matching_files = [
+            f for _, f in l if f is not None and f in files_with_id]
         adder.add_playlist_for_files(et_lists_folder, name, matching_files)
 
     # BPM

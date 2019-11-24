@@ -855,15 +855,15 @@ def action_print_audioclips(args):
 
 
 def action_export_rekordbox_local(args):
-    export_rekordbox.export_rekordbox(db_filename=args.db_filename,
-                                      rekordbox_filename=args.rekordbox_filename, 
-                                      is_for_usb=False)
+    export_rekordbox.export_rekordbox_xml(db_filename=args.db_filename,
+                                          rekordbox_filename=args.rekordbox_filename,
+                                          is_for_usb=False)
 
 
 def action_export_rekordbox_usb(args):
-    export_rekordbox.export_rekordbox(db_filename=args.db_filename,
-                                      rekordbox_filename=args.rekordbox_filename, 
-                                      is_for_usb=True)
+    export_rekordbox.export_rekordbox_xml(db_filename=args.db_filename,
+                                          rekordbox_filename=args.rekordbox_filename,
+                                          is_for_usb=True)
 
 
 def action_export_mp3_samples(args):
