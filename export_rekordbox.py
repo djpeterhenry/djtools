@@ -81,6 +81,10 @@ def get_seconds_for_beat(ref_beat, ref_sec, desired_beat, bpm):
     return ref_sec + beat_diff * spb
 
 
+def get_seconds_relative_to_marker(ref_marker, beat):
+    return get_seconds_for_beat(ref_marker.beat_time, ref_marker.sec_time, beat, ref_marker.bpm)
+
+
 def set_folder_count(et):
     et.set('Count', str(len(et.getchildren())))
 
@@ -117,6 +121,54 @@ def get_filtered_files(db_dict, files, bpm, bpm_range, cam_num_list, vocal):
                 continue
         matching_files.append(f)
     return matching_files
+
+
+class BeatGridMarker(object):
+
+    def __init__(self, sec_time, bpm, beat_time, memory_note=None):
+        self.sec_time = sec_time
+        self.bpm = bpm
+        self.beat_time = beat_time
+        self.memory_note = memory_note
+
+    def set_memory_note(self, memory_note):
+        self.memory_note = memory_note
+
+
+def get_beat_grid_markers(clip):
+    beat_grid_markers = []
+
+    warp_markers = clip['warp_markers']
+
+    first_bpm = None
+    for warp_index in xrange(len(warp_markers) - 1):
+        this_marker = warp_markers[warp_index]
+        this_beat_time = this_marker['beat_time']
+        this_sec_time = this_marker['sec_time']
+        next_marker = warp_markers[warp_index + 1]
+        next_beat_time = next_marker['beat_time']
+        next_sec_time = next_marker['sec_time']
+        bpm = 60 * ((next_beat_time - this_beat_time) /
+                    (next_sec_time - this_sec_time))
+        if warp_index == 0:
+            first_bpm = bpm
+        beat_grid_markers.append(BeatGridMarker(
+            sec_time=this_sec_time, bpm=bpm, beat_time=this_beat_time))
+
+    if beat_grid_markers:
+        first_from_warp = beat_grid_markers[0]
+
+        start_beat = clip['loop_start'] + clip['start_relative']
+        start_seconds = get_seconds_relative_to_marker(first_from_warp, start_beat)
+
+        # make sure we have beat grid back to the start if before the first warp marker
+        if start_beat < first_from_warp.beat_time:
+            first_from_warp.set_memory_note('Beat 1')
+            beat_grid_markers.append(BeatGridMarker(
+                sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat))
+
+    beat_grid_markers.sort(key=lambda x: x.sec_time)
+    return beat_grid_markers
 
 
 class PlaylistAdder(object):
@@ -217,45 +269,19 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
         et_track.set('TotalTime', str(60 * 20))
 
         clip = record['clip']
-        warp_markers = clip['warp_markers']
 
-        # maybe these need to be in order?
-        beat_grid_markers = []
+        beat_grid_markers = get_beat_grid_markers(clip)
+        for b in beat_grid_markers:
+            add_beat_grid_marker(
+                et_track=et_track, sec_time=b.sec_time, bpm=b.bpm, beat_time=b.beat_time)
 
-        first_bpm = None
-        for warp_index in xrange(len(warp_markers) - 1):
-            this_marker = warp_markers[warp_index]
-            this_beat_time = this_marker['beat_time']
-            this_sec_time = this_marker['sec_time']
-            next_marker = warp_markers[warp_index + 1]
-            next_beat_time = next_marker['beat_time']
-            next_sec_time = next_marker['sec_time']
-            bpm = 60 * ((next_beat_time - this_beat_time) /
-                        (next_sec_time - this_sec_time))
-            if warp_index == 0:
-                first_bpm = bpm
-                et_track.set('AverageBpm', str(bpm))
-            beat_grid_markers.append(
-                dict(sec_time=this_sec_time, bpm=bpm, beat_time=this_beat_time))
-
-        # We need a first bpm and first marker to do the rest
-        if first_bpm:
-            first_marker = warp_markers[0]
-            first_marker_beat = first_marker['beat_time']
-            first_marker_sec = first_marker['sec_time']
+        # I believe all clips will have these, even unwarped, but being safe?
+        if beat_grid_markers:
+            first_marker = beat_grid_markers[0]
+            et_track.set('AverageBpm', str(first_marker.bpm))
 
             start_beat = clip['loop_start'] + clip['start_relative']
-            start_seconds = get_seconds_for_beat(
-                first_marker_beat, first_marker_sec, start_beat, first_bpm)
-
-            if start_beat < first_marker_beat:
-                beat_grid_markers.append(
-                    dict(sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat))
-
-            # sort beat grid markers before adding (needed...sigh)
-            beat_grid_markers.sort(key=lambda x: x['sec_time'])
-            for b in beat_grid_markers:
-                add_beat_grid_marker(et_track, **b)
+            start_seconds = get_seconds_relative_to_marker(first_marker, start_beat)
 
             hot_cue_counter = 0
             # memory cue
@@ -267,19 +293,21 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
             # memory and hot cues for loop as well
             loop_start_beat = clip['hidden_loop_start']
             loop_end_beat = clip['hidden_loop_end']
-            loop_start_sec = get_seconds_for_beat(
-                first_marker_beat, first_marker_sec, loop_start_beat, first_bpm)
-            loop_end_sec = get_seconds_for_beat(
-                first_marker_beat, first_marker_sec, loop_end_beat, first_bpm)
+            # This assumes the loop is relative to the first marker (safe usually)
+            loop_start_sec = get_seconds_relative_to_marker(
+                first_marker, loop_start_beat)
+            loop_end_sec = get_seconds_relative_to_marker(
+                first_marker, loop_end_beat)
             add_position_marker(et_track, 'Start Loop',
                                 4, -1, loop_start_sec, loop_end_sec)
             add_position_marker(et_track, 'Start Loop',
                                 4, hot_cue_counter, loop_start_sec, loop_end_sec)
 
-            # memory cue for first warp marker too if it's after start
-            if start_beat < first_marker_beat:
-                add_position_marker(et_track, 'Beat 1',
-                                    0, -1, first_marker_sec)
+            # potentially add memory notes (like first warp marker if after start)
+            for b in beat_grid_markers:
+                if not b.memory_note:
+                    continue
+                add_position_marker(et_track, b.memory_note, 0, -1, b.sec_time)
 
         # finally record this track id
         et_track.set('TrackID', str(num_added))
