@@ -155,20 +155,21 @@ def get_beat_grid_markers(clip):
         beat_grid_markers.append(BeatGridMarker(
             sec_time=this_sec_time, bpm=bpm, beat_time=this_beat_time))
 
-    if beat_grid_markers:
-        first_from_warp = beat_grid_markers[0]
+    assert beat_grid_markers
 
-        start_beat = clip['loop_start'] + clip['start_relative']
-        start_seconds = get_seconds_relative_to_marker(first_from_warp, start_beat)
+    first_from_warp = beat_grid_markers[0]
 
-        # make sure we have beat grid back to the start if before the first warp marker
-        if start_beat < first_from_warp.beat_time:
-            first_from_warp.set_memory_note('Beat 1')
-            beat_grid_markers.append(BeatGridMarker(
-                sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat))
+    start_beat = clip['loop_start'] + clip['start_relative']
+    start_seconds = get_seconds_relative_to_marker(first_from_warp, start_beat)
+
+    # make sure we have beat grid back to the start if before the first warp marker
+    if start_beat < first_from_warp.beat_time:
+        first_from_warp.set_memory_note('Beat 1')
+        beat_grid_markers.append(BeatGridMarker(
+            sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat))
 
     beat_grid_markers.sort(key=lambda x: x.sec_time)
-    return beat_grid_markers
+    return beat_grid_markers, start_seconds
 
 
 class Cue(object):
@@ -211,15 +212,13 @@ class TrackInfo(object):
 # TODO: make one of these for ALS files
 def get_track_info(record):
     clip = record['clip']
-    beat_grid_markers = get_beat_grid_markers(clip)
+    beat_grid_markers, start_seconds = get_beat_grid_markers(clip)
     assert len(beat_grid_markers) > 0
 
     hot_cues = []
     memory_cues = []
 
     first_marker = beat_grid_markers[0]
-    start_beat = clip['loop_start'] + clip['start_relative']
-    start_seconds = get_seconds_relative_to_marker(first_marker, start_beat)
 
     start_cue = Cue(start_seconds, None, 'Start')
     hot_cues.append(start_cue)
@@ -244,6 +243,24 @@ def get_track_info(record):
         memory_cues.append(Cue(b.sec_time, None, b.memory_note))
 
     return TrackInfo(beat_grid_markers, hot_cues, memory_cues)
+
+
+def get_als_track_info(record):
+    clips = [get_beat_grid_markers(clip) for clip in record['clips']]
+    clips.sort(key=lambda x: x[1])
+    beat_grid_markers = []
+    for i, clip in enumerate(clips):
+        next_start = None
+        if i + 1 < len(clips):
+            _, next_start = clips[i + 1]
+        for b in clip[0]:
+            if beat_grid_markers and b.sec_time < beat_grid_markers[-1].sec_time:
+                continue
+            if next_start is not None and b.sec_time >= next_start:
+                break
+            # TODO: modfy?
+            beat_grid_markers.append(b)
+    print (beat_grid_markers)
 
 
 
@@ -347,6 +364,9 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
         # get track info and add
         track_info = get_track_info(record)
         track_info.add_to_track(et_track)
+
+        if aa.is_als_file(f):
+            track_info = get_als_track_info(record)
 
         # finally record this track id
         et_track.set('TrackID', str(num_added))
