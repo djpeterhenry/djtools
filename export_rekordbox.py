@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 42
+VERSION = 43
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
@@ -171,6 +171,82 @@ def get_beat_grid_markers(clip):
     return beat_grid_markers
 
 
+class Cue(object):
+
+    def __init__(self, start, end, name):
+        self.start = start
+        self.end = end
+        self.name = name
+
+
+class TrackInfo(object):
+
+    def __init__(self, beat_grid_markers, hot_cues, memory_cues):
+        assert len(beat_grid_markers) > 0
+        self.beat_grid_markers = beat_grid_markers
+        self.hot_cues = hot_cues
+        self.memory_cues = memory_cues
+
+    @staticmethod
+    def _add_cue(et_track, counter, cue):
+        assert isinstance(cue, Cue)
+        if cue.end is None:
+            add_position_marker(et_track, cue.name, 0, counter, cue.start)
+        else:
+            add_position_marker(et_track, cue.name, 4,
+                                counter, cue.start, cue.end)
+
+    def add_to_track(self, et_track):
+        et_track.set('AverageBpm', str(self.beat_grid_markers[0].bpm))
+        for b in self.beat_grid_markers:
+            add_beat_grid_marker(
+                et_track=et_track, sec_time=b.sec_time, bpm=b.bpm, beat_time=b.beat_time)
+        hot_cue_counter = 0
+        for cue in self.hot_cues:
+            self._add_cue(et_track, hot_cue_counter, cue)
+            hot_cue_counter += 1
+        for cue in self.memory_cues:
+            self._add_cue(et_track, -1, cue)
+
+# TODO: make one of these for ALS files
+def get_track_info(record):
+    clip = record['clip']
+    beat_grid_markers = get_beat_grid_markers(clip)
+    assert len(beat_grid_markers) > 0
+
+    hot_cues = []
+    memory_cues = []
+
+    first_marker = beat_grid_markers[0]
+    start_beat = clip['loop_start'] + clip['start_relative']
+    start_seconds = get_seconds_relative_to_marker(first_marker, start_beat)
+
+    start_cue = Cue(start_seconds, None, 'Start')
+    hot_cues.append(start_cue)
+    memory_cues.append(start_cue)
+
+    # memory and hot cues for loop as well
+    loop_start_beat = clip['hidden_loop_start']
+    loop_end_beat = clip['hidden_loop_end']
+    # This assumes the loop is relative to the first marker (safe usually)
+    loop_start_sec = get_seconds_relative_to_marker(
+        first_marker, loop_start_beat)
+    loop_end_sec = get_seconds_relative_to_marker(
+        first_marker, loop_end_beat)
+    loop_cue = Cue(loop_start_sec, loop_end_sec, 'Start Loop')
+    hot_cues.append(loop_cue)
+    memory_cues.append(loop_cue)
+
+    # add memory notes
+    for b in beat_grid_markers:
+        if not b.memory_note:
+            continue
+        memory_cues.append(Cue(b.sec_time, None, b.memory_note))
+
+    return TrackInfo(beat_grid_markers, hot_cues, memory_cues)
+
+
+
 class PlaylistAdder(object):
 
     def __init__(self, file_to_id):
@@ -268,46 +344,9 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
         # sample length
         et_track.set('TotalTime', str(60 * 20))
 
-        clip = record['clip']
-
-        beat_grid_markers = get_beat_grid_markers(clip)
-        for b in beat_grid_markers:
-            add_beat_grid_marker(
-                et_track=et_track, sec_time=b.sec_time, bpm=b.bpm, beat_time=b.beat_time)
-
-        # I believe all clips will have these, even unwarped, but being safe?
-        if beat_grid_markers:
-            first_marker = beat_grid_markers[0]
-            et_track.set('AverageBpm', str(first_marker.bpm))
-
-            start_beat = clip['loop_start'] + clip['start_relative']
-            start_seconds = get_seconds_relative_to_marker(first_marker, start_beat)
-
-            hot_cue_counter = 0
-            # memory cue
-            add_position_marker(et_track, 'Start', 0, -1, start_seconds)
-            # hot cue
-            add_position_marker(et_track, 'Start', 0,
-                                hot_cue_counter, start_seconds)
-            hot_cue_counter += 1
-            # memory and hot cues for loop as well
-            loop_start_beat = clip['hidden_loop_start']
-            loop_end_beat = clip['hidden_loop_end']
-            # This assumes the loop is relative to the first marker (safe usually)
-            loop_start_sec = get_seconds_relative_to_marker(
-                first_marker, loop_start_beat)
-            loop_end_sec = get_seconds_relative_to_marker(
-                first_marker, loop_end_beat)
-            add_position_marker(et_track, 'Start Loop',
-                                4, -1, loop_start_sec, loop_end_sec)
-            add_position_marker(et_track, 'Start Loop',
-                                4, hot_cue_counter, loop_start_sec, loop_end_sec)
-
-            # potentially add memory notes (like first warp marker if after start)
-            for b in beat_grid_markers:
-                if not b.memory_note:
-                    continue
-                add_position_marker(et_track, b.memory_note, 0, -1, b.sec_time)
+        # get track info and add
+        track_info = get_track_info(record)
+        track_info.add_to_track(et_track)
 
         # finally record this track id
         et_track.set('TrackID', str(num_added))
