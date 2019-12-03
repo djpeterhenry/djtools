@@ -250,15 +250,23 @@ def get_als_track_info(record):
     clips.sort(key=lambda x: x[1])
     beat_grid_markers = []
     for i, clip in enumerate(clips):
+        # track the next start seconds
         next_start = None
         if i + 1 < len(clips):
             _, next_start = clips[i + 1]
         for b in clip[0]:
-            if beat_grid_markers and b.sec_time < beat_grid_markers[-1].sec_time:
+            # If this is at or before the last existing marker, assume we've
+            # done our job right up to this point and we don't need it.
+            if beat_grid_markers and b.sec_time <= beat_grid_markers[-1].sec_time:
                 continue
+            # If we've now strayed past the next start time, we don't want to
+            # use this marker, but we do want to lay one down right before the
+            # next start.
             if next_start is not None and b.sec_time >= next_start:
                 break
-            # TODO: modfy?
+            # We want to use this marker.
+            # TODO: the "beat_time" for this may be inconsistent.
+            # Not sure how much that matters as it's only used mod 4.
             beat_grid_markers.append(b)
     print (beat_grid_markers)
 
