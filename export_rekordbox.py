@@ -285,17 +285,17 @@ def get_als_track_info(record):
         print ('Some bullshit unicode')
 
     # prune to just those matching the first sample.  For now...
-    clips_by_als_order = [c for c in record['clips'] if c['sample'] == first_sample]
+    clips_in_als_order = [c for c in record['clips'] if c['sample'] == first_sample]
     # (beat_grid_markers, start_seconds) sorted by start seconds
-    bgm_result_list = [get_beat_grid_markers(c) for c in clips_by_als_order]
-    bgm_result_list.sort(key=lambda x: x.start_cue.start)
+    bgm_results_in_als_order = [get_beat_grid_markers(c) for c in clips_in_als_order]
+    bgm_results_in_start_cue_order = sorted(bgm_results_in_als_order, key=lambda x: x.start_cue.start)
 
     beat_grid_markers = []
-    for i, bgm_result in enumerate(bgm_result_list):
+    for i, bgm_result in enumerate(bgm_results_in_start_cue_order):
         # track the next start seconds
         next_start = None
-        if i + 1 < len(bgm_result_list):
-            next_start = bgm_result_list[i + 1].start_cue.start
+        if i + 1 < len(bgm_results_in_start_cue_order):
+            next_start = bgm_results_in_start_cue_order[i + 1].start_cue.start
         previous_bgm = None
         for bgm in bgm_result.beat_grid_markers:
             # If this is at or before the last existing marker, assume we've
@@ -330,7 +330,18 @@ def get_als_track_info(record):
     for m in beat_grid_markers:
         print ('  {}'.format(m))
 
-    # 
+    # Now set up all the hot cues
+    # No memory cues right now for ALS?
+    hot_cues = []
+    memory_cues = []
+
+    for bgm_result in bgm_results_in_als_order:
+        if bgm_result.loop_cue and bgm_result.loop_cue.loop_on:
+            hot_cues.append(bgm_result.loop_cue)
+        else:
+            hot_cues.append(bgm_result.start_cue)
+
+    return TrackInfo(bgm_result.beat_grid_markers, hot_cues, memory_cues)
 
 
 
@@ -432,11 +443,14 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
         et_track.set('TotalTime', str(60 * 20))
 
         # get track info and add
-        track_info = get_track_info(record)
-        track_info.add_to_track(et_track)
-
-        if aa.is_als_file(f):
+        if aa.is_alc_file(f):
+            track_info = get_track_info(record)
+            track_info.add_to_track(et_track)
+        elif aa.is_als_file(f):
             track_info = get_als_track_info(record)
+            track_info.add_to_track(et_track)
+        else:
+            raise RuntimeError('wtf: {}'.format(f))
 
         # finally record this track id
         et_track.set('TrackID', str(num_added))
