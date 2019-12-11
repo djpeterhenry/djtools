@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 43
+VERSION = 44
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
@@ -60,9 +60,10 @@ def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
     et_tempo.set('Inizio', str(sec_time))
     et_tempo.set('Bpm', str(bpm))
     et_tempo.set('Metro', '4/4')
+    # NOTE(peter): rekordbox seems to use sec_time + bpm as enough!
     # round beat time to nearest beat and mod 4?
-    nearest_beat = (int(round(beat_time)) % 4) + 1
-    et_tempo.set('Battito', str(nearest_beat))
+    #nearest_beat = (int(round(beat_time)) % 4) + 1
+    #et_tempo.set('Battito', str(nearest_beat))
 
 
 def add_position_marker(et_track, name, type, num, start_seconds, end_seconds=None):
@@ -81,8 +82,18 @@ def get_seconds_for_beat(ref_beat, ref_sec, desired_beat, bpm):
     return ref_sec + beat_diff * spb
 
 
+def get_beat_for_seconds(ref_beat, ref_sec, desired_seconds, bpm):
+    second_diff = desired_seconds - ref_sec
+    bps = bpm / 60.0
+    return ref_beat + second_diff * bps
+
+
 def get_seconds_relative_to_marker(ref_marker, beat):
     return get_seconds_for_beat(ref_marker.beat_time, ref_marker.sec_time, beat, ref_marker.bpm)
+
+
+def get_beat_relative_to_marker(ref_marker, seconds):
+    return get_beat_for_seconds(ref_marker.beat_time, ref_marker.sec_time, seconds, ref_marker.bpm)
 
 
 def set_folder_count(et):
@@ -130,6 +141,9 @@ class BeatGridMarker(object):
         self.bpm = bpm
         self.beat_time = beat_time
         self.memory_note = memory_note
+
+    def __repr__(self):
+        return "(sec_time: {}, bpm: {}, beat_time: {})".format(self.sec_time, self.bpm, self.beat_time)
 
     def set_memory_note(self, memory_note):
         self.memory_note = memory_note
@@ -209,7 +223,7 @@ class TrackInfo(object):
         for cue in self.memory_cues:
             self._add_cue(et_track, -1, cue)
 
-# TODO: make one of these for ALS files
+
 def get_track_info(record):
     clip = record['clip']
     beat_grid_markers, start_seconds = get_beat_grid_markers(clip)
@@ -246,15 +260,23 @@ def get_track_info(record):
 
 
 def get_als_track_info(record):
-    clips = [get_beat_grid_markers(clip) for clip in record['clips']]
-    clips.sort(key=lambda x: x[1])
+    first_clip = record['clips'][0]
+    first_sample = first_clip['sample']
+
+    # prune to just those matching the first sample.  For now...
+    clips_by_als_order = [c for c in record['clips'] if c['sample'] == first_sample]
+    # (beat_grid_markers, start_seconds) sorted by start seconds
+    bgm_and_start_list = [get_beat_grid_markers(c) for c in clips_by_als_order]
+    bgm_and_start_list.sort(key=lambda x: x[1])
+
     beat_grid_markers = []
-    for i, clip in enumerate(clips):
+    for i, bgm_and_start in enumerate(bgm_and_start_list):
         # track the next start seconds
         next_start = None
-        if i + 1 < len(clips):
-            _, next_start = clips[i + 1]
-        for b in clip[0]:
+        if i + 1 < len(bgm_and_start_list):
+            _, next_start = bgm_and_start_list[i + 1]
+        previous_b = None
+        for b in bgm_and_start[0]:
             # If this is at or before the last existing marker, assume we've
             # done our job right up to this point and we don't need it.
             if beat_grid_markers and b.sec_time <= beat_grid_markers[-1].sec_time:
@@ -263,6 +285,20 @@ def get_als_track_info(record):
             # use this marker, but we do want to lay one down right before the
             # next start.
             if next_start is not None and b.sec_time >= next_start:
+                # create a beat marker one beat before the next start
+                if previous_b is not None:
+                    shim_beat = get_beat_relative_to_marker(
+                        previous_b, next_start) - 1.0
+                    shim_seconds = get_seconds_relative_to_marker(
+                        previous_b, shim_beat)
+                    if shim_seconds > previous_b.sec_time:
+                        shim_b = BeatGridMarker(
+                            sec_time=shim_seconds, 
+                            bpm=previous_b.bpm, 
+                            beat_time=shim_beat)
+                        beat_grid_markers.append(shim_b)
+                # regardless of shim success, we're done with this clips
+                # markers
                 break
             # We want to use this marker.
             # TODO: the "beat_time" for this may be inconsistent.
