@@ -566,15 +566,20 @@ def get_artist_and_track(filename):
         return split[0], delimiter.join(split[1:])
 
 
-def get_sample_unicode(record):
-    if 'clip' not in record:
-        return None
-    sample = record['clip']['sample']
+def get_sample_value_as_unicode(sample):
+    """ This works around some of my samples being unicode and some not.  Kind of """
     # Ok, this seems to work to get all the samples to unicode...
     # Still not sure why some samples (Take Over Control Acapella) are unicode
     if not isinstance(sample, unicode):
         sample = sample.decode('utf-8')
     return sample
+
+
+def get_sample_unicode(record):
+    if 'clip' not in record:
+        return None
+    sample = record['clip']['sample']
+    return get_sample_value_as_unicode(sample)
 
 
 def get_export_sample_path(f, sample_ext, target_path):

@@ -149,6 +149,23 @@ class BeatGridMarker(object):
         self.memory_note = memory_note
 
 
+class Cue(object):
+
+    def __init__(self, start, end, loop_on, name):
+        self.start = start
+        self.end = end
+        self.loop_on = loop_on
+        self.name = name
+
+
+class BeatGridMarkersResult(object):
+
+    def __init__(self, beat_grid_markers, start_cue, loop_cue):
+        self.beat_grid_markers = beat_grid_markers
+        self.start_cue = start_cue
+        self.loop_cue = loop_cue
+
+
 def get_beat_grid_markers(clip):
     beat_grid_markers = []
 
@@ -174,7 +191,9 @@ def get_beat_grid_markers(clip):
     first_from_warp = beat_grid_markers[0]
 
     start_beat = clip['loop_start'] + clip['start_relative']
+    # assumes relative to first warp marker!
     start_seconds = get_seconds_relative_to_marker(first_from_warp, start_beat)
+    start_cue = Cue(start_seconds, None, False, 'Start')
 
     # make sure we have beat grid back to the start if before the first warp marker
     if start_beat < first_from_warp.beat_time:
@@ -182,16 +201,23 @@ def get_beat_grid_markers(clip):
         beat_grid_markers.append(BeatGridMarker(
             sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat))
 
+    # Actually create start and loop Cue objects
+    loop_start_beat = clip['hidden_loop_start']
+    loop_end_beat = clip['hidden_loop_end']
+    loop_on = clip['loop_on']
+    loop_cue = None
+    if loop_start_beat == start_beat:
+        # assumes relative to first warp marker!
+        loop_start_sec = get_seconds_relative_to_marker(
+            first_from_warp, loop_start_beat)
+        loop_end_sec = get_seconds_relative_to_marker(
+            first_from_warp, loop_end_beat)
+        loop_cue = Cue(loop_start_sec, loop_end_sec, loop_on, 'Start Loop')
+
     beat_grid_markers.sort(key=lambda x: x.sec_time)
-    return beat_grid_markers, start_seconds
+    return BeatGridMarkersResult(beat_grid_markers, start_cue, loop_cue)
 
 
-class Cue(object):
-
-    def __init__(self, start, end, name):
-        self.start = start
-        self.end = end
-        self.name = name
 
 
 class TrackInfo(object):
@@ -226,75 +252,70 @@ class TrackInfo(object):
 
 def get_track_info(record):
     clip = record['clip']
-    beat_grid_markers, start_seconds = get_beat_grid_markers(clip)
-    assert len(beat_grid_markers) > 0
+    bgm_result = get_beat_grid_markers(clip)
+    assert len(bgm_result.beat_grid_markers) > 0
 
     hot_cues = []
     memory_cues = []
 
-    first_marker = beat_grid_markers[0]
+    # There's always a start!
+    hot_cues.append(bgm_result.start_cue)
+    memory_cues.append(bgm_result.start_cue)
 
-    start_cue = Cue(start_seconds, None, 'Start')
-    hot_cues.append(start_cue)
-    memory_cues.append(start_cue)
-
-    # memory and hot cues for loop as well
-    loop_start_beat = clip['hidden_loop_start']
-    loop_end_beat = clip['hidden_loop_end']
-    # This assumes the loop is relative to the first marker (safe usually)
-    loop_start_sec = get_seconds_relative_to_marker(
-        first_marker, loop_start_beat)
-    loop_end_sec = get_seconds_relative_to_marker(
-        first_marker, loop_end_beat)
-    loop_cue = Cue(loop_start_sec, loop_end_sec, 'Start Loop')
-    hot_cues.append(loop_cue)
-    memory_cues.append(loop_cue)
+    # There's only a loop if it matched the start
+    if bgm_result.loop_cue:
+        hot_cues.append(bgm_result.loop_cue)
+        memory_cues.append(bgm_result.loop_cue)
 
     # add memory notes
-    for b in beat_grid_markers:
+    for b in bgm_result.beat_grid_markers:
         if not b.memory_note:
             continue
-        memory_cues.append(Cue(b.sec_time, None, b.memory_note))
+        memory_cues.append(Cue(b.sec_time, None, False, b.memory_note))
 
-    return TrackInfo(beat_grid_markers, hot_cues, memory_cues)
+    return TrackInfo(bgm_result.beat_grid_markers, hot_cues, memory_cues)
 
 
 def get_als_track_info(record):
     first_clip = record['clips'][0]
     first_sample = first_clip['sample']
+    try:
+        print ('{}'.format(aa.get_sample_value_as_unicode(first_sample)))
+    except:
+        print ('Some bullshit unicode')
 
     # prune to just those matching the first sample.  For now...
     clips_by_als_order = [c for c in record['clips'] if c['sample'] == first_sample]
     # (beat_grid_markers, start_seconds) sorted by start seconds
-    bgm_and_start_list = [get_beat_grid_markers(c) for c in clips_by_als_order]
-    bgm_and_start_list.sort(key=lambda x: x[1])
+    bgm_result_list = [get_beat_grid_markers(c) for c in clips_by_als_order]
+    bgm_result_list.sort(key=lambda x: x.start_cue.start)
 
     beat_grid_markers = []
-    for i, bgm_and_start in enumerate(bgm_and_start_list):
+    for i, bgm_result in enumerate(bgm_result_list):
         # track the next start seconds
         next_start = None
-        if i + 1 < len(bgm_and_start_list):
-            _, next_start = bgm_and_start_list[i + 1]
-        previous_b = None
-        for b in bgm_and_start[0]:
+        if i + 1 < len(bgm_result_list):
+            next_start = bgm_result_list[i + 1].start_cue.start
+        previous_bgm = None
+        for bgm in bgm_result.beat_grid_markers:
             # If this is at or before the last existing marker, assume we've
             # done our job right up to this point and we don't need it.
-            if beat_grid_markers and b.sec_time <= beat_grid_markers[-1].sec_time:
+            if beat_grid_markers and bgm.sec_time <= beat_grid_markers[-1].sec_time:
                 continue
             # If we've now strayed past the next start time, we don't want to
             # use this marker, but we do want to lay one down right before the
             # next start.
-            if next_start is not None and b.sec_time >= next_start:
+            if next_start is not None and bgm.sec_time >= next_start:
                 # create a beat marker one beat before the next start
-                if previous_b is not None:
+                if previous_bgm is not None:
                     shim_beat = get_beat_relative_to_marker(
-                        previous_b, next_start) - 1.0
+                        previous_bgm, next_start) - 1.0
                     shim_seconds = get_seconds_relative_to_marker(
-                        previous_b, shim_beat)
-                    if shim_seconds > previous_b.sec_time:
+                        previous_bgm, shim_beat)
+                    if shim_seconds > previous_bgm.sec_time:
                         shim_b = BeatGridMarker(
                             sec_time=shim_seconds, 
-                            bpm=previous_b.bpm, 
+                            bpm=previous_bgm.bpm, 
                             beat_time=shim_beat)
                         beat_grid_markers.append(shim_b)
                 # regardless of shim success, we're done with this clips
@@ -303,8 +324,13 @@ def get_als_track_info(record):
             # We want to use this marker.
             # TODO: the "beat_time" for this may be inconsistent.
             # Not sure how much that matters as it's only used mod 4.
-            beat_grid_markers.append(b)
-    print (beat_grid_markers)
+            # I'm also currently not even storing it as "battito" in the XML
+            beat_grid_markers.append(bgm)
+            previous_bgm = bgm
+    for m in beat_grid_markers:
+        print ('  {}'.format(m))
+
+    # 
 
 
 
