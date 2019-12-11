@@ -511,9 +511,10 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
             et_bpm_folder, 'All (random)', aa.generate_random(matching_files))
 
         # vocal for bpm (default order)
+        vocal_bpm_range = bpm_range + 10
         matching_files = get_filtered_files(db_dict=db_dict,
                                             files=files_with_id,
-                                            bpm=bpm, bpm_range=bpm_range,
+                                            bpm=bpm, bpm_range=vocal_bpm_range,
                                             cam_num_list=None,
                                             vocal=True)
         adder.add_playlist_for_files(et_bpm_folder, 'Vocal', matching_files)
