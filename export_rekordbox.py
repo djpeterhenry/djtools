@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 44
+VERSION = 45
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
