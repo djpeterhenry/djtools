@@ -1036,6 +1036,10 @@ def action_touch_list(args):
         add_ts(record, ts_to_add)
     write_db_file(args.db_filename, db_dict)
 
+def action_find_samples(args):
+    sample_dict = export_rekordbox.find_existing_samples(args.root_path)
+    print (sample_dict)
+    print ('num_samples: {}'.format(len(sample_dict)))
 
 ###########
 # main
@@ -1115,6 +1119,10 @@ def parse_args():
     p_touch_list.add_argument('list_file')
     p_touch_list.add_argument('date', type=int, nargs=3)
     p_touch_list.set_defaults(func=action_touch_list)
+
+    p_find_samples = subparsers.add_parser('find_samples')
+    p_find_samples.add_argument('root_path')
+    p_find_samples.set_defaults(func=action_find_samples)
 
     return parser.parse_args()
 

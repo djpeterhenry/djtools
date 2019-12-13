@@ -363,6 +363,17 @@ class PlaylistAdder(object):
         set_playlist_count(et_list)
 
 
+def find_existing_samples(root_path):
+    SAMPLE_EXTENSIONS = set(('.mp3', '.flac', '.mp4', '.aiff', '.wav'))
+    # map from filename to path
+    result = {}
+    for dir_name, _, file_list in os.walk(root_path):
+        for f in file_list:
+            if os.path.splitext(f)[1] in SAMPLE_EXTENSIONS:
+                result[f] = os.path.join(dir_name, f)
+    return result
+
+
 def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
     if is_for_usb:
         export_rekordbox_samples(db_filename,
