@@ -429,12 +429,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
             sample = aa.get_existing_rekordbox_sample(
                 record, sample_key=REKORDBOX_LOCAL_SAMPLE_KEY)
         if sample_dict is not None:
-            replace_sample = sample_dict.get(os.path.basename(sample))
-            if replace_sample is None:
-                print ('Could not replace: {}'.format(sample))
-                sample = None
-            else:
-                sample = relative_path(rekordbox_filename, replace_sample)
+            sample = sample_dict.get(os.path.basename(sample))
         if sample is None:
             print ('Error getting sample for {}'.format(f))
             continue
