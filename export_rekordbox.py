@@ -374,19 +374,35 @@ def find_existing_samples(root_path):
     return result
 
 
-def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
-    if is_for_usb:
-        export_rekordbox_samples(db_filename,
-                                 sample_path=REKORDBOX_SAMPLE_PATH,
-                                 sample_key=REKORDBOX_SAMPLE_KEY,
-                                 always_copy=True,
-                                 convert_flac=True)
+def relative_path(path_from, path_to):
+    """
+    path_from: /Volumes/rekordbox.xml
+    path_to: /Volumes/somthing/stupid.mp3
+    """
+    path_from_full = os.path.dirname(os.path.abspath(path_from))
+    path_to_full = os.path.abspath(path_to)
+    common_prefix = os.path.commonprefix((path_from_full, path_to_full))
+    to_rel = os.path.relpath(path_to_full, common_prefix)
+    return to_rel
+
+
+def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_root_path=None):
+    sample_dict = None
+    if sample_root_path:
+        sample_dict = find_existing_samples(sample_root_path)
     else:
-        export_rekordbox_samples(db_filename,
-                                 sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
-                                 sample_key=REKORDBOX_LOCAL_SAMPLE_KEY,
-                                 always_copy=False,
-                                 convert_flac=False)
+        if is_for_usb:
+            export_rekordbox_samples(db_filename,
+                                     sample_path=REKORDBOX_SAMPLE_PATH,
+                                     sample_key=REKORDBOX_SAMPLE_KEY,
+                                     always_copy=True,
+                                     convert_flac=True)
+        else:
+            export_rekordbox_samples(db_filename,
+                                     sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
+                                     sample_key=REKORDBOX_LOCAL_SAMPLE_KEY,
+                                     always_copy=False,
+                                     convert_flac=False)
 
     db_dict = aa.read_db_file(db_filename)
     files = aa.get_valid_alc_files(db_dict)
@@ -412,6 +428,13 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb):
         else:
             sample = aa.get_existing_rekordbox_sample(
                 record, sample_key=REKORDBOX_LOCAL_SAMPLE_KEY)
+        if sample_dict is not None:
+            replace_sample = sample_dict.get(os.path.basename(sample))
+            if replace_sample is None:
+                print ('Could not replace: {}'.format(sample))
+                sample = None
+            else:
+                sample = relative_path(rekordbox_filename, replace_sample)
         if sample is None:
             print ('Error getting sample for {}'.format(f))
             continue

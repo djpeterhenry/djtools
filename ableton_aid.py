@@ -870,6 +870,12 @@ def action_export_rekordbox_usb(args):
                                           rekordbox_filename=args.rekordbox_filename,
                                           is_for_usb=True)
 
+def action_export_rekordbox_xml(args):
+    export_rekordbox.export_rekordbox_xml(db_filename=args.db_filename,
+                                          rekordbox_filename=args.rekordbox_filename,
+                                          is_for_usb=True,
+                                          sample_root_path=args.sample_root_path)    
+
 
 def action_export_mp3_samples(args):
     db_dict = read_db_file(args.db_filename)
@@ -1041,10 +1047,13 @@ def action_find_samples(args):
     print (sample_dict)
     print ('num_samples: {}'.format(len(sample_dict)))
 
+
+def action_relative_path(args):
+    result = export_rekordbox.relative_path(args.path_from, args.path_to)
+    print (result)
+
+
 ###########
-# main
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('db_filename')
@@ -1097,6 +1106,11 @@ def parse_args():
     p_rekordbox.add_argument('rekordbox_filename')
     p_rekordbox.set_defaults(func=action_export_rekordbox_usb)
 
+    p_rekordbox = subparsers.add_parser('export_rekordbox_xml')
+    p_rekordbox.add_argument('rekordbox_filename')
+    p_rekordbox.add_argument('sample_root_path')
+    p_rekordbox.set_defaults(func=action_export_rekordbox_xml)
+
     p_mp3_samples = subparsers.add_parser('export_mp3_samples')
     p_mp3_samples.set_defaults(func=action_export_mp3_samples)
 
@@ -1123,6 +1137,11 @@ def parse_args():
     p_find_samples = subparsers.add_parser('find_samples')
     p_find_samples.add_argument('root_path')
     p_find_samples.set_defaults(func=action_find_samples)
+
+    p_relative_path = subparsers.add_parser('relative_path')
+    p_relative_path.add_argument('path_from')
+    p_relative_path.add_argument('path_to')
+    p_relative_path.set_defaults(func=action_relative_path)
 
     return parser.parse_args()
 
