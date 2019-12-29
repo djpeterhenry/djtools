@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 46
+VERSION = 47
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
@@ -442,11 +442,14 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
         if aa.is_vocal(record):
             track = '{} [Vocal]'.format(track)
 
-        # Put camelot key in track name
+        # Put camelot key (7A) in the tag
         cam_key = aa.get_camelot_key(record['key'])
         if cam_key:
             et_track.set('Tonality', cam_key)
-            track = '{} [{}]'.format(track, cam_key)
+        # Put camelot num in the filename as [7] for easier searching
+        cam_num = aa.get_camelot_num(record['key'])
+        if cam_num is not None:
+            track = '{} [{}]'.format(track, cam_num)
 
         # Evidently getting these as unicode is important for some
         et_track.set('Name', track.decode('utf-8'))
