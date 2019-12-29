@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 45
+VERSION = 46
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
@@ -61,9 +61,10 @@ def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
     et_tempo.set('Bpm', str(bpm))
     et_tempo.set('Metro', '4/4')
     # NOTE(peter): rekordbox seems to use sec_time + bpm as enough!
+    # CORRECTION: IT'S NOT ENOUGH!  Consider assuming each is a downbeat?
     # round beat time to nearest beat and mod 4?
-    #nearest_beat = (int(round(beat_time)) % 4) + 1
-    #et_tempo.set('Battito', str(nearest_beat))
+    nearest_beat = (int(round(beat_time)) % 4) + 1
+    et_tempo.set('Battito', str(nearest_beat))
 
 
 def add_position_marker(et_track, name, type, num, start_seconds, end_seconds=None):
@@ -166,7 +167,7 @@ class BeatGridMarkersResult(object):
         self.loop_cue = loop_cue
 
 
-def get_beat_grid_markers(clip):
+def get_beat_grid_markers(filename, clip):
     beat_grid_markers = []
 
     warp_markers = clip['warp_markers']
@@ -202,9 +203,11 @@ def get_beat_grid_markers(clip):
             sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat))
 
     # Actually create start and loop Cue objects
-    loop_start_beat = clip['hidden_loop_start']
-    loop_end_beat = clip['hidden_loop_end']
+    # I've discovered that the hidden_loop_start is only correct when the loop is off.
+    # When the loop is on, I have no fucking clue what it represents!
     loop_on = clip['loop_on']
+    loop_start_beat = clip['loop_start'] if loop_on else clip['hidden_loop_start']
+    loop_end_beat = clip['loop_end'] if loop_on else clip['hidden_loop_end']
     loop_cue = None
     if loop_start_beat == start_beat:
         # assumes relative to first warp marker!
@@ -250,9 +253,9 @@ class TrackInfo(object):
             self._add_cue(et_track, -1, cue)
 
 
-def get_track_info(record):
+def get_track_info(filename, record):
     clip = record['clip']
-    bgm_result = get_beat_grid_markers(clip)
+    bgm_result = get_beat_grid_markers(filename, clip)
     assert len(bgm_result.beat_grid_markers) > 0
 
     hot_cues = []
@@ -276,7 +279,7 @@ def get_track_info(record):
     return TrackInfo(bgm_result.beat_grid_markers, hot_cues, memory_cues)
 
 
-def get_als_track_info(record):
+def get_als_track_info(filename, record):
     first_clip = record['clips'][0]
     first_sample = first_clip['sample']
     try:
@@ -287,7 +290,7 @@ def get_als_track_info(record):
     # prune to just those matching the first sample.  For now...
     clips_in_als_order = [c for c in record['clips'] if c['sample'] == first_sample]
     # (beat_grid_markers, start_seconds) sorted by start seconds
-    bgm_results_in_als_order = [get_beat_grid_markers(c) for c in clips_in_als_order]
+    bgm_results_in_als_order = [get_beat_grid_markers(filename, c) for c in clips_in_als_order]
     bgm_results_in_start_cue_order = sorted(bgm_results_in_als_order, key=lambda x: x.start_cue.start)
 
     beat_grid_markers = []
@@ -473,10 +476,10 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
 
         # get track info and add
         if aa.is_alc_file(f):
-            track_info = get_track_info(record)
+            track_info = get_track_info(filename=f, record=record)
             track_info.add_to_track(et_track)
         elif aa.is_als_file(f):
-            track_info = get_als_track_info(record)
+            track_info = get_als_track_info(filename=f, record=record)
             track_info.add_to_track(et_track)
         else:
             raise RuntimeError('wtf: {}'.format(f))
