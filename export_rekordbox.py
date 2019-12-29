@@ -221,8 +221,6 @@ def get_beat_grid_markers(filename, clip):
     return BeatGridMarkersResult(beat_grid_markers, start_cue, loop_cue)
 
 
-
-
 class TrackInfo(object):
 
     def __init__(self, beat_grid_markers, hot_cues, memory_cues):
