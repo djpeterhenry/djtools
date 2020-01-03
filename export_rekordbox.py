@@ -8,9 +8,10 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 47
+VERSION = 48
 
-REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
+#REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
+REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
 
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
@@ -325,7 +326,6 @@ def get_als_track_info(filename, record):
             # We want to use this marker.
             # TODO: the "beat_time" for this may be inconsistent.
             # Not sure how much that matters as it's only used mod 4.
-            # I'm also currently not even storing it as "battito" in the XML
             beat_grid_markers.append(bgm)
             previous_bgm = bgm
     for m in beat_grid_markers:
@@ -342,7 +342,7 @@ def get_als_track_info(filename, record):
         else:
             hot_cues.append(bgm_result.start_cue)
 
-    return TrackInfo(bgm_result.beat_grid_markers, hot_cues, memory_cues)
+    return TrackInfo(beat_grid_markers, hot_cues, memory_cues)
 
 
 
