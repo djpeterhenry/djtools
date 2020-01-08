@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 48
+VERSION = 49
 
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
@@ -457,16 +457,12 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
         sample_uri = 'file://localhost' + os.path.abspath(sample)
         et_track.set('Location', sample_uri)
 
-        # number of plays
+        # number of plays (now in Comments field)
         num_plays = len(aa.get_ts_list(record))
-        et_track.set('PlayCount', str(num_plays))
+        et_track.set('Comments', '{:03}'.format(num_plays))
 
         # alc
         et_track.set('DateAdded', aa.get_date_from_ts(aa.get_alc_ts(record)))
-
-        # abuse comment for alc+date
-        et_track.set('Comments', aa.get_date_from_ts(
-            aa.get_alc_or_last_ts(record)))
 
         # abuse album for random
         et_track.set('Album', str(random.randint(0, 2**31)))
