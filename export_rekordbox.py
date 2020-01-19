@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 49
+VERSION = 50
 
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
@@ -17,6 +17,18 @@ REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
 REKORDBOX_LOCAL_SAMPLE_KEY = 'rekordbox_local_sample'
 
+REKORDBOX_HISTORY_PATH = u'/Users/peter/Documents/rekordbox_history'
+
+
+def export_rekordbox_history(db_filename, history_path=REKORDBOX_HISTORY_PATH):
+    db_dict = aa.read_db_file(db_filename)
+
+    for fn in os.listdir(history_path):
+        history_filepath = os.path.join(history_path, fn)
+        aa.update_with_rekordbox_history(db_dict, history_filepath)
+
+    # write
+    aa.write_db_file(db_filename, db_dict)
 
 def export_rekordbox_samples(db_filename, sample_path, sample_key, always_copy, convert_flac):
     aa.update_db_clips_safe(db_filename)
@@ -388,6 +400,8 @@ def relative_path(path_from, path_to):
 
 
 def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_root_path=None):
+    export_rekordbox_history(db_filename)
+
     sample_dict = None
     if sample_root_path:
         sample_dict = find_existing_samples(sample_root_path)
@@ -567,6 +581,8 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
             bpm_and_range.append((bpm, 3))
         for bpm in range(80, 161, 5):
             bpm_and_range.append((bpm, 5))
+        for bpm in range(80, 161, 10):
+            bpm_and_range.append((bpm, 10))
         bpm_and_range.sort()
         for bpm, bpm_range in bpm_and_range:
             add_bpm_folder(et_filter_folder, bpm, bpm_range)

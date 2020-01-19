@@ -966,14 +966,7 @@ def update_with_rekordbox_history(db_dict, history_filename):
 
 
 def action_rekordbox_history(args):
-    db_dict = read_db_file(args.db_filename)
-
-    for fn in os.listdir(args.history_path):
-        history_filepath = os.path.join(args.history_path, fn)
-        update_with_rekordbox_history(db_dict, history_filepath)
-
-    # write
-    write_db_file(args.db_filename, db_dict)
+    export_rekordbox.export_rekordbox_history(args.db_filename)
 
 
 def action_cue_to_tracklist(args):
@@ -1117,7 +1110,6 @@ def parse_args():
     subparsers.add_parser('test_lists').set_defaults(func=action_test_lists)
 
     p_rekordbox_history = subparsers.add_parser('rekordbox_history')
-    p_rekordbox_history.add_argument('history_path')
     p_rekordbox_history.set_defaults(func=action_rekordbox_history)
 
     p_cue_to_tracklist = subparsers.add_parser('cue_to_tracklist')
