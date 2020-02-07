@@ -76,29 +76,9 @@ def get_ableton_files():
 
 
 def get_base_filename(filename, record):
-    divider = ' - '
-    file, ext = os.path.splitext(filename)
-    result = file
+    result, ext = os.path.splitext(filename)
     if 'pretty_name' in record:
         result = record['pretty_name']
-    # TODO(peter): what were you trying to do here?
-    # Interesting idea but supersceded by exporting sample db
-    if False and ext in ['.mp3', '.flac']:
-        audio = EasyID3(filename)
-        artist = ""
-        try:
-            artist = audio['artist'][0]
-        except KeyError:
-            pass
-        song = ""
-        try:
-            song = audio['title'][0]
-        except KeyError:
-            pass
-        if len(artist) > 0:
-            result = '%s%s%s' % (artist, divider, song)
-        elif len(song) > 0:
-            result = song
     # add extension:
     if ext not in ['.alc']:
         result = '%s (%s)' % (result, ext[1:].upper())
@@ -106,11 +86,6 @@ def get_base_filename(filename, record):
     if is_vocal(record):
         result = result + ' [Vocal]'
     return result
-
-
-def get_base_filename_with_bpm_and_key(filename, record):
-    base = get_base_filename(filename, record)
-    return '%s [%s] [%s]' % (base, record['bpm'], record['key'])
 
 
 def read_db_file(db_filename):
