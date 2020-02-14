@@ -125,7 +125,7 @@ def add_folder(et_parent, name):
     return result
 
 
-def get_filtered_files(db_dict, files, bpm, bpm_range, cam_num_list, vocal):
+def get_filtered_files(db_dict, files, bpm, bpm_range, cam_num_list, vocal_only=False):
     """
     bpm can be None
     cam_num_list can be None
@@ -134,16 +134,15 @@ def get_filtered_files(db_dict, files, bpm, bpm_range, cam_num_list, vocal):
     matching_files = []
     for f in files:
         record = db_dict[f]
-        if bpm is not None and not aa.matches_bpm_filter(bpm, bpm_range, record['bpm']):
+        is_vocal = aa.is_vocal(record)
+        if vocal_only and not is_vocal:
+            continue
+        bpm_range_to_use = bpm_range + 10 if is_vocal else bpm_range
+        if bpm is not None and not aa.matches_bpm_filter(bpm, bpm_range_to_use, record['bpm']):
             continue
         cam_num = aa.get_camelot_num(record['key'])
         if cam_num_list is not None and cam_num not in cam_num_list:
             continue
-        if vocal is not None:
-            if vocal and not aa.is_vocal(record):
-                continue
-            if not vocal and aa.is_vocal(record):
-                continue
         matching_files.append(f)
     return matching_files
 
@@ -541,8 +540,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
         matching_files = get_filtered_files(db_dict=db_dict,
                                             files=files_with_id,
                                             bpm=bpm, bpm_range=bpm_range,
-                                            cam_num_list=None,
-                                            vocal=False)
+                                            cam_num_list=None)
         # default order (touch)
         adder.add_playlist_for_files(
             et_bpm_folder, 'All (touch)', matching_files)
@@ -554,12 +552,11 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
             et_bpm_folder, 'All (random)', aa.generate_random(matching_files))
 
         # vocal for bpm (default order)
-        vocal_bpm_range = bpm_range + 10
         matching_files = get_filtered_files(db_dict=db_dict,
                                             files=files_with_id,
-                                            bpm=bpm, bpm_range=vocal_bpm_range,
+                                            bpm=bpm, bpm_range=bpm_range,
                                             cam_num_list=None,
-                                            vocal=True)
+                                            vocal_only=True)
         adder.add_playlist_for_files(et_bpm_folder, 'Vocal', matching_files)
 
         # for each key
@@ -569,8 +566,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
             matching_files = get_filtered_files(db_dict=db_dict,
                                                 files=files_with_id,
                                                 bpm=bpm, bpm_range=bpm_range,
-                                                cam_num_list=keys,
-                                                vocal=False)
+                                                cam_num_list=keys)
             adder.add_playlist_for_files(
                 et_bpm_folder, get_key_name(key), matching_files)
 
