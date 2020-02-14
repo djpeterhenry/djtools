@@ -936,8 +936,8 @@ def update_with_rekordbox_history(db_dict, history_filename):
                 if f is not None:
                     record = db_dict[f]
                     ts_to_write = date_ts + index
-                    print ('{}:{}'.format(f, ts_to_write))
                     add_ts(record, ts_to_write)
+                    # print ('{}:{}'.format(f, ts_to_write))
 
 
 def action_rekordbox_history(args):
@@ -974,8 +974,8 @@ def action_cue_to_tracklist(args):
                 track.index = m_index.group(1).strip()
                 tracks.append(track)
                 track = Track()
-    for t in tracks:
-        print (t)
+    # for t in tracks:
+    #     print (t)
     with open(args.tracklist_filename, 'w') as w:
         for t in tracks:
             w.write('{}\n'.format(str(t)))

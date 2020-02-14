@@ -137,7 +137,7 @@ def get_filtered_files(db_dict, files, bpm, bpm_range, cam_num_list, vocal_only=
         is_vocal = aa.is_vocal(record)
         if vocal_only and not is_vocal:
             continue
-        bpm_range_to_use = bpm_range + 10 if is_vocal else bpm_range
+        bpm_range_to_use = bpm_range + 20 if is_vocal else bpm_range
         if bpm is not None and not aa.matches_bpm_filter(bpm, bpm_range_to_use, record['bpm']):
             continue
         cam_num = aa.get_camelot_num(record['key'])
@@ -207,6 +207,9 @@ def get_beat_grid_markers(filename, clip):
     # assumes relative to first warp marker!
     start_seconds = get_seconds_relative_to_marker(first_from_warp, start_beat)
     start_cue = Cue(start_seconds, None, False, 'Start')
+
+    if start_seconds < 0:
+        print ('start_seconds: {:.3}:{}'.format(round(start_seconds, 3), filename))
 
     # make sure we have beat grid back to the start if before the first warp marker
     if start_beat < first_from_warp.beat_time:
@@ -293,7 +296,7 @@ def get_als_track_info(filename, record):
     first_clip = record['clips'][0]
     first_sample = first_clip['sample']
     try:
-        print ('{}'.format(aa.get_sample_value_as_unicode(first_sample)))
+        as_unicode = aa.get_sample_value_as_unicode(first_sample)
     except:
         print ('Some bullshit unicode')
 
@@ -339,8 +342,8 @@ def get_als_track_info(filename, record):
             # Not sure how much that matters as it's only used mod 4.
             beat_grid_markers.append(bgm)
             previous_bgm = bgm
-    for m in beat_grid_markers:
-        print ('  {}'.format(m))
+    # for m in beat_grid_markers:
+    #     print ('  {}'.format(m))
 
     # Now set up all the hot cues
     # No memory cues right now for ALS?
@@ -487,12 +490,11 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
         # get track info and add
         if aa.is_alc_file(f):
             track_info = get_track_info(filename=f, record=record)
-            track_info.add_to_track(et_track)
         elif aa.is_als_file(f):
             track_info = get_als_track_info(filename=f, record=record)
-            track_info.add_to_track(et_track)
         else:
             raise RuntimeError('wtf: {}'.format(f))
+        track_info.add_to_track(et_track)
 
         # finally record this track id
         et_track.set('TrackID', str(num_added))
