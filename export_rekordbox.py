@@ -12,11 +12,7 @@ VERSION = 51
 
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
-REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
-
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
-REKORDBOX_LOCAL_SAMPLE_KEY = 'rekordbox_local_sample'
-
 REKORDBOX_HISTORY_PATH = u'/Users/peter/Documents/rekordbox_history'
 
 
@@ -137,7 +133,7 @@ def get_filtered_files(db_dict, files, bpm, bpm_range, cam_num_list, vocal_only=
         is_vocal = aa.is_vocal(record)
         if vocal_only and not is_vocal:
             continue
-        bpm_range_to_use = bpm_range + 20 if is_vocal else bpm_range
+        bpm_range_to_use = bpm_range + 10 if is_vocal else bpm_range
         if bpm is not None and not aa.matches_bpm_filter(bpm, bpm_range_to_use, record['bpm']):
             continue
         cam_num = aa.get_camelot_num(record['key'])
@@ -411,13 +407,13 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
         if is_for_usb:
             export_rekordbox_samples(db_filename,
                                      sample_path=REKORDBOX_SAMPLE_PATH,
-                                     sample_key=REKORDBOX_SAMPLE_KEY,
+                                     sample_key=aa.REKORDBOX_SAMPLE_KEY,
                                      always_copy=True,
                                      convert_flac=True)
         else:
             export_rekordbox_samples(db_filename,
                                      sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
-                                     sample_key=REKORDBOX_LOCAL_SAMPLE_KEY,
+                                     sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
                                      always_copy=False,
                                      convert_flac=False)
 
@@ -441,10 +437,10 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
             continue
         if is_for_usb:
             sample = aa.get_existing_rekordbox_sample(
-                record, sample_key=REKORDBOX_SAMPLE_KEY)
+                record, sample_key=aa.REKORDBOX_SAMPLE_KEY)
         else:
             sample = aa.get_existing_rekordbox_sample(
-                record, sample_key=REKORDBOX_LOCAL_SAMPLE_KEY)
+                record, sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY)
         if sample_dict is not None:
             sample = sample_dict.get(os.path.basename(sample))
         if sample is None:

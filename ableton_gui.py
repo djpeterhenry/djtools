@@ -599,7 +599,12 @@ class App:
         self.add_ts_from_copy(filename)
 
     def file_action_reveal(self, filename):
-        sample = aa.get_sample(self.db_dict[filename])
+        #sample = aa.get_sample(self.db_dict[filename])
+        record = self.db_dict[filename]
+        sample = aa.get_existing_rekordbox_sample(
+            record, sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY)
+        if sample is None:
+            return
         aa.reveal_file(sample)
         self.add_ts_from_copy(filename)
 

@@ -37,6 +37,9 @@ ABLETON_EXTENSIONS = ['.alc', '.als']
 SAMPLE_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.aiff', '.flac']
 ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 
+REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
+REKORDBOX_LOCAL_SAMPLE_KEY = 'rekordbox_local_sample'
+
 def get_ts_for(year, month, day):
     return time.mktime(datetime.date(year, month, day).timetuple())
 
@@ -105,8 +108,19 @@ def read_db_file(db_filename):
 
 
 def write_db_file(db_filename, db_dict):
-    db_file = open(db_filename, 'w')
-    cPickle.dump(db_dict, db_file)
+    # very first thing make a backup
+    print ('fuckin here')
+    for x in xrange(int(1e6)):
+        backup_file = 'aa_db.{}.txt'.format(x)
+        if os.path.exists(backup_file):
+            continue
+        break
+    try:
+        shutil.copyfile(db_filename, backup_file)
+    except:
+        print ('failed backup: {} -> {}'.format(db_filename, backup_file))
+    with open(db_filename, 'w') as db_file:
+        cPickle.dump(db_dict, db_file)
     print ("Wrote: " + db_filename)
 
 
@@ -131,11 +145,17 @@ def use_for_rekordbox(record):
         return False
     if 'x_rekordbox' in record['tags']:
         return False
+    if is_ss(record):
+        return False
     return True
 
 
 def is_vocal(record):
     return 'vocal' in record['tags']
+
+
+def is_ss(record):
+    return 'SS' in record['tags']
 
 
 def has_extension(f, extension):
