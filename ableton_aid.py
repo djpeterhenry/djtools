@@ -109,7 +109,6 @@ def read_db_file(db_filename):
 
 def write_db_file(db_filename, db_dict):
     # very first thing make a backup
-    print ('fuckin here')
     for x in xrange(int(1e6)):
         backup_file = 'aa_db.{}.txt'.format(x)
         if os.path.exists(backup_file):
@@ -117,6 +116,7 @@ def write_db_file(db_filename, db_dict):
         break
     try:
         shutil.copyfile(db_filename, backup_file)
+        print ('created: {}'.format(backup_file))
     except:
         print ('failed backup: {} -> {}'.format(db_filename, backup_file))
     with open(db_filename, 'w') as db_file:
@@ -950,14 +950,19 @@ def update_with_rekordbox_history(db_dict, history_filename):
         for index, line in enumerate(h.readlines()[1:]):
             m = p_line.match(line)
             if m:
-                s = u'{} - {}'.format(m.group(1), m.group(2))
-                s_str = s.encode('utf8')
-                _, f = get_song_in_db(s_str, db_dict)
-                if f is not None:
-                    record = db_dict[f]
-                    ts_to_write = date_ts + index
-                    add_ts(record, ts_to_write)
-                    # print ('{}:{}'.format(f, ts_to_write))
+                stamp_song(db_dict, date_ts, index, m.group(1), m.group(2))
+            else:
+                print('failed to match: {}'.format(line))
+
+def stamp_song(db_dict, date_ts, index, artist, title):
+    s = u'{} - {}'.format(artist, title)
+    s_str = s.encode('utf8')
+    _, f = get_song_in_db(s_str, db_dict)
+    if f is not None:
+        record = db_dict[f]
+        ts_to_write = date_ts + index
+        add_ts(record, ts_to_write)
+        # print ('{}:{}'.format(f, ts_to_write))
 
 
 def action_rekordbox_history(args):

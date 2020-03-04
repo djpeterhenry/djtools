@@ -40,7 +40,6 @@ def export_rekordbox_samples(db_filename, sample_path, sample_key, always_copy, 
         record = db_dict[f]
         if not aa.use_for_rekordbox(record):
             continue
-        print ('Checking sample:', f)
         sample = aa.get_sample_unicode(record)
         if sample is None:
             print ('Failed to get sample for {}'.format(f))
