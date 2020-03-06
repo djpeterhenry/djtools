@@ -302,6 +302,7 @@ def generate_camelot_dict():
     initial_dict = {}
     reverse_dict = {}
     ab = ['A', 'B']
+    # this shit was fucking clever:
     for i, k in enumerate(camelot_list):
         camelot_name = str(i / 2 + 1) + ab[i % 2]
         if i % 2 == 0:
@@ -327,17 +328,20 @@ def generate_camelot_dict():
 # create global
 camelot_dict, reverse_camelot_dict = generate_camelot_dict()
 
+CAMELOT_KEY = re.compile('([0-9][0-9]?)[A|B|a|b]')
 
-def get_camelot_key(key):
-    if len(key) < 1:
-        return None
-    key = key[:1].upper() + key[1:]
-    if key[-1] == '?':
-        key = key[:-1]
-    if camelot_dict.has_key(key):
-        return camelot_dict[key]
-    else:
-        return None
+
+def normalized_camelot_key(s):
+    if CAMELOT_KEY.match(s):
+        return s.upper()
+
+
+def get_camelot_key(s):
+    # match direct
+    match = normalized_camelot_key(s)
+    if match:
+        return match
+    return camelot_dict.get(s)
 
 
 def get_camelot_num(key):
