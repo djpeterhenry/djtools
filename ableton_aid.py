@@ -801,7 +801,7 @@ def action_transfer_ts(args):
         for index, other in enumerate(close):
             print (index, ":", other)
 
-        choice = get_int("Choice:")
+        choice = get_int("Choice (-1 explicit delete):")
         if choice is not None:
             if choice == -1:
                 del db_dict[f]
@@ -821,6 +821,11 @@ def action_transfer_ts(args):
                 for old_tag in record['tags']:
                     if old_tag not in target_record['tags']:
                         target_record['tags'].append(old_tag)
+                # also transfer key if not already present
+                old_key = target_record.get('key')
+                key = record.get('key')
+                if key and not old_key:
+                    target_record['key'] = key
                 # delete old record
                 del db_dict[f]
                 write_db_file(args.db_filename, db_dict)
