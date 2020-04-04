@@ -33,6 +33,11 @@ try:
 except:
     pass
 
+SKIP_KEY = 'ALL KEYS'
+SKIP_BPM = 'ALL BPM'
+LOOK_TAG = 'LOOK'
+GOOD_TAG = 'GOOD'
+
 ABLETON_EXTENSIONS = ['.alc', '.als']
 SAMPLE_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.aiff', '.flac']
 ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
@@ -148,6 +153,11 @@ def use_for_rekordbox(record):
     if is_ss(record):
         return False
     return True
+
+
+def is_good(record):
+    has_tag = GOOD_TAG in record['tags']
+    return has_tag
 
 
 def is_vocal(record):
@@ -961,7 +971,7 @@ def update_with_rekordbox_history(db_dict, history_filename):
             if m:
                 stamp_song(db_dict, date_ts, index, m.group(1), m.group(2))
             else:
-                print('failed to match: {}'.format(line))
+                print('{}: failed to match: {}'.format(history_filename, line))
 
 def stamp_song(db_dict, date_ts, index, artist, title):
     s = u'{} - {}'.format(artist, title)

@@ -28,10 +28,6 @@ from widgets import Checkbox
 
 
 LOCK_FILEPATH = '/tmp/ableton_gui.lock'
-SKIP_KEY = 'ALL KEYS'
-SKIP_BPM = 'ALL BPM'
-LOOK_TAG = 'LOOK'
-GOOD_TAG = 'GOOD'
 
 # use this?
 WhichOpenMode = Enum('WhichOpenMode', 'Ableton Finder Play')
@@ -41,11 +37,11 @@ class App:
         'x',
         'x_rekordbox',
         'vocal',
-        GOOD_TAG,
-        LOOK_TAG,
+        aa.GOOD_TAG,
+        aa.LOOK_TAG,
         'SS',
-        SKIP_KEY,
-        SKIP_BPM,
+        aa.SKIP_KEY,
+        aa.SKIP_BPM,
     ]
     hidden_tag_pattern_list = [
         '-gc',
@@ -413,7 +409,7 @@ class App:
                     if s.lower() not in filename.lower():
                         keep = False
 
-            if filter_bpm is not None and SKIP_BPM not in tag_list:
+            if filter_bpm is not None and aa.SKIP_BPM not in tag_list:
                 # TODO: could move this filter change outside loop, as well as
                 # other range math
                 bpm_range = filter_bpm_range
@@ -445,7 +441,7 @@ class App:
                 keep = False
             if key_filter == '*' and len(key) == 0:
                 keep = False
-            if SKIP_KEY not in tag_list:
+            if aa.SKIP_KEY not in tag_list:
                 if cam_filter_numbers:
                     if cam_song is None:
                         keep = False
@@ -692,14 +688,14 @@ class App:
         filename = self.get_selected_filename()
         if not filename:
             return
-        tag = GOOD_TAG
+        tag = aa.GOOD_TAG
         self.add_tag_to_filename(filename, tag)
 
     def command_l(self):
         filename = self.get_selected_filename()
         if not filename:
             return
-        tag = LOOK_TAG
+        tag = aa.LOOK_TAG
         self.add_tag_to_filename(filename, tag)
 
     def command_clear_min_max(self):
