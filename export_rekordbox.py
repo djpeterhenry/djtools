@@ -120,7 +120,10 @@ def add_folder(et_parent, name):
     return result
 
 
-def get_filtered_files(db_dict, files, bpm, bpm_range, cam_num_list, vocal_only=False):
+def get_filtered_files(db_dict, files,
+                       bpm=None, bpm_range=None, 
+                       cam_num_list=None,
+                       vocal_only=False, good_only=False):
     """
     bpm can be None
     cam_num_list can be None
@@ -129,12 +132,16 @@ def get_filtered_files(db_dict, files, bpm, bpm_range, cam_num_list, vocal_only=
     matching_files = []
     for f in files:
         record = db_dict[f]
+        is_good = aa.is_good(record)
+        if good_only and not is_good:
+            continue
         is_vocal = aa.is_vocal(record)
         if vocal_only and not is_vocal:
             continue
-        bpm_range_to_use = bpm_range + 10 if is_vocal else bpm_range
-        if bpm is not None and not aa.matches_bpm_filter(bpm, bpm_range_to_use, record['bpm']):
-            continue
+        if bpm is not None:
+            bpm_range_to_use = bpm_range + 10 if is_vocal else bpm_range
+            if not aa.matches_bpm_filter(bpm, bpm_range_to_use, record['bpm']):
+                continue
         cam_num = aa.get_camelot_num(record['key'])
         if cam_num_list is not None and cam_num not in cam_num_list:
             continue
@@ -514,6 +521,11 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
 
     # version playlist as root
     et_version_node = add_folder(et_root_node, 'V{:02}'.format(VERSION))
+
+    # Good first!
+    adder.add_playlist_for_files(et_version_node, 'All (good)',
+                                 get_filtered_files(
+                                     db_dict=db_dict, files=files_with_id, good_only=True))
 
     # playlist for all
     adder.add_playlist_for_files(et_version_node, 'All (touch)', files_with_id)
