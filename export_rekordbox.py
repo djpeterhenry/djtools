@@ -132,8 +132,7 @@ def get_filtered_files(db_dict, files,
     matching_files = []
     for f in files:
         record = db_dict[f]
-        is_good = aa.is_good(record)
-        if good_only and not is_good:
+        if good_only and not aa.is_good(record):
             continue
         is_vocal = aa.is_vocal(record)
         if vocal_only and not is_vocal:
@@ -522,11 +521,6 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
     # version playlist as root
     et_version_node = add_folder(et_root_node, 'V{:02}'.format(VERSION))
 
-    # Good first!
-    adder.add_playlist_for_files(et_version_node, 'All (good)',
-                                 get_filtered_files(
-                                     db_dict=db_dict, files=files_with_id, good_only=True))
-
     # playlist for all
     adder.add_playlist_for_files(et_version_node, 'All (touch)', files_with_id)
     adder.add_playlist_for_files(
@@ -535,6 +529,9 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
         et_version_node, 'All (num)', aa.generate_num(files_with_id, db_dict))
     adder.add_playlist_for_files(
         et_version_node, 'All (random)', aa.generate_random(files_with_id))
+    adder.add_playlist_for_files(et_version_node, 'All (good)',
+                            get_filtered_files(
+                                db_dict=db_dict, files=files_with_id, good_only=True))
 
     def add_bpm_folder(et_parent_folder, bpm, bpm_range):
         folder_name = get_bpm_name(bpm, bpm_range)
@@ -559,14 +556,20 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
             et_bpm_folder, 'All (num)', aa.generate_num(matching_files, db_dict))
         adder.add_playlist_for_files(
             et_bpm_folder, 'All (random)', aa.generate_random(matching_files))
+        # additionally filter down to "good"
+        adder.add_playlist_for_files(et_bpm_folder, 'All (good)',
+                                     get_filtered_files(
+                                         db_dict=db_dict, files=matching_files, good_only=True))
 
         # vocal for bpm (default order)
-        matching_files = get_filtered_files(db_dict=db_dict,
-                                            files=files_with_id,
-                                            bpm=bpm, bpm_range=bpm_range,
-                                            cam_num_list=None,
-                                            vocal_only=True)
-        adder.add_playlist_for_files(et_bpm_folder, 'Vocal', matching_files)
+        # disable as available by search
+        if False:
+            matching_files = get_filtered_files(db_dict=db_dict,
+                                                files=files_with_id,
+                                                bpm=bpm, bpm_range=bpm_range,
+                                                cam_num_list=None,
+                                                vocal_only=True)
+            adder.add_playlist_for_files(et_bpm_folder, 'Vocal', matching_files)
 
         # for each key
         for key in xrange(1, 13):
