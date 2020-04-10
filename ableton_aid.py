@@ -743,6 +743,7 @@ def generate_sets(db_dict):
     result = []
     # now from most recent
     last_ts = None
+    last_file = None
     for ts in ts_sorted:
         if last_ts is None:
             last_ts = ts
@@ -755,7 +756,10 @@ def generate_sets(db_dict):
         last_ts = ts
         files = ts_db_dict[ts]
         for f in files:
+            if f == last_file:
+                continue
             result.append(f)
+            last_file = f
     return result
 
 
