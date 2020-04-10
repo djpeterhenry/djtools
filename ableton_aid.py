@@ -736,10 +736,11 @@ def action_print(args):
         print (filename + " " + str(record))
 
 
-def action_list_sets(args):
-    db_dict = read_db_file(args.db_filename)
+def generate_sets(db_dict):
     ts_db_dict = get_db_by_ts(db_dict)
     ts_sorted = sorted(ts_db_dict.iterkeys(), reverse=True)
+
+    result = []
     # now from most recent
     last_ts = None
     for ts in ts_sorted:
@@ -750,11 +751,18 @@ def action_list_sets(args):
         #print ('{}:{}'.format(ts_diff, max_seconds))
         if ts_diff > max_seconds:
             divider = '-' * 12
-            print (divider)
+            result.append(divider)
         last_ts = ts
         files = ts_db_dict[ts]
         for f in files:
-            print (f)
+            result.append(f)
+    return result
+
+
+def action_list_sets(args):
+    db_dict = read_db_file(args.db_filename)
+    for f in generate_sets(db_dict):
+        print (f)
 
 
 def action_key_frequency(args):
@@ -1044,6 +1052,9 @@ def generate_lists(db_filename, output_path = COLLECTION_FOLDER):
     write_files('add.txt', generate_alc(files, db_dict))
     write_files('name.txt', files)
     write_files('num.txt', generate_num(files, db_dict))    
+    sets = generate_sets(db_dict)
+    write_files('sets.txt', sets)
+
 
 def action_generate_lists(args):
     generate_lists(args.db_filename, args.output_path)
