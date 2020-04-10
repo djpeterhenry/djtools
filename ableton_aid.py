@@ -739,12 +739,17 @@ def action_print(args):
 def action_list_sets(args):
     db_dict = read_db_file(args.db_filename)
     ts_db_dict = get_db_by_ts(db_dict)
-    last_ts = 0
-    for ts in sorted(ts_db_dict.iterkeys()):
-        ts_diff = ts - last_ts
+    ts_sorted = sorted(ts_db_dict.iterkeys(), reverse=True)
+    # now from most recent
+    last_ts = None
+    for ts in ts_sorted:
+        if last_ts is None:
+            last_ts = ts
+        ts_diff = last_ts - ts
         max_seconds = 10 * 60
+        #print ('{}:{}'.format(ts_diff, max_seconds))
         if ts_diff > max_seconds:
-            divider = '-' * 12 + '(%d)' % (ts_diff / 60)
+            divider = '-' * 12
             print (divider)
         last_ts = ts
         files = ts_db_dict[ts]
@@ -1081,6 +1086,8 @@ def parse_args():
     # TODO: pick one?  print is raw, list is pretty
     # This should match listing orders in GUI, be pretty, and be the new dump
     subparsers.add_parser('print').set_defaults(func=action_print)
+
+    # actually looks good
     subparsers.add_parser('list_sets').set_defaults(func=action_list_sets)
 
     subparsers.add_parser('keyfreq').set_defaults(func=action_key_frequency)
