@@ -45,6 +45,7 @@ ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 REKORDBOX_SAMPLE_KEY = 'rekordbox_sample'
 REKORDBOX_LOCAL_SAMPLE_KEY = 'rekordbox_local_sample'
 
+
 def get_ts_for(year, month, day):
     return time.mktime(datetime.date(year, month, day).timetuple())
 
@@ -188,6 +189,7 @@ def alc_to_str(alc_filename):
 def alc_to_xml(alc_filename):
     return ET.fromstring(alc_to_str(alc_filename))
 
+
 def get_xml_clip_info(xml_clip):
     result = {}
     xml_warp_markers = xml_clip.find('WarpMarkers')
@@ -198,10 +200,14 @@ def get_xml_clip_info(xml_clip):
     xml_loop = xml_clip.find('Loop')
     result['loop_start'] = float(xml_loop.find('LoopStart').get('Value'))
     result['loop_end'] = float(xml_loop.find('LoopEnd').get('Value'))
-    result['start_relative'] = float(xml_loop.find('StartRelative').get('Value'))
-    result['loop_on'] = True if xml_loop.find('LoopOn').get('Value') == 'true' else False
-    result['hidden_loop_start'] = float(xml_loop.find('HiddenLoopStart').get('Value'))
-    result['hidden_loop_end'] = float(xml_loop.find('HiddenLoopEnd').get('Value'))
+    result['start_relative'] = float(
+        xml_loop.find('StartRelative').get('Value'))
+    result['loop_on'] = True if xml_loop.find(
+        'LoopOn').get('Value') == 'true' else False
+    result['hidden_loop_start'] = float(
+        xml_loop.find('HiddenLoopStart').get('Value'))
+    result['hidden_loop_end'] = float(
+        xml_loop.find('HiddenLoopEnd').get('Value'))
     # also sample info
     xml_fileref = xml_clip.find('SampleRef/FileRef')
     relative_path = os.path.join(
@@ -514,6 +520,32 @@ def generate_random(files):
     return files_copy
 
 
+def generate_sets(db_dict):
+    ts_db_dict = get_db_by_ts(db_dict)
+    ts_sorted = sorted(ts_db_dict.iterkeys(), reverse=True)
+
+    result = []
+    # now from most recent
+    last_ts = None
+    last_file = None
+    for ts in ts_sorted:
+        if last_ts is None:
+            last_ts = ts
+        ts_diff = last_ts - ts
+        max_seconds = 10 * 60
+        if ts_diff > max_seconds:
+            divider = '-' * 12 + ' {}'.format(get_date_from_ts(ts))
+            result.append(divider)
+        last_ts = ts
+        files = ts_db_dict[ts]
+        for f in files:
+            if f == last_file:
+                continue
+            result.append(f)
+            last_file = f
+    return result
+
+
 def get_keys_for_camelot_number(camelot_number):
     if camelot_number is None:
         return []
@@ -555,7 +587,7 @@ def update_db_clips(valid_alc_files, db_dict, force_alc=False, force_als=False):
                 record['clips'] = get_audioclips_from_als(f)
                 record['als_ts'] = f_ts
                 print ('Updated clips:', f)
-        
+
 
 def update_db_clips_safe(db_filename):
     db_dict = read_db_file(db_filename)
@@ -736,33 +768,6 @@ def action_print(args):
         print (filename + " " + str(record))
 
 
-def generate_sets(db_dict):
-    ts_db_dict = get_db_by_ts(db_dict)
-    ts_sorted = sorted(ts_db_dict.iterkeys(), reverse=True)
-
-    result = []
-    # now from most recent
-    last_ts = None
-    last_file = None
-    for ts in ts_sorted:
-        if last_ts is None:
-            last_ts = ts
-        ts_diff = last_ts - ts
-        max_seconds = 10 * 60
-        #print ('{}:{}'.format(ts_diff, max_seconds))
-        if ts_diff > max_seconds:
-            divider = '-' * 12
-            result.append(divider)
-        last_ts = ts
-        files = ts_db_dict[ts]
-        for f in files:
-            if f == last_file:
-                continue
-            result.append(f)
-            last_file = f
-    return result
-
-
 def action_list_sets(args):
     db_dict = read_db_file(args.db_filename)
     for f in generate_sets(db_dict):
@@ -901,11 +906,12 @@ def action_export_rekordbox_usb(args):
                                           rekordbox_filename=args.rekordbox_filename,
                                           is_for_usb=True)
 
+
 def action_export_rekordbox_xml(args):
     export_rekordbox.export_rekordbox_xml(db_filename=args.db_filename,
                                           rekordbox_filename=args.rekordbox_filename,
                                           is_for_usb=True,
-                                          sample_root_path=args.sample_root_path)    
+                                          sample_root_path=args.sample_root_path)
 
 
 def action_export_mp3_samples(args):
@@ -990,6 +996,7 @@ def update_with_rekordbox_history(db_dict, history_filename):
             else:
                 print('{}: failed to match: {}'.format(history_filename, line))
 
+
 def stamp_song(db_dict, date_ts, index, artist, title):
     s = u'{} - {}'.format(artist, title)
     s_str = s.encode('utf8')
@@ -1042,7 +1049,7 @@ def action_cue_to_tracklist(args):
             w.write('{}\n'.format(str(t)))
 
 
-def generate_lists(db_filename, output_path = COLLECTION_FOLDER):
+def generate_lists(db_filename, output_path=COLLECTION_FOLDER):
     db_dict = read_db_file(db_filename)
     files = get_ableton_files()
 
@@ -1055,13 +1062,14 @@ def generate_lists(db_filename, output_path = COLLECTION_FOLDER):
     write_files('date_or_add.txt', generate_date_plus_alc(files, db_dict))
     write_files('add.txt', generate_alc(files, db_dict))
     write_files('name.txt', files)
-    write_files('num.txt', generate_num(files, db_dict))    
+    write_files('num.txt', generate_num(files, db_dict))
     sets = generate_sets(db_dict)
     write_files('sets.txt', sets)
 
 
 def action_generate_lists(args):
     generate_lists(args.db_filename, args.output_path)
+
 
 def action_touch_list(args):
     db_dict = read_db_file(args.db_filename)
@@ -1073,6 +1081,7 @@ def action_touch_list(args):
         ts_to_add = date_ts + counter
         add_ts(record, ts_to_add)
     write_db_file(args.db_filename, db_dict)
+
 
 def action_find_samples(args):
     sample_dict = export_rekordbox.find_existing_samples(args.root_path)

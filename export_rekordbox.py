@@ -367,15 +367,23 @@ class PlaylistAdder(object):
         self.playlists_added = 0
         self.file_to_id = file_to_id
 
-    def add_playlist_for_files(self, et_parent, name, files):
+    def add_playlist_for_files(self, et_parent, name, files, max_num=None):
         self.playlists_added += 1
         et_list = ET.SubElement(et_parent, 'NODE')
         et_list.set('Type', '1')
         et_list.set('Name', name)
         et_list.set('KeyType', '0')
+        files_added = 0
         for f in files:
+            try:
+                track_id = self.file_to_id[f]
+            except KeyError:
+                continue
             et_track = ET.SubElement(et_list, 'TRACK')
-            et_track.set('Key', str(self.file_to_id[f]))
+            et_track.set('Key', str(track_id))
+            files_added += 1
+            if max_num is not None and files_added > max_num:
+                break
         set_playlist_count(et_list)
 
 
@@ -532,6 +540,10 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
     adder.add_playlist_for_files(et_version_node, 'All (good)',
                             get_filtered_files(
                                 db_dict=db_dict, files=files_with_id, good_only=True))
+
+    # sets!
+    adder.add_playlist_for_files(
+        et_version_node, 'Sets', aa.generate_sets(db_dict=db_dict), max_num=10000)
 
     def add_bpm_folder(et_parent_folder, bpm, bpm_range):
         folder_name = get_bpm_name(bpm, bpm_range)
