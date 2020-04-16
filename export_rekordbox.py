@@ -543,7 +543,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
 
     # sets!
     adder.add_playlist_for_files(
-        et_version_node, 'Sets', aa.generate_sets(db_dict=db_dict), max_num=10000)
+        et_version_node, 'Sets', aa.generate_sets(db_dict=db_dict), max_num=20000)
 
     def add_bpm_folder(et_parent_folder, bpm, bpm_range):
         folder_name = get_bpm_name(bpm, bpm_range)
