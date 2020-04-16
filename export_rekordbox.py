@@ -608,14 +608,20 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
         for bpm, bpm_range in bpm_and_range:
             add_bpm_folder(et_filter_folder, bpm, bpm_range)
 
+    def get_matching_files_from_list(list_file):
+        l = aa.get_list_from_file(list_file, db_dict)
+        return [f for _, f in l if f is not None and f in files_with_id]
+
     ##########
+    # Active list
+    active_list = get_matching_files_from_list(aa.ACTIVE_LIST)
+    adder.add_playlist_for_files(et_version_node, 'Active', active_list)
+
     # Lists
     et_lists_folder = add_folder(et_version_node, 'Lists')
     name_to_file = aa.get_list_name_to_file(aa.LISTS_FOLDER)
     for name, list_file in sorted(name_to_file.iteritems()):
-        l = aa.get_list_from_file(list_file, db_dict)
-        matching_files = [
-            f for _, f in l if f is not None and f in files_with_id]
+        matching_files = get_matching_files_from_list(list_file)
         adder.add_playlist_for_files(et_lists_folder, name, matching_files)
 
     # BPM

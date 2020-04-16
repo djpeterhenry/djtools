@@ -58,6 +58,7 @@ LISTS_FOLDER = '/Users/peter/github/djpeterhenry.github.io/lists'
 
 COLLECTION_FOLDER = "/Users/peter/github/djpeterhenry.github.io/collection"
 
+ACTIVE_LIST = '/Users/peter/github/djtools/active_list.txt'
 
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
