@@ -958,7 +958,7 @@ def action_test_lists(args):
 
 
 def update_with_rekordbox_history(db_dict, history_filename):
-    p_line = re.compile(ur'\d+\t(.*)\t(.*) \[.*$')
+    p_line = re.compile(ur'\d+\t(.*)\t([^\[]*) \[.*$')
 
     # get date from filename
     p_filename = re.compile(ur'HISTORY (\d+)-(\d+)-(\d+)\.txt')
@@ -1002,10 +1002,12 @@ def stamp_song(db_dict, date_ts, index, artist, title):
     s = u'{} - {}'.format(artist, title)
     s_str = s.encode('utf8')
     _, f = get_song_in_db(s_str, db_dict)
-    if f is not None:
-        record = db_dict[f]
-        ts_to_write = date_ts + index
-        add_ts(record, ts_to_write)
+    if f is None:
+        print ('Failed to stamp: {}'.format(s))
+        return
+    record = db_dict[f]
+    ts_to_write = date_ts + index
+    add_ts(record, ts_to_write)
         # print ('{}:{}'.format(f, ts_to_write))
 
 
