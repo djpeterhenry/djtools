@@ -958,8 +958,6 @@ def action_test_lists(args):
 
 
 def update_with_rekordbox_history(db_dict, history_filename):
-    p_line = re.compile(ur'\d+\t(.*)\t([^\[]*) \[.*$')
-
     # get date from filename
     p_filename = re.compile(ur'HISTORY (\d+)-(\d+)-(\d+)\.txt')
     p_filename_paren = re.compile(ur'HISTORY (\d+)-(\d+)-(\d+) \((\d+)\)\.txt')
@@ -991,6 +989,7 @@ def update_with_rekordbox_history(db_dict, history_filename):
 
     with codecs.open(history_filename, encoding='utf-16le') as h:
         for index, line in enumerate(h.readlines()[1:]):
+            p_line = re.compile(ur'\d+\t(.*)\t([^\[]*) \[.*$')
             m = p_line.match(line)
             if m:
                 stamp_song(db_dict, date_ts, index, m.group(1), m.group(2))
@@ -999,11 +998,12 @@ def update_with_rekordbox_history(db_dict, history_filename):
 
 
 def stamp_song(db_dict, date_ts, index, artist, title):
-    s = u'{} - {}'.format(artist, title)
+    s = u'{} - {}'.format(artist.strip(), title.strip())
     s_str = s.encode('utf8')
     _, f = get_song_in_db(s_str, db_dict)
     if f is None:
-        print ('Failed to stamp: {}'.format(s))
+        print ("Failure: {}".format(s_str))
+        # Failed to stamp!
         return
     record = db_dict[f]
     ts_to_write = date_ts + index

@@ -464,17 +464,25 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
         artist, track = aa.get_artist_and_track(f)
 
         # Optionally put [Vocal] in the track name
+        suffixes = []
+
         if aa.is_vocal(record):
-            track = '{} [Vocal]'.format(track)
+            suffixes.append('[Vocal]')
 
         # Put camelot key (7A) in the tag
         cam_key = aa.get_camelot_key(record['key'])
         if cam_key:
             et_track.set('Tonality', cam_key)
-        # Put camelot num in the filename as [7] for easier searching
+        # [7A]
+        if cam_key is not None:
+            suffixes.append('[{}]'.format(cam_key))
+        # [7]
         cam_num = aa.get_camelot_num(record['key'])
         if cam_num is not None:
-            track = '{} [{}]'.format(track, cam_num)
+            suffixes.append('[{}]'.format(cam_num))
+
+        if suffixes:
+            track = '{}   {}'.format(track, ' '.join(suffixes))
 
         # Evidently getting these as unicode is important for some
         et_track.set('Name', track.decode('utf-8'))
