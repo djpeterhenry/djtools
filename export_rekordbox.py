@@ -209,6 +209,7 @@ def get_beat_grid_markers(filename, clip):
     start_seconds = get_seconds_relative_to_marker(first_from_warp, start_beat)
     start_cue = Cue(start_seconds, None, False, 'Start')
 
+    # Starting before zero is broken in Rekordbox
     if start_seconds < 0:
         print ('start_seconds: {:.3}:{}'.format(round(start_seconds, 3), filename))
 
@@ -217,6 +218,17 @@ def get_beat_grid_markers(filename, clip):
         first_from_warp.set_memory_note('Beat 1')
         beat_grid_markers.append(BeatGridMarker(
             sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat))
+
+    # New: try to put beat grid markers all the way back to around 0 seconds
+    # Sort so we can use either the start beat or first warp beat whichever is earlier.
+    beat_grid_markers.sort(key=lambda x: x.sec_time)
+    beat_cursor = beat_grid_markers[0].beat_time
+    while True:
+        beat_cursor -= 16
+        sec_cursor = get_seconds_relative_to_marker(beat_grid_markers[0], beat_cursor)
+        if sec_cursor <= 0:
+            break
+        beat_grid_markers.append(BeatGridMarker(sec_time=sec_cursor, bpm=first_bpm, beat_time=beat_cursor))
 
     # Actually create start and loop Cue objects
     # I've discovered that the hidden_loop_start is only correct when the loop is off.
