@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 53
+VERSION = 54
 
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
@@ -617,10 +617,10 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
     def add_bpm_folders(et_filter_folder):
         # create tuples of (bpm, bpm_range) and sort them
         bpm_and_range = [(0, 0)]
-        for bpm in range(116, 141, 2):
-            bpm_and_range.append((bpm, 3))
-            bpm_and_range.append((bpm, 5))
         for bpm in range(80, 111, 5):
+            bpm_and_range.append((bpm, 5))
+        for bpm in range(114, 141, 2):
+            bpm_and_range.append((bpm, 3))
             bpm_and_range.append((bpm, 5))
         for bpm in range(145, 161, 5):
             bpm_and_range.append((bpm, 5))
