@@ -476,10 +476,11 @@ class App:
         # reasonable size
         MAX_LENGTH = 1000
         ALPHA = 0.9
+        DIVIDER = '-' * 20
         if len(filename_pairs_list) > MAX_LENGTH:
             first = filename_pairs_list[:int(MAX_LENGTH * ALPHA)]
             last = filename_pairs_list[-int(MAX_LENGTH * (1 - ALPHA)):]
-            filename_pairs_list = first + last
+            filename_pairs_list = first + [(DIVIDER,DIVIDER)] + last
 
         # fill out the important results
         if filename_pairs_list:
