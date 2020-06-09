@@ -400,6 +400,21 @@ def get_valid_alc_files(db_dict):
     return valid_alc_files
 
 
+def get_rekordbox_files(db_dict):
+    alc_files = get_ableton_files()
+    result = []
+    for f in alc_files:
+        try:
+            record = db_dict[f]
+        except:
+            continue
+        if not use_for_rekordbox(record):
+            continue
+        result.append(f)
+    result.sort(key=lambda s: s.lower())
+    return result
+
+
 def generate_sample(valid_alc_files, db_dict):
     date_file_tuples = []
     for f in valid_alc_files:
@@ -521,9 +536,11 @@ def generate_random(files):
     return files_copy
 
 
-def generate_sets(db_dict):
+def generate_sets(files, db_dict):
     ts_db_dict = get_db_by_ts(db_dict)
     ts_sorted = sorted(ts_db_dict.iterkeys(), reverse=True)
+
+    file_set = set(files)
 
     result = []
     # now from most recent
@@ -533,13 +550,14 @@ def generate_sets(db_dict):
         if last_ts is None:
             last_ts = ts
         ts_diff = last_ts - ts
-        max_seconds = 10 * 60
+        max_seconds = 30 * 60
         if ts_diff > max_seconds:
             divider = '-' * 12 + ' {}'.format(get_date_from_ts(ts))
             result.append(divider)
         last_ts = ts
-        files = ts_db_dict[ts]
-        for f in files:
+        for f in ts_db_dict[ts]:
+            if f not in file_set:
+                continue
             if f == last_file:
                 continue
             result.append(f)
@@ -767,12 +785,6 @@ def action_print(args):
     db_dict = read_db_file(args.db_filename)
     for filename, record in db_dict.iteritems():
         print (filename + " " + str(record))
-
-
-def action_list_sets(args):
-    db_dict = read_db_file(args.db_filename)
-    for f in generate_sets(db_dict):
-        print (f)
 
 
 def action_key_frequency(args):
@@ -1054,7 +1066,7 @@ def action_cue_to_tracklist(args):
 
 def generate_lists(db_filename, output_path=COLLECTION_FOLDER):
     db_dict = read_db_file(db_filename)
-    files = get_ableton_files()
+    files = get_rekordbox_files(db_dict)
 
     def write_files(filename, files_to_write):
         with open(os.path.join(output_path, filename), 'w') as outfile:
@@ -1066,7 +1078,7 @@ def generate_lists(db_filename, output_path=COLLECTION_FOLDER):
     write_files('add.txt', generate_alc(files, db_dict))
     write_files('name.txt', files)
     write_files('num.txt', generate_num(files, db_dict))
-    sets = generate_sets(db_dict)
+    sets = generate_sets(files, db_dict)
     write_files('sets.txt', sets)
 
 
@@ -1113,9 +1125,6 @@ def parse_args():
     # TODO: pick one?  print is raw, list is pretty
     # This should match listing orders in GUI, be pretty, and be the new dump
     subparsers.add_parser('print').set_defaults(func=action_print)
-
-    # actually looks good
-    subparsers.add_parser('list_sets').set_defaults(func=action_list_sets)
 
     subparsers.add_parser('keyfreq').set_defaults(func=action_key_frequency)
 

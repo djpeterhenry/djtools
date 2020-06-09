@@ -443,7 +443,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
                                      convert_flac=False)
 
     db_dict = aa.read_db_file(db_filename)
-    files = aa.get_valid_alc_files(db_dict)
+    files = aa.get_rekordbox_files(db_dict)
     files = aa.generate_date_plus_alc(files, db_dict)
 
     # testing filter
@@ -458,8 +458,6 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
 
     for f in files:
         record = db_dict[f]
-        if not aa.use_for_rekordbox(record):
-            continue
         if is_for_usb:
             sample = aa.get_existing_rekordbox_sample(
                 record, sample_key=aa.REKORDBOX_SAMPLE_KEY)
@@ -563,7 +561,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
 
     # sets!
     adder.add_playlist_for_files(
-        et_version_node, 'Sets', aa.generate_sets(db_dict=db_dict), max_num=9999)
+        et_version_node, 'Sets', aa.generate_sets(files=files, db_dict=db_dict), max_num=9999)
 
     def add_bpm_folder(et_parent_folder, bpm, bpm_range):
         folder_name = get_bpm_name(bpm, bpm_range)
