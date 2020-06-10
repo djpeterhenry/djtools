@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 54
+VERSION = 55
 
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
@@ -436,11 +436,12 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
                                      always_copy=True,
                                      convert_flac=True)
         else:
+            # Now converting flac so I can use this for everything
             export_rekordbox_samples(db_filename,
                                      sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
                                      sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
                                      always_copy=False,
-                                     convert_flac=False)
+                                     convert_flac=True)
 
     db_dict = aa.read_db_file(db_filename)
     files = aa.get_rekordbox_files(db_dict)
