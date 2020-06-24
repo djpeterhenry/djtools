@@ -519,7 +519,7 @@ def generate_date(valid_alc_files, db_dict):
 def generate_date_plus_alc(valid_alc_files, db_dict):
     return get_files_from_pairs(generate_date_plus_alc_pairs(valid_alc_files, db_dict))
 
-
+# this is shitty:
 def generate_num(files, db_dict):
     num_file_tuples = []
     for file in files:
@@ -528,6 +528,26 @@ def generate_num(files, db_dict):
         num_file_tuples.append((num, file))
     num_file_tuples.sort()
     return get_files_from_pairs(num_file_tuples)
+
+
+def generate_recent(files, db_dict, years=4):
+    H = 60 * 60
+    D = 24 * H
+    Y = 356 * D
+    SPAN = Y * years
+    now = time.time()
+
+    # this is why you suck:  USE A PREDICATE
+    result = []
+
+    date_file = generate_date_plus_alc_pairs(files, db_dict)
+    # consider general predicate
+    for ts, f in date_file:
+        dt = now - ts
+        if dt > SPAN:
+            continue
+        result.append(f)
+    return generate_random(result)
 
 
 def generate_random(files):

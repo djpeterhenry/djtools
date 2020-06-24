@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 55
+VERSION = 56
 
 #REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
@@ -555,7 +555,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
     adder.add_playlist_for_files(
         et_version_node, 'All (num)', aa.generate_num(files_with_id, db_dict))
     adder.add_playlist_for_files(
-        et_version_node, 'All (random)', aa.generate_random(files_with_id))
+        et_version_node, 'All (recent)', aa.generate_recent(files_with_id, db_dict))
     adder.add_playlist_for_files(et_version_node, 'All (good)',
                             get_filtered_files(
                                 db_dict=db_dict, files=files_with_id, good_only=True))
@@ -586,7 +586,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
         adder.add_playlist_for_files(
             et_bpm_folder, 'All (num)', aa.generate_num(matching_files, db_dict))
         adder.add_playlist_for_files(
-            et_bpm_folder, 'All (random)', aa.generate_random(matching_files))
+            et_bpm_folder, 'All (recent)', aa.generate_recent(matching_files, db_dict))
         # additionally filter down to "good"
         adder.add_playlist_for_files(et_bpm_folder, 'All (good)',
                                      get_filtered_files(
