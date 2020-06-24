@@ -377,7 +377,7 @@ def get_missing(db_filename):
     db_dict = read_db_file(db_filename)
     alc_file_set = set(get_ableton_files())
     result = []
-    for filename, record in iter(sorted(db_dict.iteritems())):
+    for filename, _ in iter(sorted(db_dict.iteritems())):
         if filename not in alc_file_set:
             result.append(filename)
     return result
@@ -761,7 +761,7 @@ def action_add_missing_keys(args):
             continue
         try:
             print ('considering:', filename)
-            bpm, tags, key = (record['bpm'], record['tags'], record['key'])
+            key = record['key']
             if len(key) == 0 or key[-1] == '?':
                 filepath = os.path.abspath(filename)
                 new_key = get_key_from_alc(filepath)
@@ -794,7 +794,7 @@ def action_key_frequency(args):
     for filename, record in iter(sorted(db_dict.iteritems())):
         if filename not in alc_file_set:
             continue
-        bpm, tags, key = (record['bpm'], record['tags'], record['key'])
+        key = record['key']
         cam_key = get_camelot_key(key)
         if cam_key is None:
             continue
@@ -814,7 +814,7 @@ def action_key_frequency(args):
 
 def action_rename_tag(args):
     db_dict = read_db_file(args.db_filename)
-    for filename, record in iter(sorted(db_dict.iteritems())):
+    for _, record in iter(sorted(db_dict.iteritems())):
         tags = record['tags']
         tags = [x if (x != args.tag_old) else args.tag_new for x in tags]
         record['tags'] = tags
