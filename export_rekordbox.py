@@ -8,9 +8,8 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 56
+VERSION = 1
 
-#REKORDBOX_SAMPLE_PATH = u'/Volumes/MacHelper/rekordbox_samples'
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
 REKORDBOX_HISTORY_PATH = u'/Users/peter/Documents/rekordbox_history'
@@ -422,7 +421,7 @@ def relative_path(path_from, path_to):
     return to_rel
 
 
-def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_root_path=None):
+def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, key_lists=True, sample_root_path=None):
     export_rekordbox_history(db_filename)
 
     sample_dict = None
@@ -603,15 +602,16 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, sample_roo
             adder.add_playlist_for_files(et_bpm_folder, 'Vocal', matching_files)
 
         # for each key
-        for key in xrange(1, 13):
-            # (key, key+1)
-            keys = [key, aa.get_relative_camelot_key(key, 1)]
-            matching_files = get_filtered_files(db_dict=db_dict,
-                                                files=files_with_id,
-                                                bpm=bpm, bpm_range=bpm_range,
-                                                cam_num_list=keys)
-            adder.add_playlist_for_files(
-                et_bpm_folder, get_key_name(key), matching_files)
+        if key_lists:
+            for key in xrange(1, 13):
+                # (key, key+1)
+                keys = [key, aa.get_relative_camelot_key(key, 1)]
+                matching_files = get_filtered_files(db_dict=db_dict,
+                                                    files=files_with_id,
+                                                    bpm=bpm, bpm_range=bpm_range,
+                                                    cam_num_list=keys)
+                adder.add_playlist_for_files(
+                    et_bpm_folder, get_key_name(key), matching_files)
 
     def add_bpm_folders(et_filter_folder):
         # create tuples of (bpm, bpm_range) and sort them
