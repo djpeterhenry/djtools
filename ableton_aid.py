@@ -60,6 +60,9 @@ COLLECTION_FOLDER = "/Users/peter/github/djpeterhenry.github.io/collection"
 
 ACTIVE_LIST = '/Users/peter/github/djtools/active_list.txt'
 
+def is_valid(filepath):
+    return os.path.exists(filepath) or os.path.islink(filepath)
+
 def get_int(prompt_string):
     ui = raw_input(prompt_string)
     try:
@@ -605,7 +608,7 @@ def matches_bpm_filter(filter_bpm, bpm_range, bpm):
 
 
 def assert_exists(filename):
-    if not os.path.exists(filename):
+    if not is_valid(filename):
         raise ValueError('File does not exist: {}'.format(filename))
 
 
@@ -670,7 +673,7 @@ def get_export_sample_path(f, sample_ext, target_path):
 def get_existing_rekordbox_sample(record, sample_key):
     try:
         sample = record[sample_key]
-        if os.path.exists(sample):
+        if is_valid(sample):
             return sample
     except:
         pass

@@ -8,12 +8,11 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 1
+VERSION = 2
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
 REKORDBOX_HISTORY_PATH = u'/Users/peter/Documents/rekordbox_history'
-
 
 def export_rekordbox_history(db_filename, history_path=REKORDBOX_HISTORY_PATH):
     db_dict = aa.read_db_file(db_filename)
@@ -47,22 +46,25 @@ def export_rekordbox_samples(db_filename, sample_path, sample_key, convert_flac,
         # convert
         if sample_ext.lower() in extensions_to_convert:
             target = aa.get_export_sample_path(f, '.aiff', sample_path)
-            if not os.path.exists(target):
+            if not aa.is_valid(target):
                 cmd = ['ffmpeg', '-i', sample, target]
-                subprocess.check_call(cmd)            
+                subprocess.check_call(cmd)
         # copy
         elif always_copy:
             target = aa.get_export_sample_path(f, sample_ext, sample_path)
-            if not os.path.exists(target):
+            if not aa.is_valid(target):
                 shutil.copy(sample, target)
         # symlink
         elif always_link:
             target = aa.get_export_sample_path(f, sample_ext, sample_path)
+            # remove existing target link to fix
+            if os.path.islink(target):
+                os.unlink(target)
             if not os.path.exists(target):
-                os.symlink(sample, target)
+                os.symlink(os.path.abspath(sample), target)
         else:
             target = sample.encode('utf-8')
-        assert os.path.exists(target)
+        assert aa.is_valid(target)
         record[sample_key] = target.decode('utf-8')
     aa.write_db_file(db_filename, db_dict)
 
@@ -438,7 +440,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, key_lists=True, sample
                                  sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
                                  convert_flac=True,
                                  always_copy=False,
-                                 always_link=False,
+                                 always_link=True,
                                  )
 
     db_dict = aa.read_db_file(db_filename)
