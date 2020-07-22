@@ -25,7 +25,7 @@ def export_rekordbox_history(db_filename, history_path=REKORDBOX_HISTORY_PATH):
     # write
     aa.write_db_file(db_filename, db_dict)
 
-def export_rekordbox_samples(db_filename, sample_path, sample_key, always_copy, convert_flac):
+def export_rekordbox_samples(db_filename, sample_path, sample_key, convert_flac, always_copy, always_link):
     aa.update_db_clips_safe(db_filename)
     aa.generate_lists(db_filename)
 
@@ -44,17 +44,22 @@ def export_rekordbox_samples(db_filename, sample_path, sample_key, always_copy, 
             print ('Failed to get sample for {}'.format(f))
             continue
         _, sample_ext = os.path.splitext(sample)
-        # convert flac and mp4 (could be video)
+        # convert
         if sample_ext.lower() in extensions_to_convert:
             target = aa.get_export_sample_path(f, '.aiff', sample_path)
             if not os.path.exists(target):
                 cmd = ['ffmpeg', '-i', sample, target]
-                subprocess.check_call(cmd)
-        # copy others
+                subprocess.check_call(cmd)            
+        # copy
         elif always_copy:
             target = aa.get_export_sample_path(f, sample_ext, sample_path)
             if not os.path.exists(target):
                 shutil.copy(sample, target)
+        # symlink
+        elif always_link:
+            target = aa.get_export_sample_path(f, sample_ext, sample_path)
+            if not os.path.exists(target):
+                os.symlink(sample, target)
         else:
             target = sample.encode('utf-8')
         assert os.path.exists(target)
@@ -432,15 +437,19 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, key_lists=
             export_rekordbox_samples(db_filename,
                                      sample_path=REKORDBOX_SAMPLE_PATH,
                                      sample_key=aa.REKORDBOX_SAMPLE_KEY,
+                                     convert_flac=True,
                                      always_copy=True,
-                                     convert_flac=True)
+                                     always_link=False,
+                                     )
         else:
             # Now converting flac so I can use this for everything
             export_rekordbox_samples(db_filename,
                                      sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
                                      sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
+                                     convert_flac=True,
                                      always_copy=False,
-                                     convert_flac=True)
+                                     always_link=False,
+                                     )
 
     db_dict = aa.read_db_file(db_filename)
     files = aa.get_rekordbox_files(db_dict)
