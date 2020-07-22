@@ -930,20 +930,12 @@ def action_print_audioclips(args):
 
 def action_export_rekordbox_local(args):
     export_rekordbox.export_rekordbox_xml(db_filename=args.db_filename,
-                                          rekordbox_filename=args.rekordbox_filename,
-                                          is_for_usb=False)
-
-
-def action_export_rekordbox_usb(args):
-    export_rekordbox.export_rekordbox_xml(db_filename=args.db_filename,
-                                          rekordbox_filename=args.rekordbox_filename,
-                                          is_for_usb=True)
+                                          rekordbox_filename=args.rekordbox_filename)
 
 
 def action_export_rekordbox_xml(args):
     export_rekordbox.export_rekordbox_xml(db_filename=args.db_filename,
                                           rekordbox_filename=args.rekordbox_filename,
-                                          is_for_usb=True,
                                           sample_root_path=args.sample_root_path)
 
 
@@ -1176,10 +1168,6 @@ def parse_args():
     p_rekordbox = subparsers.add_parser('export_rekordbox_local')
     p_rekordbox.add_argument('rekordbox_filename')
     p_rekordbox.set_defaults(func=action_export_rekordbox_local)
-
-    p_rekordbox = subparsers.add_parser('export_rekordbox_usb')
-    p_rekordbox.add_argument('rekordbox_filename')
-    p_rekordbox.set_defaults(func=action_export_rekordbox_usb)
 
     p_rekordbox = subparsers.add_parser('export_rekordbox_xml')
     p_rekordbox.add_argument('rekordbox_filename')

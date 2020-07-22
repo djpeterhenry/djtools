@@ -426,30 +426,20 @@ def relative_path(path_from, path_to):
     return to_rel
 
 
-def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, key_lists=True, sample_root_path=None):
+def export_rekordbox_xml(db_filename, rekordbox_filename, key_lists=True, sample_root_path=None):
     export_rekordbox_history(db_filename)
 
     sample_dict = None
-    if sample_root_path:
+    if sample_root_path is not None:
         sample_dict = find_existing_samples(sample_root_path)
     else:
-        if is_for_usb:
-            export_rekordbox_samples(db_filename,
-                                     sample_path=REKORDBOX_SAMPLE_PATH,
-                                     sample_key=aa.REKORDBOX_SAMPLE_KEY,
-                                     convert_flac=True,
-                                     always_copy=True,
-                                     always_link=False,
-                                     )
-        else:
-            # Now converting flac so I can use this for everything
-            export_rekordbox_samples(db_filename,
-                                     sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
-                                     sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
-                                     convert_flac=True,
-                                     always_copy=False,
-                                     always_link=False,
-                                     )
+        export_rekordbox_samples(db_filename,
+                                 sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
+                                 sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
+                                 convert_flac=True,
+                                 always_copy=False,
+                                 always_link=False,
+                                 )
 
     db_dict = aa.read_db_file(db_filename)
     files = aa.get_rekordbox_files(db_dict)
@@ -467,12 +457,8 @@ def export_rekordbox_xml(db_filename, rekordbox_filename, is_for_usb, key_lists=
 
     for f in files:
         record = db_dict[f]
-        if is_for_usb:
-            sample = aa.get_existing_rekordbox_sample(
-                record, sample_key=aa.REKORDBOX_SAMPLE_KEY)
-        else:
-            sample = aa.get_existing_rekordbox_sample(
-                record, sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY)
+        sample = aa.get_existing_rekordbox_sample(
+            record, sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY)
         if sample_dict is not None:
             sample = sample_dict.get(os.path.basename(sample))
         if sample is None:
