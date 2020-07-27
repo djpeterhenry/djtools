@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 5
+VERSION = 6
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
@@ -480,18 +480,19 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
 
         # Put camelot key (7A) in the tag
         cam_key = aa.get_camelot_key(record['key'])
-        if cam_key:
-            et_track.set('Tonality', cam_key)
-        # [7-A]
         if cam_key is not None:
-            suffixes.append('[{}-{}]'.format(cam_key[:-1], cam_key[-1:]))
-        # [7]
-        # cam_num = aa.get_camelot_num(record['key'])
-        # if cam_num is not None:
-        #     suffixes.append('[{}]'.format(cam_num))
+            et_track.set('Tonality', cam_key)
+            # [7=A]
+            cam_num = int(cam_key[:-1])
+            cam_ab = cam_key[-1:]
+            suffixes.append('[{}={}]'.format(cam_num, cam_ab))
+            # [7-A][6-A]
+            cam_num_minus = aa.get_relative_camelot_key(cam_num, -1)
+            suffixes.append('[{}-{}][{}-{}]'.format(cam_num, cam_ab, cam_num_minus, cam_ab))
 
         if suffixes:
-            track = '{}   {}'.format(track, ' '.join(suffixes))
+            spaces = ' ' * 10
+            track = '{}{}{}'.format(track, spaces, ' '.join(suffixes))
 
         # Evidently getting these as unicode is important for some
         et_track.set('Name', track.decode('utf-8'))
@@ -620,7 +621,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
             bpm_and_range.append((bpm, 5))
         for bpm in range(114, 141, 2):
             bpm_and_range.append((bpm, 3))
-            bpm_and_range.append((bpm, 5))
+            #bpm_and_range.append((bpm, 5))
         for bpm in range(145, 161, 5):
             bpm_and_range.append((bpm, 5))
         bpm_and_range.sort()
