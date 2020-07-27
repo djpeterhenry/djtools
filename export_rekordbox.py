@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 6
+VERSION = 7
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
