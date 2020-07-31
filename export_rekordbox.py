@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 7
+VERSION = 8
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
@@ -24,7 +24,7 @@ def export_rekordbox_history(db_filename, history_path=REKORDBOX_HISTORY_PATH):
     # write
     aa.write_db_file(db_filename, db_dict)
 
-def export_rekordbox_samples(db_filename, sample_path, sample_key, convert_flac, always_copy, always_link):
+def export_rekordbox_samples(db_filename, sample_path, sample_key, convert_flac, always_copy):
     aa.update_db_clips_safe(db_filename)
     aa.generate_lists(db_filename)
 
@@ -52,16 +52,12 @@ def export_rekordbox_samples(db_filename, sample_path, sample_key, convert_flac,
         # copy
         elif always_copy:
             target = aa.get_export_sample_path(f, sample_ext, sample_path)
-            if not aa.is_valid(target):
-                shutil.copy(sample, target)
-        # symlink
-        elif always_link:
-            target = aa.get_export_sample_path(f, sample_ext, sample_path)
             # remove existing target link to fix
             if os.path.islink(target):
                 os.unlink(target)
             if not os.path.exists(target):
-                os.symlink(os.path.abspath(sample), target)
+                shutil.copy(sample, target)
+                print ('Copied {} to {}'.format(sample, target))
         else:
             target = sample.encode('utf-8')
         assert aa.is_valid(target)
@@ -441,8 +437,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
                                  sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
                                  sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
                                  convert_flac=True,
-                                 always_copy=False,
-                                 always_link=True,
+                                 always_copy=True,
                                  )
 
     db_dict = aa.read_db_file(db_filename)
