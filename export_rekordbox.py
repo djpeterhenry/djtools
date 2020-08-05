@@ -616,8 +616,10 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
             bpm_and_range.append((bpm, 5))
         for bpm in range(114, 141, 2):
             bpm_and_range.append((bpm, 3))
-            #bpm_and_range.append((bpm, 5))
         for bpm in range(145, 161, 5):
+            bpm_and_range.append((bpm, 5))
+        # bonus middle 5s
+        for bpm in range(120, 131, 5):
             bpm_and_range.append((bpm, 5))
         bpm_and_range.sort()
         return bpm_and_range
