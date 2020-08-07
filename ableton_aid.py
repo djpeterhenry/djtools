@@ -782,26 +782,22 @@ def action_add_missing_keys(args):
     for filename, record in db_dict.iteritems():
         if filename not in alc_file_set:
             continue
-        try:
-            print ('considering:', filename)
-            key = record['key']
-            if len(key) == 0 or key[-1] == '?':
-                filepath = os.path.abspath(filename)
-                new_key = get_key_from_alc(filepath)
-                print ('new_key: ' + new_key)
-                if new_key is None:
-                    continue
-                new_record = record
-                new_record['key'] = new_key
-                db_dict[filename] = new_record
-                # write every time...this may take a while
-                write_db_file(args.db_filename, db_dict)
-            else:
-                print ('had key:', key)
-        except IOError as e:
-            print ('IOError: ' + str(e))
-        except subprocess.CalledProcessError as e:
-            print ('CalledProcessError (probably KeyFinder): ' + str(e))
+        # print ('considering:', filename)
+        key = record['key']
+        if len(key) == 0 or key[-1] == '?':
+            filepath = os.path.abspath(filename)
+            new_key = get_key_from_alc(filepath)
+            print ('new_key: ' + new_key)
+            if new_key is None:
+                continue
+            new_record = record
+            new_record['key'] = new_key
+            db_dict[filename] = new_record
+            # write every time...this may take a while
+            write_db_file(args.db_filename, db_dict)
+        else:
+            pass
+            # print ('had key:', key)
 
 
 def action_print(args):
