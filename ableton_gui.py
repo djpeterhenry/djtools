@@ -19,7 +19,6 @@ import atexit
 import datetime
 import codecs
 from itertools import groupby
-from enum import Enum
 
 import ableton_aid as aa
 from entry_text import EntryText
@@ -28,9 +27,6 @@ from widgets import Checkbox
 
 
 LOCK_FILEPATH = '/tmp/ableton_gui.lock'
-
-# use this?
-WhichOpenMode = Enum('WhichOpenMode', 'Ableton Finder Play')
 
 class App:
     extra_tag_list = [

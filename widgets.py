@@ -14,11 +14,3 @@ class Checkbox(object):
 
     def toggle(self):
         self.var.set(not bool(self.get()))
-
-# do some sort of enum menu
-# self.which_files_var = StringVar(master)
-# self.which_files_var.trace('w', just_update)
-# self.which_files_menu = OptionMenu(
-#     frame_edit, self.which_files_var, *[x.name for x in WhichFiles])
-# self.which_files_menu.config(width=10)
-# self.which_files_menu.pack(side=LEFT)
