@@ -57,7 +57,8 @@ def export_rekordbox_samples(db_filename, sample_path, sample_key, convert_flac,
                 os.unlink(target)
             if not os.path.exists(target):
                 shutil.copy(sample, target)
-                print ('Copied {} to {}'.format(sample, target))
+                # TODO: fix this so it handles unicode.  Some recent Ame track broke it.
+                #print ('Copied {} to {}'.format(sample, target))
         else:
             target = sample.encode('utf-8')
         assert aa.is_valid(target)
