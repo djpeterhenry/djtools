@@ -26,13 +26,6 @@ import shutil
 
 import export_rekordbox
 
-# import mutagen
-try:
-    from mutagen.mp3 import MP3
-    from mutagen.easyid3 import EasyID3
-except:
-    pass
-
 SKIP_KEY = 'ALL KEYS'
 SKIP_BPM = 'ALL BPM'
 LOOK_TAG = 'LOOK'
@@ -132,22 +125,6 @@ def write_db_file(db_filename, db_dict):
     with open(db_filename, 'w') as db_file:
         cPickle.dump(db_dict, db_file)
     print ("Wrote: " + db_filename)
-
-
-def get_mp3_bpm(filename):
-    audio = EasyID3(filename)
-    bpm = None
-    bpm_text = None
-    try:
-        bpm_text = audio['bpm'][0]
-    except KeyError:
-        pass
-    if bpm_text is not None:
-        try:
-            bpm = int(bpm_text)
-        except ValueError:
-            pass
-    return bpm
 
 
 def use_for_rekordbox(record):
@@ -729,22 +706,15 @@ def action_add(args):
     for filename in alc_files:
         print (filename)
         if db_dict.has_key(filename):
-            print (db_dict[filename])
+            #print (db_dict[filename])
             continue
 
-        # get with tag if mp3
-        bpm = None
-        # TODO(peter): consider making this work again
-        # if os.path.splitext(filename)[1] == '.mp3':
-        #     bpm = get_mp3_bpm(filename)
-        #     print ('bpm from mp3:', bpm)
-        if bpm is None:
-            ui = raw_input("BPM: ")
-            try:
-                bpm = int(ui)
-            except ValueError:
-                print ("Stopping and saving...")
-                break
+        ui = raw_input("BPM: ")
+        try:
+            bpm = int(ui)
+        except ValueError:
+            print ("Stopping and saving...")
+            break
 
         # record the result in the database
         new_record = {'bpm': bpm, 'tags': [], 'key': ''}
