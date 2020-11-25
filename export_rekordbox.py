@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 8
+VERSION = 9
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
@@ -613,15 +613,12 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
     def get_bpm_and_range_list():
         # create tuples of (bpm, bpm_range) and sort them
         bpm_and_range = [(0, 0)]
-        for bpm in range(80, 111, 5):
+        # fives all the way through
+        for bpm in range(80, 161, 5):
             bpm_and_range.append((bpm, 5))
-        for bpm in range(114, 141, 2):
+        # middle threes
+        for bpm in range(114, 135, 2):
             bpm_and_range.append((bpm, 3))
-        for bpm in range(145, 161, 5):
-            bpm_and_range.append((bpm, 5))
-        # bonus middle 5s
-        for bpm in range(120, 131, 5):
-            bpm_and_range.append((bpm, 5))
         bpm_and_range.sort()
         return bpm_and_range
 
