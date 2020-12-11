@@ -631,36 +631,45 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
         return [f for _, f in l if f is not None and f in files_with_id]
 
 
-    # playlist for all
-    adder.add_playlist_for_files(et_version_node, 'All (touch)', files_with_id)
-    adder.add_playlist_for_files(
-        et_version_node, 'All (new)', aa.generate_alc(files_with_id, db_dict))
-    adder.add_playlist_for_files(
-        et_version_node, 'All (num)', aa.generate_num(files_with_id, db_dict))
-    adder.add_playlist_for_files(
-        et_version_node, 'All (recent)', aa.generate_recent(files_with_id, db_dict))
-    adder.add_playlist_for_files(et_version_node, 'All (good)',
-                            get_filtered_files(
-                                db_dict=db_dict, files=files_with_id, good_only=True))
-
-    # top
-    et_top_folder = add_folder(et_version_node, 'Top')
-    def add_top(parent):
-        adder.add_playlist_for_files(parent, 'All (touch)', files_with_id)
+    if False:
+        # playlist for all
+        adder.add_playlist_for_files(et_version_node, 'All (touch)', files_with_id)
         adder.add_playlist_for_files(
-            parent, 'All (recent)', aa.generate_recent(files_with_id, db_dict))
-        adder.add_playlist_for_files(parent, 'All (good)',
+            et_version_node, 'All (new)', aa.generate_alc(files_with_id, db_dict))
+        adder.add_playlist_for_files(
+            et_version_node, 'All (num)', aa.generate_num(files_with_id, db_dict))
+        adder.add_playlist_for_files(
+            et_version_node, 'All (recent)', aa.generate_recent(files_with_id, db_dict))
+        adder.add_playlist_for_files(et_version_node, 'All (good)',
                                 get_filtered_files(
                                     db_dict=db_dict, files=files_with_id, good_only=True))
+
+    # all
+    def add_all(parent):
+        adder.add_playlist_for_files(parent, 'All', files_with_id)
+
+        # sets (aka hand history)
+        adder.add_playlist_for_files(
+            parent, 'Sets', aa.generate_sets(files=files, db_dict=db_dict), max_num=9999)
+
+    # top
+    def add_top(parent):
+        adder.add_playlist_for_files(
+            parent, 'Recent', aa.generate_recent(files_with_id, db_dict))
+        adder.add_playlist_for_files(parent, 'Good',
+                                get_filtered_files(
+                                    db_dict=db_dict, files=files_with_id, good_only=True))
+
+        # Active list
+        adder.add_playlist_for_files(parent, 'Active', get_matching_files_from_list(aa.ACTIVE_LIST))
+
+    # All
+    et_all_folder = add_folder(et_version_node, "All")
+    add_all(et_all_folder)
+
+    # Top
+    et_top_folder = add_folder(et_version_node, 'Top')
     add_top(et_top_folder)
-
-    # sets!
-    adder.add_playlist_for_files(
-        et_version_node, 'Sets', aa.generate_sets(files=files, db_dict=db_dict), max_num=9999)
-
-    # Active list
-    active_list = get_matching_files_from_list(aa.ACTIVE_LIST)
-    adder.add_playlist_for_files(et_version_node, 'Active', active_list)
 
     # Lists
     et_lists_folder = add_folder(et_version_node, 'Lists')
