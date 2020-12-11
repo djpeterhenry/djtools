@@ -540,24 +540,12 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
     et_playlists = ET.SubElement(et_dj_playlists, 'PLAYLISTS')
     et_root_node = add_folder(et_playlists, 'ROOT')
 
+
+    ###################
+    #######
     # version playlist as root
     et_version_node = add_folder(et_root_node, 'V{:02}'.format(VERSION))
-
-    # playlist for all
-    adder.add_playlist_for_files(et_version_node, 'All (touch)', files_with_id)
-    adder.add_playlist_for_files(
-        et_version_node, 'All (new)', aa.generate_alc(files_with_id, db_dict))
-    adder.add_playlist_for_files(
-        et_version_node, 'All (num)', aa.generate_num(files_with_id, db_dict))
-    adder.add_playlist_for_files(
-        et_version_node, 'All (recent)', aa.generate_recent(files_with_id, db_dict))
-    adder.add_playlist_for_files(et_version_node, 'All (good)',
-                            get_filtered_files(
-                                db_dict=db_dict, files=files_with_id, good_only=True))
-
-    # sets!
-    adder.add_playlist_for_files(
-        et_version_node, 'Sets', aa.generate_sets(files=files, db_dict=db_dict), max_num=9999)
+    ###### ^
 
     def add_bpm_folder(et_parent_folder, bpm, bpm_range):
         folder_name = get_bpm_name(bpm, bpm_range)
@@ -641,6 +629,24 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
     def get_matching_files_from_list(list_file):
         l = aa.get_list_from_file(list_file, db_dict)
         return [f for _, f in l if f is not None and f in files_with_id]
+
+
+    # playlist for all
+    adder.add_playlist_for_files(et_version_node, 'All (touch)', files_with_id)
+    adder.add_playlist_for_files(
+        et_version_node, 'All (new)', aa.generate_alc(files_with_id, db_dict))
+    adder.add_playlist_for_files(
+        et_version_node, 'All (num)', aa.generate_num(files_with_id, db_dict))
+    adder.add_playlist_for_files(
+        et_version_node, 'All (recent)', aa.generate_recent(files_with_id, db_dict))
+    adder.add_playlist_for_files(et_version_node, 'All (good)',
+                            get_filtered_files(
+                                db_dict=db_dict, files=files_with_id, good_only=True))
+
+    # sets!
+    adder.add_playlist_for_files(
+        et_version_node, 'Sets', aa.generate_sets(files=files, db_dict=db_dict), max_num=9999)
+
 
     ##########
     # Active list
