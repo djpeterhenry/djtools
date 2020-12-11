@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 9
+VERSION = 10
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
@@ -643,12 +643,21 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
                             get_filtered_files(
                                 db_dict=db_dict, files=files_with_id, good_only=True))
 
+    # top
+    et_top_folder = add_folder(et_version_node, 'Top')
+    def add_top(parent):
+        adder.add_playlist_for_files(parent, 'All (touch)', files_with_id)
+        adder.add_playlist_for_files(
+            parent, 'All (recent)', aa.generate_recent(files_with_id, db_dict))
+        adder.add_playlist_for_files(parent, 'All (good)',
+                                get_filtered_files(
+                                    db_dict=db_dict, files=files_with_id, good_only=True))
+    add_top(et_top_folder)
+
     # sets!
     adder.add_playlist_for_files(
         et_version_node, 'Sets', aa.generate_sets(files=files, db_dict=db_dict), max_num=9999)
 
-
-    ##########
     # Active list
     active_list = get_matching_files_from_list(aa.ACTIVE_LIST)
     adder.add_playlist_for_files(et_version_node, 'Active', active_list)
