@@ -631,19 +631,6 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
         return [f for _, f in l if f is not None and f in files_with_id]
 
 
-    if False:
-        # playlist for all
-        adder.add_playlist_for_files(et_version_node, 'All (touch)', files_with_id)
-        adder.add_playlist_for_files(
-            et_version_node, 'All (new)', aa.generate_alc(files_with_id, db_dict))
-        adder.add_playlist_for_files(
-            et_version_node, 'All (num)', aa.generate_num(files_with_id, db_dict))
-        adder.add_playlist_for_files(
-            et_version_node, 'All (recent)', aa.generate_recent(files_with_id, db_dict))
-        adder.add_playlist_for_files(et_version_node, 'All (good)',
-                                get_filtered_files(
-                                    db_dict=db_dict, files=files_with_id, good_only=True))
-
     # all
     def add_all(parent):
         adder.add_playlist_for_files(parent, 'All', files_with_id)
