@@ -517,17 +517,9 @@ def generate_recent(files, db_dict, years=4):
     SPAN = Y * years
     now = time.time()
 
-    # this is why you suck:  USE A PREDICATE
-    result = []
-
     date_file = generate_date_plus_alc_pairs(files, db_dict)
-    # consider general predicate
-    for ts, f in date_file:
-        dt = now - ts
-        if dt > SPAN:
-            continue
-        result.append(f)
-    return generate_random(result)
+    result = [f for ts, f in date_file if now - ts <= SPAN]
+    return result
 
 
 def generate_random(files):
