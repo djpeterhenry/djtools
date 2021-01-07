@@ -126,20 +126,13 @@ def add_folder(et_parent, name):
 def get_filtered_files(db_dict, files,
                        bpm=None, bpm_range=None, 
                        cam_num_list=None,
-                       vocal_only=False, good_only=False):
-    """
-    bpm can be None
-    cam_num_list can be None
-    vocal can be None
-    """
+                       tag=None):
     matching_files = []
     for f in files:
         record = db_dict[f]
-        if good_only and not aa.is_good(record):
+        if tag and tag not in record['tags']:
             continue
         is_vocal = aa.is_vocal(record)
-        if vocal_only and not is_vocal:
-            continue
         if bpm is not None:
             bpm_range_to_use = bpm_range + 10 if is_vocal else bpm_range
             if not aa.matches_bpm_filter(bpm, bpm_range_to_use, record['bpm']):
@@ -560,8 +553,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
         # all for bpm (various orders)
         matching_files = get_filtered_files(db_dict=db_dict,
                                             files=files_with_id,
-                                            bpm=bpm, bpm_range=bpm_range,
-                                            cam_num_list=None)
+                                            bpm=bpm, bpm_range=bpm_range)
         # default order (touch)
         adder.add_playlist_for_files(
             et_bpm_folder, 'All (touch)', matching_files)
@@ -574,17 +566,7 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
                 et_bpm_folder, 'All (recent)', aa.generate_recent(matching_files, db_dict))
             adder.add_playlist_for_files(et_bpm_folder, 'All (good)',
                                          get_filtered_files(
-                                             db_dict=db_dict, files=matching_files, good_only=True))
-
-        # vocal for bpm (default order)
-        # disable as available by search
-        if False:
-            matching_files = get_filtered_files(db_dict=db_dict,
-                                                files=files_with_id,
-                                                bpm=bpm, bpm_range=bpm_range,
-                                                cam_num_list=None,
-                                                vocal_only=True)
-            adder.add_playlist_for_files(et_bpm_folder, 'Vocal', matching_files)
+                                             db_dict=db_dict, files=matching_files, tag=aa.GOOD_TAG))
 
         # for each key
         if key_lists:
@@ -647,11 +629,14 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
 
         # Good
         adder.add_playlist_for_files(parent, 'Good',
-                                get_filtered_files(
-                                    db_dict=db_dict, files=files_with_id, good_only=True))
+            get_filtered_files(db_dict=db_dict, files=files_with_id, tag=aa.GOOD_TAG))
 
         # Active list
         adder.add_playlist_for_files(parent, 'Active', get_matching_files_from_list(aa.ACTIVE_LIST))
+
+        # p_nasty
+        adder.add_playlist_for_files(parent, 'P-Nasty',
+            get_filtered_files(db_dict=db_dict, files=files_with_id, tag=aa.P_NASTY_TAG))
 
     # All
     et_all_folder = add_folder(et_version_node, "All")
