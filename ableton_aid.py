@@ -802,6 +802,19 @@ def action_rename_tag(args):
     write_db_file(args.db_filename, db_dict)
 
 
+def action_list_tags(args):
+    db_dict = read_db_file(args.db_filename)
+    files = get_rekordbox_files(db_dict)
+    tag_to_count = defaultdict(int)
+    for f in files:
+        record = db_dict[f]
+        tags = record['tags']
+        for tag in tags:
+            tag_to_count[tag] += 1
+    for tag, count in tag_to_count.iteritems():
+        print (tag, ":", count)
+
+
 def action_list_missing(args):
     missing = get_missing(args.db_filename)
     for f in missing:
@@ -1105,6 +1118,8 @@ def parse_args():
     p_rename.add_argument('tag_old')
     p_rename.add_argument('tag_new')
     p_rename.set_defaults(func=action_rename_tag)
+
+    subparsers.add_parser('list_tags').set_defaults(func=action_list_tags)
 
     subparsers.add_parser('list_missing').set_defaults(
         func=action_list_missing)
