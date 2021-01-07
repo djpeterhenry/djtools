@@ -38,6 +38,7 @@ class App:
         'SS',
         aa.SKIP_KEY,
         aa.SKIP_BPM,
+        aa.P_NASTY_TAG,
     ]
     hidden_tag_pattern_list = [
         '-gc',
