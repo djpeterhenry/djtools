@@ -396,7 +396,7 @@ class App:
                 keep = False
 
             # vocal affects others
-            is_vocal = 'vocal' in tag_list
+            is_vocal = aa.is_vocal(record)
             if do_vocal_check:
                 if is_vocal != vocal_selected:
                     keep = False
@@ -427,7 +427,7 @@ class App:
 
             do_ss_check = True
             if do_ss_check:
-                is_ss = 'SS' in tag_list
+                is_ss = aa.SS_TAG in tag_list
                 if is_ss != ss_selected:
                     keep = False
 
