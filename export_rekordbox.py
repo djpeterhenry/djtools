@@ -8,7 +8,7 @@ import random
 
 import ableton_aid as aa
 
-VERSION = 11
+VERSION = 1
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
@@ -625,11 +625,11 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
 
         # Recent (random)
         adder.add_playlist_for_files(
-            parent, 'Recent', aa.generate_recent(files_with_id, db_dict))
+            parent, 'Random', aa.generate_random(aa.generate_recent(files_with_id, db_dict)))
 
         # Good
-        adder.add_playlist_for_files(parent, 'Good',
-            get_filtered_files(db_dict=db_dict, files=files_with_id, tag=aa.GOOD_TAG))
+        # adder.add_playlist_for_files(parent, 'Good',
+        #     get_filtered_files(db_dict=db_dict, files=files_with_id, tag=aa.GOOD_TAG))
 
         # Active list
         adder.add_playlist_for_files(parent, 'Active', get_matching_files_from_list(aa.ACTIVE_LIST))
