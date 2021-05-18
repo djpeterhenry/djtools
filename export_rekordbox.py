@@ -623,6 +623,10 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
         adder.add_playlist_for_files(
             parent, 'Sets', aa.generate_sets(files=files, db_dict=db_dict), max_num=9999)
 
+        # New Songs!
+        adder.add_playlist_for_files(
+            parent, 'New', aa.generate_alc(files_with_id, db_dict))
+        
         # Recent (random)
         adder.add_playlist_for_files(
             parent, 'Random', aa.generate_random(aa.generate_recent(files_with_id, db_dict)))
