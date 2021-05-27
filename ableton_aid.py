@@ -33,6 +33,7 @@ GOOD_TAG = 'GOOD'
 SS_TAG = 'SS'
 VOCAL_TAG = 'vocal' # legacy lowercase
 P_NASTY_TAG = 'P_NASTY'
+SHANNON_TAG = 'SHANNON'
 
 ABLETON_EXTENSIONS = ['.alc', '.als']
 SAMPLE_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.aiff', '.flac']

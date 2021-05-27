@@ -642,6 +642,9 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
         adder.add_playlist_for_files(parent, 'P-Nasty',
             get_filtered_files(db_dict=db_dict, files=files_with_id, tag=aa.P_NASTY_TAG))
 
+        adder.add_playlist_for_files(parent, 'Shannon',
+            get_filtered_files(db_dict=db_dict, files=files_with_id, tag=aa.SHANNON_TAG))
+
     # All
     et_all_folder = add_folder(et_version_node, "All")
     add_all(et_all_folder)
