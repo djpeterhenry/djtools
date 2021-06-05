@@ -23,6 +23,7 @@ import urllib
 from collections import defaultdict
 import argparse
 import shutil
+import enum
 
 import export_rekordbox
 
