@@ -23,40 +23,11 @@ import urllib
 from collections import defaultdict
 import argparse
 import shutil
-from enum import Enum 
 
 import export_rekordbox
 
-class ListEnum(Enum):
+from tag import Tag
 
-    @classmethod
-    def list(cls):
-        return list(map(lambda c: c.value, cls))
-
-class Tag(ListEnum):
-    # legacy lowercase
-    X = 'x'
-    X_REKORDBOX = 'x_rekordbox'
-    VOCAL_TAG = 'vocal'
-    # better uppercase
-    SKIP_KEY = 'ALL KEYS'
-    SKIP_BPM = 'ALL BPM'
-    LOOK_TAG = 'LOOK'
-    GOOD_TAG = 'GOOD'
-    SS_TAG = 'SS'
-    P_NASTY_TAG = 'P_NASTY'
-    SHANNON_TAG = 'SHANNON'
-
-
-# kill when working
-SKIP_KEY = 'ALL KEYS'
-SKIP_BPM = 'ALL BPM'
-LOOK_TAG = 'LOOK'
-GOOD_TAG = 'GOOD'
-SS_TAG = 'SS'
-VOCAL_TAG = 'vocal' # legacy lowercase
-P_NASTY_TAG = 'P_NASTY'
-SHANNON_TAG = 'SHANNON'
 
 ABLETON_EXTENSIONS = ['.alc', '.als']
 SAMPLE_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.aiff', '.flac']
@@ -159,7 +130,7 @@ def use_for_rekordbox(record):
         return False
     if 'x_rekordbox' in record['tags']:
         return False
-    if SS_TAG in record['tags']:
+    if Tag.SS_TAG.value in record['tags']:
         return False
     return True
 
@@ -167,7 +138,7 @@ def is_vocal(record):
     """
     Common enough to keep I guess?
     """
-    return VOCAL_TAG in record['tags']
+    return Tag.VOCAL_TAG.value in record['tags']
 
 def has_extension(f, extension):
     return os.path.splitext(f)[1] == extension

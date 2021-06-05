@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 import random
 
 import ableton_aid as aa
+from tag import Tag
 
 VERSION = 1
 
@@ -564,9 +565,6 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
                 et_bpm_folder, 'All (num)', aa.generate_num(matching_files, db_dict))
             adder.add_playlist_for_files(
                 et_bpm_folder, 'All (recent)', aa.generate_recent(matching_files, db_dict))
-            adder.add_playlist_for_files(et_bpm_folder, 'All (good)',
-                                         get_filtered_files(
-                                             db_dict=db_dict, files=matching_files, tag=aa.GOOD_TAG))
 
         # for each key
         if key_lists:
@@ -633,17 +631,17 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
 
         # Good
         # adder.add_playlist_for_files(parent, 'Good',
-        #     get_filtered_files(db_dict=db_dict, files=files_with_id, tag=aa.GOOD_TAG))
+        #     get_filtered_files(db_dict=db_dict, files=files_with_id, tag=Tag.GOOD_TAG.value))
 
         # Active list
         adder.add_playlist_for_files(parent, 'Active', get_matching_files_from_list(aa.ACTIVE_LIST))
 
         # p_nasty
         adder.add_playlist_for_files(parent, 'P-Nasty',
-            get_filtered_files(db_dict=db_dict, files=files_with_id, tag=aa.P_NASTY_TAG))
+            get_filtered_files(db_dict=db_dict, files=files_with_id, tag=Tag.P_NASTY_TAG.value))
 
         adder.add_playlist_for_files(parent, 'Shannon',
-            get_filtered_files(db_dict=db_dict, files=files_with_id, tag=aa.SHANNON_TAG))
+            get_filtered_files(db_dict=db_dict, files=files_with_id, tag=Tag.SHANNON_TAG.value))
 
     # All
     et_all_folder = add_folder(et_version_node, "All")

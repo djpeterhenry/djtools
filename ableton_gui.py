@@ -21,7 +21,7 @@ import codecs
 from itertools import groupby
 
 import ableton_aid as aa
-from ableton_aid import Tag
+from tag import Tag
 
 from entry_text import EntryText
 from lists_selector import ListsSelector
@@ -398,7 +398,7 @@ class App:
                     if s.lower() not in filename.lower():
                         keep = False
 
-            if filter_bpm is not None and aa.SKIP_BPM not in tag_list:
+            if filter_bpm is not None and Tag.SKIP_BPM.value not in tag_list:
                 # TODO: could move this filter change outside loop, as well as
                 # other range math
                 bpm_range = filter_bpm_range
@@ -419,7 +419,7 @@ class App:
 
             do_ss_check = True
             if do_ss_check:
-                is_ss = aa.SS_TAG in tag_list
+                is_ss = Tag.SS_TAG.value in tag_list
                 if is_ss != ss_selected:
                     keep = False
 
@@ -430,7 +430,7 @@ class App:
                 keep = False
             if key_filter == '*' and len(key) == 0:
                 keep = False
-            if Tag.SKIP_KEY not in tag_list:
+            if Tag.SKIP_KEY.value not in tag_list:
                 if cam_filter_numbers:
                     if cam_song is None:
                         keep = False
@@ -678,14 +678,14 @@ class App:
         filename = self.get_selected_filename()
         if not filename:
             return
-        tag = aa.GOOD_TAG
+        tag = Tag.GOOD_TAG.value
         self.add_tag_to_filename(filename, tag)
 
     def command_l(self):
         filename = self.get_selected_filename()
         if not filename:
             return
-        tag = aa.LOOK_TAG
+        tag = Tag.LOOK_TAG.value
         self.add_tag_to_filename(filename, tag)
 
     def command_clear_min_max(self):
