@@ -21,6 +21,8 @@ import codecs
 from itertools import groupby
 
 import ableton_aid as aa
+from ableton_aid import Tag
+
 from entry_text import EntryText
 from lists_selector import ListsSelector
 from widgets import Checkbox
@@ -29,18 +31,6 @@ from widgets import Checkbox
 LOCK_FILEPATH = '/tmp/ableton_gui.lock'
 
 class App:
-    extra_tag_list = [
-        'x',
-        'x_rekordbox',
-        'vocal',
-        aa.GOOD_TAG,
-        aa.LOOK_TAG,
-        'SS',
-        aa.SKIP_KEY,
-        aa.SKIP_BPM,
-        aa.P_NASTY_TAG,
-        aa.SHANNON_TAG,
-    ]
     hidden_tag_pattern_list = [
         '-gc',
         '-mr',
@@ -269,7 +259,8 @@ class App:
     def get_tag_list(self):
         result = []
         result.append('')
-        result.extend(self.extra_tag_list)
+        result.extend(Tag.list())
+
         # also check the dictionary
         # want to sort those from the dictionary
         others = set()
@@ -439,7 +430,7 @@ class App:
                 keep = False
             if key_filter == '*' and len(key) == 0:
                 keep = False
-            if aa.SKIP_KEY not in tag_list:
+            if Tag.SKIP_KEY not in tag_list:
                 if cam_filter_numbers:
                     if cam_song is None:
                         keep = False
