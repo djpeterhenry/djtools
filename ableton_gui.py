@@ -212,6 +212,7 @@ class App:
         self.listbox.bind("v", lambda _: self.tag_vocal.toggle())
         self.listbox.bind("f", lambda _: self.command_copy_filename())
         self.listbox.bind("p", lambda _: self.command_play_filename())
+        self.listbox.bind("e", lambda _: self.command_export_list())
         self.listbox.bind("g", lambda _: self.command_g())
         self.listbox.bind("l", lambda _: self.command_l())
         self.listbox.bind("j", lambda _: self.command_order_down())
@@ -621,6 +622,10 @@ class App:
         if not filename:
             return
         self.file_action_play_vlc(filename)
+
+    def command_export_list(self):
+        for filename in self.active_alc_files:
+            print filename
 
     def command_tag_add(self):
         filename = self.get_selected_filename()
