@@ -209,7 +209,6 @@ class App:
         self.listbox.bind("a", lambda _: self.command_tag_add())
         self.listbox.bind("r", lambda _: self.command_tag_remove())
         self.listbox.bind("s", lambda _: self.command_save())
-        # self.listbox.bind("x", lambda _ : self.command_x())
         self.listbox.bind("v", lambda _: self.tag_vocal.toggle())
         self.listbox.bind("f", lambda _: self.command_copy_filename())
         self.listbox.bind("p", lambda _: self.command_play_filename())
@@ -666,13 +665,6 @@ class App:
         self.update_listbox()
         self.listbox.activate(old_index)
         self.listbox.see(old_index)
-
-    def command_x(self):
-        filename = self.get_selected_filename()
-        if not filename:
-            return
-        tag = 'x'
-        self.add_tag_to_filename(filename, tag)
 
     def command_g(self):
         filename = self.get_selected_filename()

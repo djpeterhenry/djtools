@@ -636,12 +636,12 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
         # Active list
         adder.add_playlist_for_files(parent, 'Active', get_matching_files_from_list(aa.ACTIVE_LIST))
 
-        # p_nasty
-        adder.add_playlist_for_files(parent, 'P-Nasty',
-            get_filtered_files(db_dict=db_dict, files=files_with_id, tag=Tag.P_NASTY_TAG.value))
+        tag_lists = [Tag.P_NASTY_TAG, Tag.SHANNON_TAG, Tag.DAN_TAG, Tag.PETER_PICKS_TAG]
 
-        adder.add_playlist_for_files(parent, 'Shannon',
-            get_filtered_files(db_dict=db_dict, files=files_with_id, tag=Tag.SHANNON_TAG.value))
+        for tag in tag_lists:
+            adder.add_playlist_for_files(parent, tag.value,
+                get_filtered_files(db_dict=db_dict, files=files_with_id, tag=tag.value))
+
 
     # All
     et_all_folder = add_folder(et_version_node, "All")

@@ -20,3 +20,5 @@ class Tag(ListEnum):
     SS_TAG = 'SS'
     P_NASTY_TAG = 'P_NASTY'
     SHANNON_TAG = 'SHANNON'
+    DAN_TAG = 'DAN'
+    PETER_PICKS_TAG = 'PETER_PICKS'
