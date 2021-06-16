@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 2
+VERSION = 3
 
 REKORDBOX_SAMPLE_PATH = u'/Volumes/music/rekordbox_samples'
 REKORDBOX_LOCAL_SAMPLE_PATH = u'/Users/peter/Music/PioneerDJ/LocalSamples'
@@ -127,12 +127,20 @@ def add_folder(et_parent, name):
 def get_filtered_files(db_dict, files,
                        bpm=None, bpm_range=None, 
                        cam_num_list=None,
-                       tag=None):
+                       tags=None):
     matching_files = []
+    tags = tags or []
     for f in files:
         record = db_dict[f]
-        if tag and tag not in record['tags']:
+
+        # This is a stupid way to do this:
+        found_all_tags = True
+        for tag in tags:
+            if not tag in record['tags']:
+                found_all_tags = False
+        if not found_all_tags:
             continue
+
         is_vocal = aa.is_vocal(record)
         if bpm is not None:
             bpm_range_to_use = bpm_range + 10 if is_vocal else bpm_range
@@ -629,18 +637,14 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
         adder.add_playlist_for_files(
             parent, 'Random', aa.generate_random(aa.generate_recent(files_with_id, db_dict)))
 
-        # Good
-        # adder.add_playlist_for_files(parent, 'Good',
-        #     get_filtered_files(db_dict=db_dict, files=files_with_id, tag=Tag.GOOD_TAG.value))
-
         # Active list
         adder.add_playlist_for_files(parent, 'Active', get_matching_files_from_list(aa.ACTIVE_LIST))
 
-        tag_lists = [Tag.P_NASTY_TAG, Tag.SHANNON_TAG, Tag.DAN_TAG, Tag.PETER_PICKS_TAG]
+        tags_to_list = [Tag.P_NASTY_TAG, Tag.SHANNON_TAG, Tag.DAN_TAG, Tag.PETER_PICKS_TAG]
 
-        for tag in tag_lists:
+        for tag in tags_to_list:
             adder.add_playlist_for_files(parent, tag.value,
-                get_filtered_files(db_dict=db_dict, files=files_with_id, tag=tag.value))
+                get_filtered_files(db_dict=db_dict, files=files_with_id, tags=[tag.value]))
 
 
     # All
