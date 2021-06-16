@@ -133,13 +133,14 @@ def get_filtered_files(db_dict, files,
     for f in files:
         record = db_dict[f]
 
-        # This is a stupid way to do this:
-        found_all_tags = True
-        for tag in tags:
-            if not tag in record['tags']:
-                found_all_tags = False
-        if not found_all_tags:
-            continue
+        # This is a stupid way to do this probably:
+        if tags:
+            found_any = False
+            for tag in tags:
+                if tag in record['tags']:
+                    found_any = True
+            if not found_any:
+                continue
 
         is_vocal = aa.is_vocal(record)
         if bpm is not None:
@@ -640,11 +641,17 @@ def export_rekordbox_xml(db_filename, rekordbox_filename,
         # Active list
         adder.add_playlist_for_files(parent, 'Active', get_matching_files_from_list(aa.ACTIVE_LIST))
 
-        tags_to_list = [Tag.P_NASTY_TAG, Tag.SHANNON_TAG, Tag.DAN_TAG, Tag.PETER_PICKS_TAG]
+        wedding_tags = [Tag.P_NASTY_TAG, Tag.SHANNON_TAG, Tag.DAN_TAG, Tag.PETER_PICKS_TAG]
+        wedding_values = [x.value for x in wedding_tags]
 
-        for tag in tags_to_list:
-            adder.add_playlist_for_files(parent, tag.value,
-                get_filtered_files(db_dict=db_dict, files=files_with_id, tags=[tag.value]))
+        for tag_value in wedding_values:
+            adder.add_playlist_for_files(parent, tag_value,
+                get_filtered_files(db_dict=db_dict, files=files_with_id, tags=[tag_value]))
+
+        # union
+        adder.add_playlist_for_files(parent, "UNION",
+            get_filtered_files(db_dict=db_dict, files=files_with_id, tags=wedding_values))
+
 
 
     # All
