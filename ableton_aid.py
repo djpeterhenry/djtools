@@ -859,7 +859,6 @@ def action_transfer_ts(args):
 
         print(f, "plays:", ts_len)
 
-        # cutoff=0.4, n=10
         close = difflib.get_close_matches(f, alc_file_list, cutoff=0.3, n=10)
         for index, other in enumerate(close):
             print(index, ":", other)
