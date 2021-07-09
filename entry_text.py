@@ -1,8 +1,18 @@
 from Tkinter import *
 
+
 class EntryText:
-    def __init__(self, root, initial_value='', text_width=8, take_focus=False, int_only=False, int_min=0,
-                 int_max=999, update_fun=lambda: None):
+    def __init__(
+        self,
+        root,
+        initial_value="",
+        text_width=8,
+        take_focus=False,
+        int_only=False,
+        int_min=0,
+        int_max=999,
+        update_fun=lambda: None,
+    ):
         self.last_int_value = None
         self.int_only = int_only
         self.int_min = int_min
@@ -19,7 +29,9 @@ class EntryText:
             takefocus_num = 1
         else:
             takefocus_num = 0
-        self.entry = Entry(root, textvariable=self.stringvar, width=text_width, takefocus=takefocus_num)
+        self.entry = Entry(
+            root, textvariable=self.stringvar, width=text_width, takefocus=takefocus_num
+        )
 
         self.entry.bind("<Escape>", self.key_escape)
         self.entry.bind("<X>", lambda _: self.insert_space())
@@ -29,7 +41,7 @@ class EntryText:
         self.entry.pack(side=LEFT)
 
     def update(self):
-        print 'update'
+        print "update"
         self.update_int()
         self.update_fun()
 
@@ -41,16 +53,16 @@ class EntryText:
         # if invalid, set to last
         # otherwise we have a valid int!
         if parse_int is None or parse_int < self.int_min or parse_int > self.int_max:
-            self.stringvar.set(self.last_int_value or '')
+            self.stringvar.set(self.last_int_value or "")
         else:
             self.last_int_value = parse_int
 
     def clear(self):
         self.last_int_value = None
-        self.stringvar.set('')
+        self.stringvar.set("")
 
     def insert_space(self):
-        self.entry.insert(INSERT, ' ')
+        self.entry.insert(INSERT, " ")
         return self.key_break()
 
     def key_break(self):

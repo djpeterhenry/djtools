@@ -2,6 +2,7 @@ from Tkinter import *
 
 import os
 
+
 class ListsSelector:
     def __init__(self, root, path, update_function=None):
         self.path = path
@@ -15,13 +16,17 @@ class ListsSelector:
             return
 
         self.string_var = StringVar(root)
-        self.string_var.trace('w', lambda a, b, c: self.update())
-        self.option_menu = OptionMenu(root, self.string_var, *self.update_and_get_names())
+        self.string_var.trace("w", lambda a, b, c: self.update())
+        self.option_menu = OptionMenu(
+            root, self.string_var, *self.update_and_get_names()
+        )
         self.option_menu.pack(side=LEFT)
 
         self.disabled_var = IntVar(root)
-        self.disabled_var.trace('w', lambda a, b, c: self.update())
-        disabled_key_button = Checkbutton(root, text="*", variable=self.disabled_var, takefocus=0)
+        self.disabled_var.trace("w", lambda a, b, c: self.update())
+        disabled_key_button = Checkbutton(
+            root, text="*", variable=self.disabled_var, takefocus=0
+        )
         disabled_key_button.pack(side=LEFT)
 
     def update_and_get_names(self):
@@ -31,9 +36,11 @@ class ListsSelector:
             if not os.path.isfile(f):
                 continue
             name, ext = os.path.splitext(os.path.basename(f))
-            if ext in ('.txt', '') and not name.startswith('.'):
+            if ext in (".txt", "") and not name.startswith("."):
                 self.name_to_file[name] = f
-        names_to_list = [''] + sorted(self.name_to_file.iterkeys(), key=lambda x: x.lower())
+        names_to_list = [""] + sorted(
+            self.name_to_file.iterkeys(), key=lambda x: x.lower()
+        )
         return names_to_list
 
     def update(self):
@@ -53,14 +60,13 @@ class ListsSelector:
             for s in self.song_list:
                 print s
 
-
     def get_song_list(self, db_dict):
         if not self.song_list:
             return None
         result = []
         for s in self.song_list:
-            alc_filename = s + '.alc'
-            als_filename = s + '.als'
+            alc_filename = s + ".alc"
+            als_filename = s + ".als"
             if s in db_dict:
                 result.append(s)
             elif als_filename in db_dict:

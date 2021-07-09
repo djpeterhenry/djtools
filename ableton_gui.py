@@ -28,28 +28,29 @@ from lists_selector import ListsSelector
 from widgets import Checkbox
 
 
-LOCK_FILEPATH = '/tmp/ableton_gui.lock'
+LOCK_FILEPATH = "/tmp/ableton_gui.lock"
+
 
 class App:
     hidden_tag_pattern_list = [
-        '-gc',
-        '-mr',
-        '-ji',
-        '-pe',
-        'northfield',
-        'shawna',
-        '(weidner)',
+        "-gc",
+        "-mr",
+        "-ji",
+        "-pe",
+        "northfield",
+        "shawna",
+        "(weidner)",
     ]
 
     def get_order_list(self):
         # Supported: 'key' 'name'
         # return ['bpm', 'alc', 'sample', 'date', 'date+alc', 'num', 'random']
-        return ['date+alc', 'num', 'alc', 'random']
+        return ["date+alc", "num", "alc", "random"]
 
     def __init__(self, master, db_filename, include_extra):
         if os.path.exists(LOCK_FILEPATH):
-            raise RuntimeError('Locked: {}'.format(LOCK_FILEPATH))
-        open(LOCK_FILEPATH, 'a').close()
+            raise RuntimeError("Locked: {}".format(LOCK_FILEPATH))
+        open(LOCK_FILEPATH, "a").close()
 
         # window position
         window_x = 0
@@ -63,11 +64,11 @@ class App:
         init_bpm_range = 3
 
         # font (you dream of 'consolas')
-        listbox_font = ('courier', 16)
+        listbox_font = ("courier", 16)
 
         ##########
         # Actually start doing stuff
-        master.geometry('+%d+%d' % (window_x, window_y))
+        master.geometry("+%d+%d" % (window_x, window_y))
 
         # keep values
         self.master = master
@@ -85,7 +86,7 @@ class App:
         # gui
 
         #######
-        path_stem = os.path.split(os.path.abspath('.'))[1]
+        path_stem = os.path.split(os.path.abspath("."))[1]
         print path_stem
         master.title("Ableton Aid (%s)" % path_stem)
 
@@ -98,31 +99,48 @@ class App:
             self.update_listbox()
 
         self.entry_filter = EntryText(
-            frame_top, text_width=search_width, take_focus=True,
-            update_fun=self.update_listbox)
+            frame_top,
+            text_width=search_width,
+            take_focus=True,
+            update_fun=self.update_listbox,
+        )
         self.entry_bpm = EntryText(
-            frame_top, text_width=3, take_focus=True,
-            int_only=True, int_min=0, int_max=999,
-            update_fun=self.update_listbox)
+            frame_top,
+            text_width=3,
+            take_focus=True,
+            int_only=True,
+            int_min=0,
+            int_max=999,
+            update_fun=self.update_listbox,
+        )
         self.entry_bpm_range = EntryText(
-            frame_top, text_width=1, take_focus=True,
-            int_only=True, initial_value=str(init_bpm_range), int_min=0, int_max=9,
-            update_fun=self.update_listbox)
+            frame_top,
+            text_width=1,
+            take_focus=True,
+            int_only=True,
+            initial_value=str(init_bpm_range),
+            int_min=0,
+            int_max=9,
+            update_fun=self.update_listbox,
+        )
 
-        self.bpm_star = Checkbox(frame_top, '*', just_update)
+        self.bpm_star = Checkbox(frame_top, "*", just_update)
 
         self.order_list = self.get_order_list()
         self.order_var = StringVar(frame_top)
-        self.order_var.trace("w", lambda name, index,
-                             mode: self.generate_and_set_from_current_button())
+        self.order_var.trace(
+            "w", lambda name, index, mode: self.generate_and_set_from_current_button()
+        )
         self.order_var.set(self.order_list[0])
         for s in self.order_list:
-            b = Radiobutton(frame_top, text=s + ' ',
-                            variable=self.order_var, value=s, takefocus=0)
+            b = Radiobutton(
+                frame_top, text=s + " ", variable=self.order_var, value=s, takefocus=0
+            )
             b.pack(side=LEFT, anchor=W)
 
         self.lists_selector = ListsSelector(
-            frame_top, aa.LISTS_FOLDER, self.update_listbox)
+            frame_top, aa.LISTS_FOLDER, self.update_listbox
+        )
 
         # key Label
         self.key_label_var = StringVar()
@@ -146,43 +164,68 @@ class App:
 
         if include_extra:
             self.entry_bpm_edit = EntryText(
-                frame_edit, int_only=True, initial_value='0', text_width=3,
-                update_fun=self.update_bpm_edit)
-            self.entry_key_edit = EntryText(frame_edit, text_width=4,
-                                            update_fun=self.update_key_edit)
+                frame_edit,
+                int_only=True,
+                initial_value="0",
+                text_width=3,
+                update_fun=self.update_bpm_edit,
+            )
+            self.entry_key_edit = EntryText(
+                frame_edit, text_width=4, update_fun=self.update_key_edit
+            )
 
         self.entry_key_filter = EntryText(
-            frame_edit, take_focus=True, text_width=4,
-            int_only=True, int_min=1, int_max=12,
-            update_fun=self.update_listbox)
+            frame_edit,
+            take_focus=True,
+            text_width=4,
+            int_only=True,
+            int_min=1,
+            int_max=12,
+            update_fun=self.update_listbox,
+        )
 
         # new fun extra key bits
-        self.key_1 = Checkbox(frame_edit, '-1', just_update)
-        self.key_2 = Checkbox(frame_edit, '1', just_update)
-        self.key_3 = Checkbox(frame_edit, '2', just_update)
-        self.key_4 = Checkbox(frame_edit, '4', just_update)
-        self.key_star = Checkbox(frame_edit, '*', just_update)
+        self.key_1 = Checkbox(frame_edit, "-1", just_update)
+        self.key_2 = Checkbox(frame_edit, "1", just_update)
+        self.key_3 = Checkbox(frame_edit, "2", just_update)
+        self.key_4 = Checkbox(frame_edit, "4", just_update)
+        self.key_star = Checkbox(frame_edit, "*", just_update)
 
         self.tag_var = StringVar(master)
-        self.tag_var.trace('w', just_update)
+        self.tag_var.trace("w", just_update)
         self.tag_list_menu = OptionMenu(frame_edit, self.tag_var, *tag_list)
         self.tag_list_menu.pack(side=LEFT)
 
-        self.tag_invert = Checkbox(frame_edit, 'Invert', just_update)
-        self.tag_vocal = Checkbox(frame_edit, '[Vocal]', just_update)
-        self.tag_ss = Checkbox(frame_edit, '[SS]', just_update)
+        self.tag_invert = Checkbox(frame_edit, "Invert", just_update)
+        self.tag_vocal = Checkbox(frame_edit, "[Vocal]", just_update)
+        self.tag_ss = Checkbox(frame_edit, "[SS]", just_update)
 
         self.reveal_var = IntVar(master)
         self.reveal_button = Checkbutton(
-            frame_edit, text="Reveal", variable=self.reveal_var, takefocus=0)
+            frame_edit, text="Reveal", variable=self.reveal_var, takefocus=0
+        )
         self.reveal_button.pack(side=LEFT)
 
         min_label = Label(frame_edit, text="M:")
         min_label.pack(side=LEFT)
-        self.min_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
-                                    update_fun=self.update_listbox)
-        self.max_amount = EntryText(frame_edit, int_only=True, initial_value=str(0), text_width=1, int_min=0, int_max=9,
-                                    update_fun=self.update_listbox)
+        self.min_amount = EntryText(
+            frame_edit,
+            int_only=True,
+            initial_value=str(0),
+            text_width=1,
+            int_min=0,
+            int_max=9,
+            update_fun=self.update_listbox,
+        )
+        self.max_amount = EntryText(
+            frame_edit,
+            int_only=True,
+            initial_value=str(0),
+            text_width=1,
+            int_min=0,
+            int_max=9,
+            update_fun=self.update_listbox,
+        )
 
         #################
         # last row (listbox)
@@ -191,8 +234,13 @@ class App:
         frame.pack(fill=BOTH, expand=1)
 
         self.scrollbar = Scrollbar(frame, orient=VERTICAL)
-        self.listbox = Listbox(frame, yscrollcommand=self.scrollbar.set, width=listbox_width, height=listbox_height,
-                               font=listbox_font)
+        self.listbox = Listbox(
+            frame,
+            yscrollcommand=self.scrollbar.set,
+            width=listbox_width,
+            height=listbox_height,
+            font=listbox_font,
+        )
         self.scrollbar.config(command=self.listbox.yview)
         self.listbox.pack(side=LEFT, fill=BOTH, expand=1)
         self.scrollbar.pack(side=RIGHT, fill=Y)
@@ -246,8 +294,8 @@ class App:
         new_key = None
         try:
             record = self.db_dict[selected_filename]
-            new_bpm = record['bpm']
-            new_key = record['key']
+            new_bpm = record["bpm"]
+            new_key = record["key"]
         except KeyError:
             pass
         # only update if UI elements exist
@@ -258,14 +306,14 @@ class App:
 
     def get_tag_list(self):
         result = []
-        result.append('')
+        result.append("")
         result.extend(Tag.list())
 
         # also check the dictionary
         # want to sort those from the dictionary
         others = set()
         for record in self.db_dict.itervalues():
-            for tag in record['tags']:
+            for tag in record["tags"]:
                 if tag not in result:
                     others.add(tag)
         result.extend(sorted(others))
@@ -276,6 +324,7 @@ class App:
                 if pattern in tag:
                     return True
             return False
+
         result = [tag for tag in result if not exclude(tag)]
         return result
 
@@ -307,20 +356,19 @@ class App:
         cam_filter = aa.get_camelot_key(key_filter)
         # direct camelot allowed as well
         if cam_filter is None and len(key_filter) > 0 and key_filter[0].isdigit():
-            possible_lower = [s.lower()
-                              for s in aa.reverse_camelot_dict.keys()]
+            possible_lower = [s.lower() for s in aa.reverse_camelot_dict.keys()]
             if key_filter.lower() in possible_lower:
                 cam_filter = key_filter
             # since major/minor doesn't matter, also allow just camelot numbers
             if cam_filter is None:
-                fake_key_filter = key_filter + 'A'
+                fake_key_filter = key_filter + "A"
                 if fake_key_filter.lower() in possible_lower:
                     cam_filter = fake_key_filter
 
         # print keys for number
         if cam_filter is not None:
             keys = aa.get_keys_for_camelot_number(cam_filter[:-1])
-            keys_as_str = ' '.join(keys)
+            keys_as_str = " ".join(keys)
             self.key_label_var.set(keys_as_str)
 
         # create the numbers from the filter
@@ -334,17 +382,29 @@ class App:
             # add range
             for i in range(0, key_filter_range + 1):
                 # python % is always positive
-                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, i))
-                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, -i))
+                cam_filter_numbers.append(
+                    aa.get_relative_camelot_key(cam_filter_num, i)
+                )
+                cam_filter_numbers.append(
+                    aa.get_relative_camelot_key(cam_filter_num, -i)
+                )
             # add variables
             if self.key_1.get():
-                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, -1))
+                cam_filter_numbers.append(
+                    aa.get_relative_camelot_key(cam_filter_num, -1)
+                )
             if self.key_2.get():
-                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, 1))
+                cam_filter_numbers.append(
+                    aa.get_relative_camelot_key(cam_filter_num, 1)
+                )
             if self.key_3.get():
-                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, 2))
+                cam_filter_numbers.append(
+                    aa.get_relative_camelot_key(cam_filter_num, 2)
+                )
             if self.key_4.get():
-                cam_filter_numbers.append(aa.get_relative_camelot_key(cam_filter_num, 4))
+                cam_filter_numbers.append(
+                    aa.get_relative_camelot_key(cam_filter_num, 4)
+                )
 
         filter_string = self.entry_filter.stringvar.get()
         filter_bpm = self.entry_bpm.get_int()
@@ -356,8 +416,7 @@ class App:
 
         # possibly override list to use with selected song list
         list_to_use = self.list_to_use
-        lists_selector_song_list = self.lists_selector.get_song_list(
-            self.db_dict)
+        lists_selector_song_list = self.lists_selector.get_song_list(self.db_dict)
         if lists_selector_song_list:
             list_to_use = lists_selector_song_list
             do_vocal_check = False
@@ -377,7 +436,7 @@ class App:
                 filename_pairs_list.append((filename, None))
                 continue
 
-            bpm, tag_list, key = (record['bpm'], record['tags'], record['key'])
+            bpm, tag_list, key = (record["bpm"], record["tags"], record["key"])
             ts_list = aa.get_ts_list(record)
 
             keep = True
@@ -426,9 +485,9 @@ class App:
             # used beyond filter check
             cam_song = aa.get_camelot_key(key)
 
-            if key_filter == '-' and len(key) > 0:
+            if key_filter == "-" and len(key) > 0:
                 keep = False
-            if key_filter == '*' and len(key) == 0:
+            if key_filter == "*" and len(key) == 0:
                 keep = False
             if Tag.SKIP_KEY.value not in tag_list:
                 if cam_filter_numbers:
@@ -440,7 +499,7 @@ class App:
                             keep = False
 
             # This is the only way to see x tags
-            is_x = 'x' in tag_list and tag != 'x'
+            is_x = "x" in tag_list and tag != "x"
             if is_x:
                 keep = False
 
@@ -456,20 +515,24 @@ class App:
                 # key_display = key + ' : ' + cam_song
                 # key_display = '%3s:%3s' % (key, cam_song)
                 # check this with edit
-                key_display = '%3s' % (cam_song)
-            cool_filename = ' %03d|%s|%02d| %s' % (
-                bpm, key_display, min(99, len(ts_list)), file)
+                key_display = "%3s" % (cam_song)
+            cool_filename = " %03d|%s|%02d| %s" % (
+                bpm,
+                key_display,
+                min(99, len(ts_list)),
+                file,
+            )
             filename_pairs_list.append((cool_filename, filename))
         # done looping over all filenames
 
         # reasonable size
         MAX_LENGTH = 1000
         ALPHA = 0.9
-        DIVIDER = '-' * 20
+        DIVIDER = "-" * 20
         if len(filename_pairs_list) > MAX_LENGTH:
-            first = filename_pairs_list[:int(MAX_LENGTH * ALPHA)]
-            last = filename_pairs_list[-int(MAX_LENGTH * (1 - ALPHA)):]
-            filename_pairs_list = first + [(DIVIDER,DIVIDER)] + last
+            first = filename_pairs_list[: int(MAX_LENGTH * ALPHA)]
+            last = filename_pairs_list[-int(MAX_LENGTH * (1 - ALPHA)) :]
+            filename_pairs_list = first + [(DIVIDER, DIVIDER)] + last
 
         # fill out the important results
         if filename_pairs_list:
@@ -488,7 +551,9 @@ class App:
             if pair[0] == self.listbox_target_string:
                 print "listbox_target_string:", self.listbox_target_string
                 activate = True
-            elif self.listbox_target_filename and self.listbox_target_filename == pair[1]:
+            elif (
+                self.listbox_target_filename and self.listbox_target_filename == pair[1]
+            ):
                 print "listbox_target_filename:", self.listbox_target_filename
                 activate = True
             if activate:
@@ -513,14 +578,14 @@ class App:
         if not filename:
             return
         record = self.db_dict[filename]
-        record['bpm'] = self.entry_bpm_edit.get_int()
+        record["bpm"] = self.entry_bpm_edit.get_int()
 
     def update_key_edit(self):
         filename = self.get_selected_filename()
         if not filename:
             return
         record = self.db_dict[filename]
-        record['key'] = self.entry_key_edit.stringvar.get()
+        record["key"] = self.entry_key_edit.stringvar.get()
 
     def get_selected_index(self):
         selected_items = self.listbox.curselection()
@@ -580,15 +645,18 @@ class App:
 
     def file_action_copy_ableton(self, filename):
         filename_path = os.path.abspath(filename)
-        command = 'osascript -e "set the clipboard to POSIX file \\"%s\\""' % filename_path
+        command = (
+            'osascript -e "set the clipboard to POSIX file \\"%s\\""' % filename_path
+        )
         subprocess.call(command, shell=True)
         self.add_ts_from_copy(filename)
 
     def file_action_reveal(self, filename):
-        #sample = aa.get_sample(self.db_dict[filename])
+        # sample = aa.get_sample(self.db_dict[filename])
         record = self.db_dict[filename]
         sample = aa.get_existing_rekordbox_sample(
-            record, sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY)
+            record, sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY
+        )
         if sample is None:
             return
         aa.reveal_file(sample)
@@ -599,12 +667,12 @@ class App:
 
     def file_action_play_vlc(self, filename):
         sample = aa.get_sample(self.db_dict[filename])
-        command = ['open', sample]
+        command = ["open", sample]
         subprocess.call(command)
 
     # should be classmethod
     def set_clipboard_data(self, data):
-        p = subprocess.Popen(['pbcopy'], stdin=subprocess.PIPE)
+        p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
         p.stdin.write(data)
         p.stdin.close()
         retcode = p.wait()
@@ -643,15 +711,16 @@ class App:
             return
         record = self.db_dict[filename]
         try:
-            record['tags'].remove(tag)
+            record["tags"].remove(tag)
         except ValueError:
             pass
         self.update_listbox()
 
     def save_dialog(self):
         do_save = tkMessageBox.askokcancel(
-            "Confirm Save", 'Save database "%s"?' % self.db_filename)
-        if (do_save):
+            "Confirm Save", 'Save database "%s"?' % self.db_filename
+        )
+        if do_save:
             aa.write_db_file(self.db_filename, self.db_dict)
 
     def command_save(self):
@@ -661,8 +730,8 @@ class App:
         if not tag:
             return
         record = self.db_dict[filename]
-        if tag not in record['tags']:
-            record['tags'].append(tag)
+        if tag not in record["tags"]:
+            record["tags"].append(tag)
         # timestamp every time we tag
         self.ts_filename(filename)
         # some old indexing code
@@ -686,7 +755,7 @@ class App:
         self.add_tag_to_filename(filename, tag)
 
     def command_clear_min_max(self):
-        print 'clear min max'
+        print "clear min max"
         self.min_amount.set(0)
         self.max_amount.set(0)
 
@@ -719,21 +788,21 @@ class App:
         t = time.time()
         self.list_to_use = self.valid_alc_files
         # ignore 'name'...it's the default
-        if (self.order_var.get() == 'bpm'):
+        if self.order_var.get() == "bpm":
             self.list_to_use = self.generate_bpm()
-        elif (self.order_var.get() == 'date'):
+        elif self.order_var.get() == "date":
             self.list_to_use = self.generate_date()
-        elif (self.order_var.get() == 'date+alc'):
+        elif self.order_var.get() == "date+alc":
             self.list_to_use = self.generate_date_plus_alc()
-        elif (self.order_var.get() == 'sample'):
+        elif self.order_var.get() == "sample":
             self.list_to_use = self.generate_sample()
-        elif (self.order_var.get() == 'alc'):
+        elif self.order_var.get() == "alc":
             self.list_to_use = self.generate_alc()
-        elif (self.order_var.get() == 'random'):
+        elif self.order_var.get() == "random":
             self.list_to_use = self.generate_random()
-        elif (self.order_var.get() == 'key'):
+        elif self.order_var.get() == "key":
             self.list_to_use = self.generate_key()
-        elif (self.order_var.get() == 'num'):
+        elif self.order_var.get() == "num":
             self.list_to_use = self.generate_num()
         print "[time] generate_and_set_from_current_button:", str(time.time() - t)
         self.update_listbox()
@@ -759,7 +828,7 @@ class App:
         bpm_file_tuples = []
         for file in self.valid_alc_files:
             record = self.db_dict[file]
-            bpm_file_tuples.append((record['bpm'], file))
+            bpm_file_tuples.append((record["bpm"], file))
         bpm_file_tuples.sort()
         return [file for _, file in bpm_file_tuples]
 
@@ -767,13 +836,13 @@ class App:
         key_file_tuples = []
         for file in self.valid_alc_files:
             record = self.db_dict[file]
-            key_song = record['key']
+            key_song = record["key"]
             cam_song = aa.get_camelot_key(key_song)
             if cam_song is not None:
-                cam_sort = ('%02d' % int(cam_song[:-1])) + cam_song[-1]
+                cam_sort = ("%02d" % int(cam_song[:-1])) + cam_song[-1]
                 key_file_tuples.append((cam_sort, file))
             else:
-                key_file_tuples.append(('Z', file))
+                key_file_tuples.append(("Z", file))
         key_file_tuples.sort()
         return [file for _, file in key_file_tuples]
 
@@ -783,19 +852,19 @@ class App:
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('db_filename')
-    parser.add_argument('--always_on_top', '-t', action='store_true')
-    parser.add_argument('--include_extra', '-e', action='store_true')
+    parser.add_argument("db_filename")
+    parser.add_argument("--always_on_top", "-t", action="store_true")
+    parser.add_argument("--include_extra", "-e", action="store_true")
     return parser.parse_args()
 
 
 def main(args):
     master = Tk()
     app = App(master, args.db_filename, args.include_extra)
-    on_top_str = '1' if args.always_on_top else '0'
-    master.call('wm', 'attributes', '.', '-topmost', on_top_str)
+    on_top_str = "1" if args.always_on_top else "0"
+    master.call("wm", "attributes", ".", "-topmost", on_top_str)
     master.mainloop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(parse_args())

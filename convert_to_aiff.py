@@ -4,15 +4,20 @@ import os
 import argparse
 import subprocess
 
+
 def convert_filename(input_filename):
     base, extension = os.path.splitext(input_filename)
     output_filename = base + " (from {})".format(extension) + ".aiff"
-    cmd = ['ffmpeg',
-        '-i', input_filename,
-        "-map_metadata", "0", # doesn't preserve tags as it should
-        output_filename
+    cmd = [
+        "ffmpeg",
+        "-i",
+        input_filename,
+        "-map_metadata",
+        "0",  # doesn't preserve tags as it should
+        output_filename,
     ]
     subprocess.check_call(cmd)
+
 
 def convert_folder(input_folder):
     for filename in os.listdir(input_folder):
@@ -20,10 +25,11 @@ def convert_folder(input_folder):
             continue
         convert_filename(filename)
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_filename')
-    parser.add_argument('--input_folder')
+    parser.add_argument("--input_filename")
+    parser.add_argument("--input_folder")
     args = parser.parse_args()
 
     if args.input_filename:
@@ -31,8 +37,7 @@ def main():
 
     if args.input_folder:
         convert_folder(args.input_folder)
-    
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     main()
-
-
