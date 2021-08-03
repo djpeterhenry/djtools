@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 3
+VERSION = 4
 
 REKORDBOX_SAMPLE_PATH = u"/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = u"/Users/peter/Music/PioneerDJ/LocalSamples"
@@ -445,7 +445,6 @@ def export_rekordbox_xml(
     db_filename,
     rekordbox_filename,
     bpm_folders=False,
-    key_lists=False,
     sample_root_path=None,
 ):
     export_rekordbox_history(db_filename)
@@ -570,50 +569,34 @@ def export_rekordbox_xml(
     et_version_node = add_folder(et_root_node, "V{:02}".format(VERSION))
     ###### ^
 
+    def add_key_lists(bpm=None, bpm_range=None):
+        for key in xrange(1, 13):
+            # (key, key+1)
+            keys = [key, aa.get_relative_camelot_key(key, 1)]
+            matching_files = get_filtered_files(
+                db_dict=db_dict,
+                files=files_with_id,
+                bpm=bpm,
+                bpm_range=bpm_range,
+                cam_num_list=keys,
+            )
+            adder.add_playlist_for_files(
+                et_bpm_folder, get_key_name(key), matching_files
+            )
+
     def add_bpm_folder(et_parent_folder, bpm, bpm_range):
         folder_name = get_bpm_name(bpm, bpm_range)
         print(folder_name)
 
         et_bpm_folder = add_folder(et_parent_folder, folder_name)
 
-        # all unfiltered
-        if False:
-            adder.add_playlist_for_files(et_bpm_folder, "All BPM", files_with_id)
-
         # all for bpm (various orders)
         matching_files = get_filtered_files(
             db_dict=db_dict, files=files_with_id, bpm=bpm, bpm_range=bpm_range
         )
+
         # default order (touch)
         adder.add_playlist_for_files(et_bpm_folder, "All (touch)", matching_files)
-        if False:
-            adder.add_playlist_for_files(
-                et_bpm_folder, "All (new)", aa.generate_alc(matching_files, db_dict)
-            )
-            adder.add_playlist_for_files(
-                et_bpm_folder, "All (num)", aa.generate_num(matching_files, db_dict)
-            )
-            adder.add_playlist_for_files(
-                et_bpm_folder,
-                "All (recent)",
-                aa.generate_recent(matching_files, db_dict),
-            )
-
-        # for each key
-        if key_lists:
-            for key in xrange(1, 13):
-                # (key, key+1)
-                keys = [key, aa.get_relative_camelot_key(key, 1)]
-                matching_files = get_filtered_files(
-                    db_dict=db_dict,
-                    files=files_with_id,
-                    bpm=bpm,
-                    bpm_range=bpm_range,
-                    cam_num_list=keys,
-                )
-                adder.add_playlist_for_files(
-                    et_bpm_folder, get_key_name(key), matching_files
-                )
 
     def get_bpm_and_range_list():
         # create tuples of (bpm, bpm_range) and sort them
@@ -621,9 +604,10 @@ def export_rekordbox_xml(
         # fives all the way through
         for bpm in range(80, 161, 5):
             bpm_and_range.append((bpm, 5))
-        # middle threes
-        for bpm in range(114, 135, 2):
-            bpm_and_range.append((bpm, 3))
+        if False:
+            # middle threes
+            for bpm in range(114, 135, 2):
+                bpm_and_range.append((bpm, 3))
         bpm_and_range.sort()
         return bpm_and_range
 
