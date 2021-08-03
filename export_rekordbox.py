@@ -444,7 +444,6 @@ def relative_path(path_from, path_to):
 def export_rekordbox_xml(
     db_filename,
     rekordbox_filename,
-    bpm_folders=False,
     sample_root_path=None,
 ):
     export_rekordbox_history(db_filename)
@@ -569,7 +568,7 @@ def export_rekordbox_xml(
     et_version_node = add_folder(et_root_node, "V{:02}".format(VERSION))
     ###### ^
 
-    def add_key_lists(bpm=None, bpm_range=None):
+    def add_key_playlists(et_filter_folder, bpm=None, bpm_range=None):
         for key in xrange(1, 13):
             # (key, key+1)
             keys = [key, aa.get_relative_camelot_key(key, 1)]
@@ -581,22 +580,8 @@ def export_rekordbox_xml(
                 cam_num_list=keys,
             )
             adder.add_playlist_for_files(
-                et_bpm_folder, get_key_name(key), matching_files
+                et_filter_folder, get_key_name(key), matching_files
             )
-
-    def add_bpm_folder(et_parent_folder, bpm, bpm_range):
-        folder_name = get_bpm_name(bpm, bpm_range)
-        print(folder_name)
-
-        et_bpm_folder = add_folder(et_parent_folder, folder_name)
-
-        # all for bpm (various orders)
-        matching_files = get_filtered_files(
-            db_dict=db_dict, files=files_with_id, bpm=bpm, bpm_range=bpm_range
-        )
-
-        # default order (touch)
-        adder.add_playlist_for_files(et_bpm_folder, "All (touch)", matching_files)
 
     def get_bpm_and_range_list():
         # create tuples of (bpm, bpm_range) and sort them
@@ -610,12 +595,6 @@ def export_rekordbox_xml(
                 bpm_and_range.append((bpm, 3))
         bpm_and_range.sort()
         return bpm_and_range
-
-    def add_bpm_folders(et_filter_folder):
-        # create tuples of (bpm, bpm_range) and sort them
-        bpm_and_range = get_bpm_and_range_list()
-        for bpm, bpm_range in bpm_and_range:
-            add_bpm_folder(et_filter_folder, bpm, bpm_range)
 
     def add_bpm_playlists(et_filter_folder):
         bpm_and_range = get_bpm_and_range_list()
@@ -694,20 +673,21 @@ def export_rekordbox_xml(
     et_top_folder = add_folder(et_version_node, "Top")
     add_top(et_top_folder)
 
-    # Lists
-    et_lists_folder = add_folder(et_version_node, "Lists")
-    name_to_file = aa.get_list_name_to_file(aa.LISTS_FOLDER)
-    for name, list_file in sorted(name_to_file.iteritems()):
-        matching_files = get_matching_files_from_list(list_file)
-        adder.add_playlist_for_files(et_lists_folder, name, matching_files)
+    # Lists (brilliant)
+    if False:
+        et_lists_folder = add_folder(et_version_node, "Lists")
+        name_to_file = aa.get_list_name_to_file(aa.LISTS_FOLDER)
+        for name, list_file in sorted(name_to_file.iteritems()):
+            matching_files = get_matching_files_from_list(list_file)
+            adder.add_playlist_for_files(et_lists_folder, name, matching_files)
 
     # BPM
-    if bpm_folders:
-        et_filter_folder = add_folder(et_version_node, "BPM Filter")
-        add_bpm_folders(et_filter_folder)
-    else:
-        et_filter_folder = add_folder(et_version_node, "BPM Filter")
-        add_bpm_playlists(et_filter_folder)
+    et_filter_folder = add_folder(et_version_node, "BPM Filter")
+    add_bpm_playlists(et_filter_folder)
+
+    # Key
+    et_filter_folder = add_folder(et_version_node, "Key Filter")
+    add_key_playlists(et_filter_folder)
 
     print("Total playlists: {}".format(adder.playlists_added))
 
