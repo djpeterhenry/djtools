@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 4
+VERSION = 5
 
 REKORDBOX_SAMPLE_PATH = u"/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = u"/Users/peter/Music/PioneerDJ/LocalSamples"
@@ -586,13 +586,22 @@ def export_rekordbox_xml(
     def get_bpm_and_range_list():
         # create tuples of (bpm, bpm_range) and sort them
         bpm_and_range = [(0, 0)]
-        # fives all the way through
-        for bpm in range(80, 161, 5):
-            bpm_and_range.append((bpm, 5))
         if False:
+            # fives all the way through
+            for bpm in range(80, 161, 5):
+                bpm_and_range.append((bpm, 5))
             # middle threes
             for bpm in range(114, 135, 2):
                 bpm_and_range.append((bpm, 3))
+        # low 5
+        for bpm in range(80, 116, 5):
+            bpm_and_range.append((bpm, 5))
+        # middle 4
+        for bpm in range(120, 133, 4):
+            bpm_and_range.append((bpm, 4))
+        # high 5
+        for bpm in range(135, 161, 5):
+            bpm_and_range.append((bpm, 5))
         bpm_and_range.sort()
         return bpm_and_range
 
@@ -685,9 +694,10 @@ def export_rekordbox_xml(
     et_filter_folder = add_folder(et_version_node, "BPM Filter")
     add_bpm_playlists(et_filter_folder)
 
-    # Key
-    et_filter_folder = add_folder(et_version_node, "Key Filter")
-    add_key_playlists(et_filter_folder)
+    # Key (only for CDJ)
+    if False:
+        et_filter_folder = add_folder(et_version_node, "Key Filter")
+        add_key_playlists(et_filter_folder)
 
     print("Total playlists: {}".format(adder.playlists_added))
 
