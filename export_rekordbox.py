@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 5
+VERSION = 6
 
 REKORDBOX_SAMPLE_PATH = u"/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = u"/Users/peter/Music/PioneerDJ/LocalSamples"
@@ -597,7 +597,7 @@ def export_rekordbox_xml(
         for bpm in range(80, 116, 5):
             bpm_and_range.append((bpm, 5))
         # middle 4
-        for bpm in range(120, 133, 4):
+        for bpm in range(118, 133, 2):
             bpm_and_range.append((bpm, 4))
         # high 5
         for bpm in range(135, 161, 5):
