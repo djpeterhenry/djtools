@@ -1039,8 +1039,7 @@ def stamp_song(db_dict, date_ts, index, artist, title):
     s_str = s.encode("utf8")
     _, f = get_song_in_db(s_str, db_dict)
     if f is None:
-        print("Failure: {}".format(s_str))
-        # Failed to stamp!
+        print("Failure to stamp: {}".format(s_str))
         return
     record = db_dict[f]
     ts_to_write = date_ts + index
