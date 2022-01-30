@@ -11,6 +11,8 @@ from tag import Tag
 
 VERSION = 6
 
+LIST_PLAYLISTS = False
+
 REKORDBOX_SAMPLE_PATH = u"/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = u"/Users/peter/Music/PioneerDJ/LocalSamples"
 REKORDBOX_HISTORY_PATH = u"/Users/peter/Documents/rekordbox_history"
@@ -683,7 +685,7 @@ def export_rekordbox_xml(
     add_top(et_top_folder)
 
     # Lists (brilliant)
-    if False:
+    if LIST_PLAYLISTS:
         et_lists_folder = add_folder(et_version_node, "Lists")
         name_to_file = aa.get_list_name_to_file(aa.LISTS_FOLDER)
         for name, list_file in sorted(name_to_file.iteritems()):
