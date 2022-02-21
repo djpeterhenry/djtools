@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 6
+VERSION = 1
 
 LIST_PLAYLISTS = False
 
@@ -650,6 +650,7 @@ def export_rekordbox_xml(
             parent, "Active", get_matching_files_from_list(aa.ACTIVE_LIST)
         )
 
+    def add_dan_shannon(parent):
         wedding_tags = [
             Tag.P_NASTY_TAG,
             Tag.SHANNON_TAG,
