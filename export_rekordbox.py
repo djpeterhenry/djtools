@@ -626,6 +626,15 @@ def export_rekordbox_xml(
     def add_all(parent):
         adder.add_playlist_for_files(parent, "All", files_with_id)
 
+    # Helper to add a list for a tag
+    def add_playlist_for_tag(parent, tag):
+        adder.add_playlist_for_files(
+            parent,
+            tag.value,
+            get_filtered_files(
+                db_dict=db_dict, files=files_with_id, tags=[tag.value]
+            ),
+        )
     # top
     def add_top(parent):
         # Sets (aka hand history)
@@ -650,32 +659,17 @@ def export_rekordbox_xml(
             parent, "Active", get_matching_files_from_list(aa.ACTIVE_LIST)
         )
 
-    def add_dan_shannon(parent):
-        wedding_tags = [
-            Tag.P_NASTY_TAG,
-            Tag.SHANNON_TAG,
-            Tag.DAN_TAG,
-            Tag.PETER_PICKS_TAG,
-        ]
-        wedding_values = [x.value for x in wedding_tags]
+        add_playlist_for_tag(parent, Tag.P_NASTY_TAG)
 
-        for tag_value in wedding_values:
-            adder.add_playlist_for_files(
-                parent,
-                tag_value,
-                get_filtered_files(
-                    db_dict=db_dict, files=files_with_id, tags=[tag_value]
-                ),
-            )
-
-        # union
-        adder.add_playlist_for_files(
-            parent,
-            "UNION",
-            get_filtered_files(
-                db_dict=db_dict, files=files_with_id, tags=wedding_values
-            ),
-        )
+        # untested but probably fine:
+        if False:
+            wedding_tags = [
+                Tag.SHANNON_TAG,
+                Tag.DAN_TAG,
+                Tag.PETER_PICKS_TAG,
+            ]
+            for tag in wedding_tags:
+                add_playlist_for_tag(parent, tag)
 
     # All
     et_all_folder = add_folder(et_version_node, "All")

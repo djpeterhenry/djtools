@@ -114,7 +114,7 @@ def read_db_file(db_filename):
 def write_db_file(db_filename, db_dict):
     # very first thing make a backup
     for x in xrange(int(1e6)):
-        backup_file = "aa_db.{}.txt".format(x)
+        backup_file = "aa_db.{:03}.txt".format(x)
         if os.path.exists(backup_file):
             continue
         break
