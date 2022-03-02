@@ -23,3 +23,4 @@ class Tag(ListEnum):
     SHANNON_TAG = "SHANNON"
     DAN_TAG = "DAN"
     PETER_PICKS_TAG = "PETER_PICKS"
+    CRISPY_TACOS = "CRISPY_TACOS"
