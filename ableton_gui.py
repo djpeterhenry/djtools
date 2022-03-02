@@ -54,6 +54,9 @@ class App:
             raise RuntimeError("Locked: {}".format(LOCK_FILEPATH))
         open(LOCK_FILEPATH, "a").close()
 
+        #### 
+        # Constants
+
         # window position
         window_x = 0
         window_y = 225
@@ -86,8 +89,6 @@ class App:
 
         ########
         # gui
-
-        #######
         path_stem = os.path.split(os.path.abspath("."))[1]
         print(path_stem)
         master.title("Ableton Aid (%s)" % path_stem)
