@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 # dup import:
 from Tkinter import *
 import sys
@@ -87,7 +89,7 @@ class App:
 
         #######
         path_stem = os.path.split(os.path.abspath("."))[1]
-        print path_stem
+        print(path_stem)
         master.title("Ableton Aid (%s)" % path_stem)
 
         #################
@@ -365,7 +367,6 @@ class App:
                 if fake_key_filter.lower() in possible_lower:
                     cam_filter = fake_key_filter
 
-        # print keys for number
         if cam_filter is not None:
             keys = aa.get_keys_for_camelot_number(cam_filter[:-1])
             keys_as_str = " ".join(keys)
@@ -428,7 +429,6 @@ class App:
             if filename == last_filename:
                 continue
 
-            # print names of those not in db_dict
             try:
                 record = self.db_dict[filename]
             except KeyError:
@@ -539,39 +539,44 @@ class App:
             files_display, filenames = zip(*filename_pairs_list)
             t = time.time()
             self.listbox.insert(END, *files_display)
-            print "self.listbox.insert(END, *files_display) took:", (time.time() - t)
+            print("self.listbox.insert(END, *files_display) took:", (time.time() - t))
             self.active_alc_files = filenames
 
         # search for previous_name
         # NOTE THAT IF PLAY COUNT HAS CHANGED, IT WON'T FIND
         # or anything else (key, etc, when editing)
-        print "searching for:", self.listbox_target_string, "or", self.listbox_target_filename
+        print(
+            "searching for:",
+            self.listbox_target_string,
+            "or",
+            self.listbox_target_filename,
+        )
         for i, pair in enumerate(filename_pairs_list):
             activate = False
             if pair[0] == self.listbox_target_string:
-                print "listbox_target_string:", self.listbox_target_string
+                print("listbox_target_string:", self.listbox_target_string)
                 activate = True
             elif (
                 self.listbox_target_filename and self.listbox_target_filename == pair[1]
             ):
-                print "listbox_target_filename:", self.listbox_target_filename
+                print("listbox_target_filename:", self.listbox_target_filename)
                 activate = True
             if activate:
                 self.listbox.select_set(i)
                 self.listbox.activate(i)
                 self.listbox.see(i)
-                print "found: ", self.listbox_target_string
+                print("found: ", self.listbox_target_string)
                 break
 
         # no matter what (in addition to select)
         self.refresh_edit()
 
         self.count_label_var.set(str(len(filename_pairs_list)))
-        print "Listbox length:", len(filename_pairs_list)
+        print("Listbox length:", len(filename_pairs_list))
 
         # timing
         time_end = time.clock()
-        print "[time] update_listbox:", str(time_end - time_start)
+        print("[time] update_listbox:", str(time_end - time_start))
 
     def update_bpm_edit(self):
         filename = self.get_selected_filename()
@@ -693,7 +698,7 @@ class App:
 
     def command_export_list(self):
         for filename in self.active_alc_files:
-            print filename
+            print(filename)
 
     def command_tag_add(self):
         filename = self.get_selected_filename()
@@ -755,12 +760,12 @@ class App:
         self.add_tag_to_filename(filename, tag)
 
     def command_clear_min_max(self):
-        print "clear min max"
+        print("clear min max")
         self.min_amount.set(0)
         self.max_amount.set(0)
 
     def command_order_down(self):
-        print ("command_order_down")
+        print("command_order_down")
         var = self.order_var.get()
         which = self.order_list.index(var)
         which -= 1
@@ -769,7 +774,7 @@ class App:
         self.order_var.set(self.order_list[which])
 
     def command_order_up(self):
-        print ("command_order_up")
+        print("command_order_up")
         var = self.order_var.get()
         which = self.order_list.index(var)
         which += 1
@@ -804,7 +809,7 @@ class App:
             self.list_to_use = self.generate_key()
         elif self.order_var.get() == "num":
             self.list_to_use = self.generate_num()
-        print "[time] generate_and_set_from_current_button:", str(time.time() - t)
+        print("[time] generate_and_set_from_current_button:", str(time.time() - t))
         self.update_listbox()
 
     def generate_random(self):
