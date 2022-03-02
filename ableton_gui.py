@@ -57,6 +57,9 @@ class App:
         #### 
         # Constants
 
+        SEARCH_WIDTH = 10
+        TAG_WIDTH = 20
+
         # window position
         window_x = 0
         window_y = 225
@@ -65,7 +68,7 @@ class App:
         listbox_height = 14
 
         # other dimensions
-        search_width = 30
+        
         init_bpm_range = 3
 
         # font (you dream of 'consolas')
@@ -103,7 +106,7 @@ class App:
 
         self.entry_filter = EntryText(
             frame_top,
-            text_width=search_width,
+            text_width=SEARCH_WIDTH,
             take_focus=True,
             update_fun=self.update_listbox,
         )
@@ -197,7 +200,7 @@ class App:
         self.tag_var = StringVar(master)
         self.tag_var.trace("w", just_update)
         self.tag_list_menu = OptionMenu(frame_edit, self.tag_var, *tag_list)
-        self.tag_list_menu.config()
+        self.tag_list_menu.config(width=TAG_WIDTH)
         self.tag_list_menu.pack(side=LEFT)
 
         self.tag_invert = Checkbox(frame_edit, "Invert", just_update)
