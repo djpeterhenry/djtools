@@ -661,6 +661,7 @@ def export_rekordbox_xml(
 
         add_playlist_for_tag(parent, Tag.P_NASTY_TAG)
         add_playlist_for_tag(parent, Tag.CRISPY_TACOS)
+        add_playlist_for_tag(parent, Tag.DRUM_LOOPS)
 
         # untested but probably fine:
         if False:
