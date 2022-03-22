@@ -11,7 +11,7 @@ from tag import Tag
 
 VERSION = 3
 
-LIST_PLAYLISTS = False
+LISTS_PLAYLISTS = False
 
 REKORDBOX_SAMPLE_PATH = u"/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = u"/Users/peter/Music/PioneerDJ/LocalSamples"
@@ -673,6 +673,11 @@ def export_rekordbox_xml(
             if file not in new_files_set:
                 new_files.append(file)
 
+    def add_lists(parent):
+        for list_name, list_file in list_name_to_file:
+            matching_files = get_matching_files_from_list(list_file)
+            adder.add_playlist_for_files(parent, list_name, matching_files)
+
     ######
     # Start adding things
 
@@ -686,11 +691,9 @@ def export_rekordbox_xml(
     add_tag(et_tag_folder)
 
     # Lists (brilliant)
-    if LIST_PLAYLISTS:
+    if LISTS_PLAYLISTS:
         et_lists_folder = add_folder(et_version_node, "Lists")
-        for name, list_file in list_name_to_file:
-            matching_files = get_matching_files_from_list(list_file)
-            adder.add_playlist_for_files(et_lists_folder, name, matching_files)
+        add_lists(et_lists_folder)
 
     # BPM
     et_filter_folder = add_folder(et_version_node, "BPM Filter")
