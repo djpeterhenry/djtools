@@ -664,6 +664,18 @@ def export_rekordbox_xml(
         add_playlist_for_tag(parent, Tag.ACTUAL_HOUSE)
         add_playlist_for_tag(parent, Tag.DRUM_LOOPS)
 
+    # Make sure all in lists are included in new_files
+    list_name_to_file = sorted(aa.get_list_name_to_file(aa.LISTS_FOLDER).items())
+    new_files_set = set(new_files)
+    for _, list_file in list_name_to_file:
+        matching_files = get_matching_files_from_list(list_file)
+        for file in matching_files:
+            if file not in new_files_set:
+                new_files.append(file)
+
+    ######
+    # Start adding things
+
     et_all_folder = add_folder(et_version_node, "All")
     add_all(et_all_folder)
 
@@ -676,8 +688,7 @@ def export_rekordbox_xml(
     # Lists (brilliant)
     if LIST_PLAYLISTS:
         et_lists_folder = add_folder(et_version_node, "Lists")
-        name_to_file = aa.get_list_name_to_file(aa.LISTS_FOLDER)
-        for name, list_file in sorted(name_to_file.iteritems()):
+        for name, list_file in list_name_to_file:
             matching_files = get_matching_files_from_list(list_file)
             adder.add_playlist_for_files(et_lists_folder, name, matching_files)
 
