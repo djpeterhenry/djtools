@@ -533,16 +533,21 @@ def generate_num(files, db_dict):
     return get_files_from_pairs(num_file_tuples)
 
 
-def generate_recent(files, db_dict, years=4):
+def get_past_ts(years):
     H = 60 * 60
     D = 24 * H
     Y = 356 * D
     SPAN = Y * years
     now = time.time()
+    return now - SPAN
 
+
+def generate_recent_and_old(files, db_dict, years):
+    past_ts = get_past_ts(years)
     date_file = generate_date_plus_alc_pairs(files, db_dict)
-    result = [f for ts, f in date_file if now - ts <= SPAN]
-    return result
+    recent = [f for ts, f in date_file if ts >= past_ts]
+    old = [f for ts, f in date_file if ts < past_ts]
+    return recent, old
 
 
 def generate_random(files):

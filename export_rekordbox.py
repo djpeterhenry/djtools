@@ -9,13 +9,15 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 2
+VERSION = 3
 
 LIST_PLAYLISTS = False
 
 REKORDBOX_SAMPLE_PATH = u"/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = u"/Users/peter/Music/PioneerDJ/LocalSamples"
 REKORDBOX_HISTORY_PATH = u"/Users/peter/Documents/rekordbox_history"
+
+NEW_OLD_YEARS = 6
 
 
 def export_rekordbox_history(db_filename, history_path=REKORDBOX_HISTORY_PATH):
@@ -570,6 +572,11 @@ def export_rekordbox_xml(
     et_version_node = add_folder(et_root_node, "V{:02}".format(VERSION))
     ###### ^
 
+    new_files, old_files = aa.generate_recent_and_old(
+        files_with_id, db_dict, NEW_OLD_YEARS
+    )
+
+    # Was used for CDJ
     def add_key_playlists(et_filter_folder, bpm=None, bpm_range=None):
         for key in xrange(1, 13):
             # (key, key+1)
@@ -607,12 +614,12 @@ def export_rekordbox_xml(
         bpm_and_range.sort()
         return bpm_and_range
 
-    def add_bpm_playlists(et_filter_folder):
+    def add_bpm_playlists(et_filter_folder, files):
         bpm_and_range = get_bpm_and_range_list()
         for bpm, bpm_range in bpm_and_range:
             playlist_name = get_bpm_name(bpm, bpm_range)
             matching_files = get_filtered_files(
-                db_dict=db_dict, files=files_with_id, bpm=bpm, bpm_range=bpm_range
+                db_dict=db_dict, files=files, bpm=bpm, bpm_range=bpm_range
             )
             adder.add_playlist_for_files(
                 et_filter_folder, playlist_name, matching_files
@@ -631,11 +638,9 @@ def export_rekordbox_xml(
         adder.add_playlist_for_files(
             parent,
             tag.value,
-            get_filtered_files(
-                db_dict=db_dict, files=files_with_id, tags=[tag.value]
-            ),
+            get_filtered_files(db_dict=db_dict, files=files_with_id, tags=[tag.value]),
         )
-    # top
+
     def add_top(parent):
         # Sets (aka hand history)
         adder.add_playlist_for_files(
@@ -643,44 +648,30 @@ def export_rekordbox_xml(
         )
 
         # New Songs!
-        adder.add_playlist_for_files(
-            parent, "New", aa.generate_alc(files_with_id, db_dict)
-        )
+        adder.add_playlist_for_files(parent, "New", aa.generate_alc(new_files, db_dict))
 
-        # Recent (random)
-        adder.add_playlist_for_files(
-            parent,
-            "Random",
-            aa.generate_random(aa.generate_recent(files_with_id, db_dict)),
-        )
+        # Old Songs!
+        adder.add_playlist_for_files(parent, "Old", aa.generate_alc(old_files, db_dict))
 
         # Active list
         adder.add_playlist_for_files(
             parent, "Active", get_matching_files_from_list(aa.ACTIVE_LIST)
         )
 
+    def add_tag(parent):
         add_playlist_for_tag(parent, Tag.P_NASTY_TAG)
         add_playlist_for_tag(parent, Tag.CRISPY_TACOS)
         add_playlist_for_tag(parent, Tag.ACTUAL_HOUSE)
         add_playlist_for_tag(parent, Tag.DRUM_LOOPS)
 
-        # untested but probably fine:
-        if False:
-            wedding_tags = [
-                Tag.SHANNON_TAG,
-                Tag.DAN_TAG,
-                Tag.PETER_PICKS_TAG,
-            ]
-            for tag in wedding_tags:
-                add_playlist_for_tag(parent, tag)
-
-    # All
     et_all_folder = add_folder(et_version_node, "All")
     add_all(et_all_folder)
 
-    # Top
     et_top_folder = add_folder(et_version_node, "Top")
     add_top(et_top_folder)
+
+    et_tag_folder = add_folder(et_version_node, "Tag")
+    add_tag(et_tag_folder)
 
     # Lists (brilliant)
     if LIST_PLAYLISTS:
@@ -692,7 +683,7 @@ def export_rekordbox_xml(
 
     # BPM
     et_filter_folder = add_folder(et_version_node, "BPM Filter")
-    add_bpm_playlists(et_filter_folder)
+    add_bpm_playlists(et_filter_folder, new_files)
 
     # Key (only for CDJ)
     if False:
