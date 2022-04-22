@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 3
+VERSION = 4
 
 LISTS_PLAYLISTS = False
 
@@ -595,13 +595,6 @@ def export_rekordbox_xml(
     def get_bpm_and_range_list():
         # create tuples of (bpm, bpm_range) and sort them
         bpm_and_range = [(0, 0)]
-        if False:
-            # fives all the way through
-            for bpm in range(80, 161, 5):
-                bpm_and_range.append((bpm, 5))
-            # middle threes
-            for bpm in range(114, 135, 2):
-                bpm_and_range.append((bpm, 3))
         # low 5
         for bpm in range(80, 116, 5):
             bpm_and_range.append((bpm, 5))
@@ -611,6 +604,9 @@ def export_rekordbox_xml(
         # high 5
         for bpm in range(135, 161, 5):
             bpm_and_range.append((bpm, 5))
+        # new broad
+        for bpm in range(120, 141, 5):
+            bpm_and_range.append((bpm, 10))
         bpm_and_range.sort()
         return bpm_and_range
 
