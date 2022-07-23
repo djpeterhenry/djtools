@@ -511,6 +511,11 @@ def export_rekordbox_xml(
             suffixes.append(
                 "[{}-{}][{}-{}]".format(cam_num, cam_ab, cam_num_minus, cam_ab)
             )
+            # [7+A][6+A][8+A]
+            cam_num_plus = aa.get_relative_camelot_key(cam_num, 1)
+            suffixes.append(
+                "[{}+{}][{}+{}][{}+{}]".format(cam_num, cam_ab, cam_num_minus, cam_ab, cam_num_plus, cam_ab)
+            )
 
         if suffixes:
             spaces = " " * 10
