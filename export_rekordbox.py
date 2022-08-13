@@ -654,6 +654,9 @@ def export_rekordbox_xml(
         # Old Songs!
         adder.add_playlist_for_files(parent, "Old", aa.generate_alc(old_files, db_dict))
 
+        # All ordered by play
+        adder.add_playlist_for_files(parent, "Top", aa.generate_num(files=files, db_dict=db_dict))
+
         # Active list
         adder.add_playlist_for_files(
             parent, "Active", get_matching_files_from_list(aa.ACTIVE_LIST)
