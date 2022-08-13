@@ -36,6 +36,8 @@ def get_ts_for(year, month, day):
     return time.mktime(datetime.date(year, month, day).timetuple())
 
 
+# We use "old_alc_ts" for files with "alc_ts" before this datetime.
+# I totally forget how I made that all work, but it seems to.
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
 MP3_SAMPLE_PATH = u"/Volumes/music/mp3_samples/"

@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 4
+VERSION = 1
 
 LISTS_PLAYLISTS = False
 
@@ -668,7 +668,7 @@ def export_rekordbox_xml(
         add_playlist_for_tag(parent, Tag.ACTUAL_HOUSE)
         add_playlist_for_tag(parent, Tag.DRUM_LOOPS)
 
-    # Make sure all in lists are included in new_files
+    # Make sure all in lists are included in new_files regardless of age
     list_name_to_file = sorted(aa.get_list_name_to_file(aa.LISTS_FOLDER).items())
     new_files_set = set(new_files)
     for _, list_file in list_name_to_file:
