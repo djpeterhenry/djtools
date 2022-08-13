@@ -4,8 +4,6 @@ from __future__ import print_function
 
 import sys
 import os
-import glob
-import stat
 import cPickle
 import shutil
 import re
@@ -14,12 +12,9 @@ import subprocess
 import gzip
 import codecs
 import xml.etree.ElementTree as ET
-import json
 import time
-import unicodedata
 import datetime
 import difflib
-import urllib
 from collections import defaultdict
 import argparse
 import shutil
@@ -43,7 +38,6 @@ def get_ts_for(year, month, day):
 
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
-# MP3_SAMPLE_PATH = u'/Volumes/MacHelper/mp3_samples'
 MP3_SAMPLE_PATH = u"/Volumes/music/mp3_samples/"
 
 LISTS_FOLDER = "/Users/peter/github/djpeterhenry.github.io/lists"
