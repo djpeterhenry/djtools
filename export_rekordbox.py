@@ -514,7 +514,9 @@ def export_rekordbox_xml(
             # [7+A][6+A][8+A]
             cam_num_plus = aa.get_relative_camelot_key(cam_num, 1)
             suffixes.append(
-                "[{}+{}][{}+{}][{}+{}]".format(cam_num, cam_ab, cam_num_minus, cam_ab, cam_num_plus, cam_ab)
+                "[{}+{}][{}+{}][{}+{}]".format(
+                    cam_num, cam_ab, cam_num_minus, cam_ab, cam_num_plus, cam_ab
+                )
             )
 
         if suffixes:
@@ -655,7 +657,14 @@ def export_rekordbox_xml(
         adder.add_playlist_for_files(parent, "Old", aa.generate_alc(old_files, db_dict))
 
         # All ordered by play
-        adder.add_playlist_for_files(parent, "Top", aa.generate_num(files=files, db_dict=db_dict))
+        adder.add_playlist_for_files(parent, "Top", aa.generate_num(files, db_dict))
+
+        # All ordered by plays since I moved to SF
+        adder.add_playlist_for_files(
+            parent,
+            "Top (SF)",
+            aa.generate_num(files, db_dict, aa.get_ts_for(2015, 7, 1)),
+        )
 
         # Active list
         adder.add_playlist_for_files(

@@ -520,11 +520,14 @@ def generate_date_plus_alc_pairs(valid_alc_files, db_dict):
     return tuples
 
 
-def generate_num_alc_pairs(valid_alc_files, db_dict):
+def generate_num_alc_pairs(valid_alc_files, db_dict, ts_after):
     num_file_tuples = []
     for file in valid_alc_files:
         record = db_dict[file]
-        num = len(get_ts_list(record))
+        ts_list = (
+            get_ts_list_after(record, ts_after) if ts_after else get_ts_list(record)
+        )
+        num = len(ts_list)
         num_file_tuples.append((num, file))
     num_file_tuples.sort(reverse=True)
     return num_file_tuples
@@ -542,8 +545,10 @@ def generate_date_plus_alc(valid_alc_files, db_dict):
     return get_files_from_pairs(generate_date_plus_alc_pairs(valid_alc_files, db_dict))
 
 
-def generate_num(valid_alc_files, db_dict):
-    return get_files_from_pairs(generate_num_alc_pairs(valid_alc_files, db_dict))
+def generate_num(valid_alc_files, db_dict, ts_after=None):
+    return get_files_from_pairs(
+        generate_num_alc_pairs(valid_alc_files, db_dict, ts_after)
+    )
 
 
 def generate_recent_and_old(files, db_dict, years):
