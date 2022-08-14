@@ -429,6 +429,15 @@ def get_files_from_pairs(pairs):
     return [file for _, file in pairs]
 
 
+def get_past_ts(years):
+    H = 60 * 60
+    D = 24 * H
+    Y = 356 * D
+    SPAN = Y * years
+    now = time.time()
+    return now - SPAN
+
+
 def add_ts(record, ts):
     try:
         current = record["ts_list"]
@@ -444,6 +453,11 @@ def get_ts_list(record):
     except:
         ts_list = []
     return ts_list
+
+
+def get_ts_list_after(record, ts):
+    ts_list = get_ts_list(record)
+    return [x for x in ts_list if x >= ts]
 
 
 def get_last_ts(record):
@@ -506,6 +520,16 @@ def generate_date_plus_alc_pairs(valid_alc_files, db_dict):
     return tuples
 
 
+def generate_num_alc_pairs(valid_alc_files, db_dict):
+    num_file_tuples = []
+    for file in valid_alc_files:
+        record = db_dict[file]
+        num = len(get_ts_list(record))
+        num_file_tuples.append((num, file))
+    num_file_tuples.sort(reverse=True)
+    return num_file_tuples
+
+
 def generate_alc(valid_alc_files, db_dict):
     return get_files_from_pairs(generate_alc_pairs(valid_alc_files, db_dict))
 
@@ -518,24 +542,8 @@ def generate_date_plus_alc(valid_alc_files, db_dict):
     return get_files_from_pairs(generate_date_plus_alc_pairs(valid_alc_files, db_dict))
 
 
-# this is shitty:
-def generate_num(files, db_dict):
-    num_file_tuples = []
-    for file in files:
-        record = db_dict[file]
-        num = -len(get_ts_list(record))
-        num_file_tuples.append((num, file))
-    num_file_tuples.sort()
-    return get_files_from_pairs(num_file_tuples)
-
-
-def get_past_ts(years):
-    H = 60 * 60
-    D = 24 * H
-    Y = 356 * D
-    SPAN = Y * years
-    now = time.time()
-    return now - SPAN
+def generate_num(valid_alc_files, db_dict):
+    return get_files_from_pairs(generate_num_alc_pairs(valid_alc_files, db_dict))
 
 
 def generate_recent_and_old(files, db_dict, years):
