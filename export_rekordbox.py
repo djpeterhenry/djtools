@@ -663,7 +663,7 @@ def export_rekordbox_xml(
         adder.add_playlist_for_files(
             parent,
             "Top (SF)",
-            aa.generate_num(files, db_dict, aa.get_ts_for(2015, 7, 1)),
+            aa.generate_num(files, db_dict, aa.SF_TS),
         )
 
         # Active list
