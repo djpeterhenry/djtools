@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 1
+VERSION = 2
 
 LISTS_PLAYLISTS = False
 
@@ -640,7 +640,7 @@ def export_rekordbox_xml(
     def add_playlist_for_tag(parent, tag):
         adder.add_playlist_for_files(
             parent,
-            tag.value,
+            tag.value.lower(),
             get_filtered_files(db_dict=db_dict, files=files_with_id, tags=[tag.value]),
         )
 
@@ -673,6 +673,7 @@ def export_rekordbox_xml(
 
     def add_tag(parent):
         add_playlist_for_tag(parent, Tag.P_NASTY_TAG)
+        add_playlist_for_tag(parent, Tag.JAZZ)
         add_playlist_for_tag(parent, Tag.CRISPY_TACOS)
         add_playlist_for_tag(parent, Tag.ACTUAL_HOUSE)
         add_playlist_for_tag(parent, Tag.DRUM_LOOPS)

@@ -13,6 +13,7 @@ class Tag(ListEnum):
     X = "x"
     X_REKORDBOX = "x_rekordbox"
     VOCAL_TAG = "vocal"
+    JAZZ = "jazz"
     # better uppercase
     SKIP_KEY = "ALL KEYS"
     SKIP_BPM = "ALL BPM"
