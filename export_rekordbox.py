@@ -17,7 +17,7 @@ REKORDBOX_SAMPLE_PATH = u"/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = u"/Users/peter/Music/PioneerDJ/LocalSamples"
 REKORDBOX_HISTORY_PATH = u"/Users/peter/Documents/rekordbox_history"
 
-NEW_OLD_YEARS = 6
+NEW_OLD_YEARS = 7
 
 
 def export_rekordbox_history(db_filename, history_path=REKORDBOX_HISTORY_PATH):
@@ -582,6 +582,12 @@ def export_rekordbox_xml(
     new_files, old_files = aa.generate_recent_and_old(
         files_with_id, db_dict, NEW_OLD_YEARS
     )
+
+    # Various other conditions can artifically make a file "new" as well as old
+    # See later where being in a saved "list" awkwardly tries to do this too.
+    for f in old_files:
+        if aa.is_vocal(db_dict[f]):
+            new_files.append(f)
 
     # Was used for CDJ
     def add_key_playlists(et_filter_folder, bpm=None, bpm_range=None):
