@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 2
+VERSION = 4
 
 LISTS_PLAYLISTS = False
 

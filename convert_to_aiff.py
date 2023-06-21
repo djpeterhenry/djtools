@@ -23,7 +23,7 @@ def convert_folder(input_folder):
     for filename in os.listdir(input_folder):
         if os.path.splitext(filename)[1].lower() != ".mp3":
             continue
-        convert_filename(filename)
+        convert_filename(os.path.join(input_folder, filename))
 
 
 def main():
