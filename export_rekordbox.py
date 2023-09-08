@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 5
+VERSION = 2
 
 LISTS_PLAYLISTS = False
 
@@ -492,11 +492,14 @@ def export_rekordbox_xml(
         et_track = ET.SubElement(et_collection, "TRACK")
         artist, track = aa.get_artist_and_track(f)
 
-        # Optionally put [Vocal] in the track name
+        # Accumulate suffixes for tags and keys
         suffixes = []
 
         if aa.is_vocal(record):
             suffixes.append("[Vocal]")
+
+        if Tag.GOOD_TAG.value in record["tags"]:
+            suffixes.append("[Good]")
 
         # Put camelot key (7A) in the tag
         cam_key = aa.get_camelot_key(record["key"])
@@ -678,6 +681,7 @@ def export_rekordbox_xml(
         )
 
     def add_tag(parent):
+        add_playlist_for_tag(parent, Tag.GOOD_TAG)
         add_playlist_for_tag(parent, Tag.P_NASTY_TAG)
         add_playlist_for_tag(parent, Tag.JAZZ)
         add_playlist_for_tag(parent, Tag.CASTRO)
