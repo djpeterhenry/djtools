@@ -20,6 +20,25 @@ REKORDBOX_HISTORY_PATH = u"/Users/peter/Documents/rekordbox_history"
 NEW_OLD_YEARS = 7
 
 
+def get_bpm_and_range_list():
+    # create tuples of (bpm, bpm_range) and sort them
+    bpm_and_range = [(0, 0)]
+    # low 5
+    for bpm in range(80, 116, 5):
+        bpm_and_range.append((bpm, 5))
+    # middle 4
+    for bpm in range(118, 133, 2):
+        bpm_and_range.append((bpm, 4))
+    # high 5
+    for bpm in range(135, 161, 5):
+        bpm_and_range.append((bpm, 5))
+    # new broad
+    for bpm in range(120, 141, 5):
+        bpm_and_range.append((bpm, 10))
+    bpm_and_range.sort()
+    return bpm_and_range
+
+
 def export_rekordbox_history(db_filename, history_path=REKORDBOX_HISTORY_PATH):
     db_dict = aa.read_db_file(db_filename)
 
@@ -607,24 +626,6 @@ def export_rekordbox_xml(
             adder.add_playlist_for_files(
                 et_filter_folder, get_key_name(key), matching_files
             )
-
-    def get_bpm_and_range_list():
-        # create tuples of (bpm, bpm_range) and sort them
-        bpm_and_range = [(0, 0)]
-        # low 5
-        for bpm in range(80, 116, 5):
-            bpm_and_range.append((bpm, 5))
-        # middle 4
-        for bpm in range(118, 133, 2):
-            bpm_and_range.append((bpm, 4))
-        # high 5
-        for bpm in range(135, 161, 5):
-            bpm_and_range.append((bpm, 5))
-        # new broad
-        for bpm in range(120, 141, 5):
-            bpm_and_range.append((bpm, 10))
-        bpm_and_range.sort()
-        return bpm_and_range
 
     def add_bpm_playlists(et_filter_folder, files):
         bpm_and_range = get_bpm_and_range_list()
