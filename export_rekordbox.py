@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 2
+VERSION = 3
 
 LISTS_PLAYLISTS = False
 
@@ -30,10 +30,10 @@ def get_bpm_and_range_list():
     for bpm in range(118, 133, 2):
         bpm_and_range.append((bpm, 4))
     # high 5
-    for bpm in range(135, 161, 5):
+    for bpm in range(135, 141, 5):
         bpm_and_range.append((bpm, 5))
-    # new broad
-    for bpm in range(120, 141, 5):
+    # The fat 10s
+    for bpm in range(120, 161, 5):
         bpm_and_range.append((bpm, 10))
     bpm_and_range.sort()
     return bpm_and_range
