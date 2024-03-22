@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 4
+VERSION = 5
 
 LISTS_PLAYLISTS = False
 
@@ -707,8 +707,9 @@ def export_rekordbox_xml(
     ######
     # Start adding things
 
-    # et_all_folder = add_folder(et_version_node, "All")
-    add_all(et_version_node)
+    # All is in a folder because if it's higher level, the order gets messed up later relative to other folders
+    et_all_folder = add_folder(et_version_node, "All")
+    add_all(et_all_folder)
 
     et_top_folder = add_folder(et_version_node, "Top")
     add_top(et_top_folder)
