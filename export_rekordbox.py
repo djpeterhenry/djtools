@@ -9,7 +9,7 @@ import random
 import ableton_aid as aa
 from tag import Tag
 
-VERSION = 5
+VERSION = 1
 
 LISTS_PLAYLISTS = False
 
@@ -17,7 +17,7 @@ REKORDBOX_SAMPLE_PATH = u"/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = u"/Users/peter/Music/PioneerDJ/LocalSamples"
 REKORDBOX_HISTORY_PATH = u"/Users/peter/Documents/rekordbox_history"
 
-NEW_OLD_YEARS = 7
+NEW_OLD_YEARS = 20
 
 
 def get_bpm_and_range_list():
@@ -518,14 +518,17 @@ def export_rekordbox_xml(
             if tag.value in record["tags"]:
                 suffixes.append("[#{}]".format(tag.value.lower()))
 
-        # These amounts of days make a file "old" by number of days.
-        for old_index, old_days in enumerate((180,365,365*2,365*4)):
-            last_ts = aa.get_alc_or_last_ts(record)
+        # timestamp filtering
+        for old_index, old_days in enumerate((90,180,365,365*2,365*4,365*6)):
+            active_ts = aa.get_alc_or_last_ts(record)
+            new_ts = aa.get_alc_ts(record)
             old_ts = aa.get_past_ts(aa.get_span_days(old_days))
-            if last_ts < old_ts:
-                suffixes.append("[#o{}]".format(old_index+1))
+            if active_ts > old_ts:
+                suffixes.append("[#a{}]".format(old_index+1))
             else:
-                suffixes.append("[#n{}]".format(old_index+1))    
+                suffixes.append("[#o{}]".format(old_index+1))
+            if new_ts > old_ts:
+                suffixes.append("[#n{}]".format(old_index+1))
 
         # Put camelot key (7A) in the tag
         cam_key = aa.get_camelot_key(record["key"])
@@ -608,6 +611,8 @@ def export_rekordbox_xml(
     et_version_node = add_folder(et_root_node, "V{:02}".format(VERSION))
     ###### ^
 
+
+    # This becomes irrelevant when you set NEW_OLD_YEARS large like you do!
     new_files, old_files = aa.generate_recent_and_old(
         files_with_id, db_dict, NEW_OLD_YEARS
     )
@@ -671,7 +676,7 @@ def export_rekordbox_xml(
         adder.add_playlist_for_files(parent, "New", aa.generate_alc(new_files, db_dict))
 
         # Old Songs!
-        adder.add_playlist_for_files(parent, "Old", aa.generate_alc(old_files, db_dict))
+        #adder.add_playlist_for_files(parent, "Old", aa.generate_alc(old_files, db_dict))
 
         # All ordered by play
         adder.add_playlist_for_files(parent, "Top", aa.generate_num(files, db_dict))
