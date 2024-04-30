@@ -432,13 +432,19 @@ def get_files_from_pairs(pairs):
     return [file for _, file in pairs]
 
 
-def get_past_ts(years):
+def get_span_days(days):
     H = 60 * 60
     D = 24 * H
-    Y = 356 * D
-    SPAN = Y * years
+    return D * days
+
+
+def get_span_years(years):
+    return get_span_days(365 * years)
+
+
+def get_past_ts(span):
     now = time.time()
-    return now - SPAN
+    return now - span
 
 
 def add_ts(record, ts):
@@ -555,7 +561,7 @@ def generate_num(valid_alc_files, db_dict, ts_after=None):
 
 
 def generate_recent_and_old(files, db_dict, years):
-    past_ts = get_past_ts(years)
+    past_ts = get_past_ts(get_span_years(years))
     date_file = generate_date_plus_alc_pairs(files, db_dict)
     recent = [f for ts, f in date_file if ts >= past_ts]
     old = [f for ts, f in date_file if ts < past_ts]

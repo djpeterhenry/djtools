@@ -518,6 +518,15 @@ def export_rekordbox_xml(
             if tag.value in record["tags"]:
                 suffixes.append("[#{}]".format(tag.value.lower()))
 
+        # These amounts of days make a file "old" by number of days.
+        for old_index, old_days in enumerate((180,365,365*2,365*4)):
+            last_ts = aa.get_alc_or_last_ts(record)
+            old_ts = aa.get_past_ts(aa.get_span_days(old_days))
+            if last_ts < old_ts:
+                suffixes.append("[#o{}]".format(old_index+1))
+            else:
+                suffixes.append("[#n{}]".format(old_index+1))    
+
         # Put camelot key (7A) in the tag
         cam_key = aa.get_camelot_key(record["key"])
         if cam_key is not None:
@@ -525,16 +534,16 @@ def export_rekordbox_xml(
             # [7=A]
             cam_num = int(cam_key[:-1])
             cam_ab = cam_key[-1:]
-            suffixes.append("[{}={}]".format(cam_num, cam_ab))
+            suffixes.append("[#{}={}]".format(cam_num, cam_ab))
             # [7-A][6-A]
             cam_num_minus = aa.get_relative_camelot_key(cam_num, -1)
             suffixes.append(
-                "[{}-{}][{}-{}]".format(cam_num, cam_ab, cam_num_minus, cam_ab)
+                "[#{}-{}][#{}-{}]".format(cam_num, cam_ab, cam_num_minus, cam_ab)
             )
             # [7+A][6+A][8+A]
             cam_num_plus = aa.get_relative_camelot_key(cam_num, 1)
             suffixes.append(
-                "[{}+{}][{}+{}][{}+{}]".format(
+                "[#{}+{}][#{}+{}][#{}+{}]".format(
                     cam_num, cam_ab, cam_num_minus, cam_ab, cam_num_plus, cam_ab
                 )
             )
