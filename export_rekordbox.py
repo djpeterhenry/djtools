@@ -549,7 +549,7 @@ def export_rekordbox_xml(
             )
 
         if suffixes:
-            spaces = " " * 10
+            spaces = " " * (100-len(track))
             track = "{}{}{}".format(track, spaces, " ".join(suffixes))
 
         # Evidently getting these as unicode is important for some
