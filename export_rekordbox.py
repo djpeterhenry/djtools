@@ -514,11 +514,9 @@ def export_rekordbox_xml(
         # Accumulate suffixes for tags and keys
         suffixes = []
 
-        if aa.is_vocal(record):
-            suffixes.append("[Vocal]")
-
-        if Tag.GOOD_TAG.value in record["tags"]:
-            suffixes.append("[Good]")
+        for tag in [Tag.VOCAL_TAG, Tag.GOOD_TAG, Tag.JAZZ]:
+            if tag.value in record["tags"]:
+                suffixes.append("[#{}]".format(tag.value.lower()))
 
         # Put camelot key (7A) in the tag
         cam_key = aa.get_camelot_key(record["key"])
