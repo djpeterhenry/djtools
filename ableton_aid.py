@@ -2,6 +2,10 @@
 # Created on May 14, 2009
 from __future__ import print_function
 
+# Mack input be raw_input on python2
+try: input = raw_input
+except NameError: pass
+
 import sys
 import os
 import cPickle
@@ -57,7 +61,7 @@ def is_valid(filepath):
 
 
 def get_int(prompt_string):
-    ui = raw_input(prompt_string)
+    ui = input(prompt_string)
     try:
         return int(ui)
     except ValueError:
@@ -748,7 +752,7 @@ def action_add(args):
             # print (db_dict[filename])
             continue
 
-        ui = raw_input("BPM: ")
+        ui = input("BPM: ")
         try:
             bpm = int(ui)
         except ValueError:
@@ -771,7 +775,7 @@ def action_edit(args):
     if db_dict.has_key(args.edit_filename):
         record = db_dict[args.edit_filename]
         bpm = record["bpm"]
-    ui = raw_input("BPM [%s]: " % bpm)
+    ui = input("BPM [%s]: " % bpm)
     if ui:
         try:
             bpm = int(ui)
