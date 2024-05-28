@@ -1,6 +1,8 @@
 # This was old functionality that I shouldn't have to support
 # Keeping for reference for a while.
 
+MP3_SAMPLE_PATH = u"/Volumes/music/mp3_samples/"
+
 def action_export_mp3_samples(args):
     db_dict = read_db_file(args.db_filename)
     files = get_ableton_files()

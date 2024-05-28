@@ -57,8 +57,6 @@ OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 # When I moved to SF
 SF_TS = get_ts_for(2015, 7, 1)
 
-MP3_SAMPLE_PATH = u"/Volumes/music/mp3_samples/"
-
 LISTS_FOLDER = "/Users/peter/github/djpeterhenry.github.io/lists"
 
 COLLECTION_FOLDER = "/Users/peter/github/djpeterhenry.github.io/collection"
@@ -980,9 +978,6 @@ def action_export_rekordbox_xml(args):
         rekordbox_filename=args.rekordbox_filename,
         sample_root_path=args.sample_root_path,
     )
-
-
-
 
 
 def action_test_lists(args):
