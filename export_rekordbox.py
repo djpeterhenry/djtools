@@ -221,7 +221,7 @@ def get_beat_grid_markers(filename, clip):
     warp_markers = clip["warp_markers"]
 
     first_bpm = None
-    for warp_index in xrange(len(warp_markers) - 1):
+    for warp_index in range(len(warp_markers) - 1):
         this_marker = warp_markers[warp_index]
         this_beat_time = this_marker["beat_time"]
         this_sec_time = this_marker["sec_time"]
@@ -624,7 +624,7 @@ def export_rekordbox_xml(
 
     # Was used for CDJ
     def add_key_playlists(et_filter_folder, bpm=None, bpm_range=None):
-        for key in xrange(1, 13):
+        for key in range(1, 13):
             # (key, key+1)
             keys = [key, aa.get_relative_camelot_key(key, 1)]
             matching_files = get_filtered_files(
