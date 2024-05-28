@@ -519,16 +519,16 @@ def export_rekordbox_xml(
                 suffixes.append("[#{}]".format(tag.value.lower()))
 
         # timestamp filtering
-        for old_index, old_days in enumerate((90,180,365,365*2,365*4,365*6)):
+        for old_index, old_days in enumerate((90, 180, 365, 365 * 2, 365 * 4, 365 * 6)):
             active_ts = aa.get_alc_or_last_ts(record)
             new_ts = aa.get_alc_ts(record)
             old_ts = aa.get_past_ts(aa.get_span_days(old_days))
             if active_ts > old_ts:
-                suffixes.append("[#a{}]".format(old_index+1))
+                suffixes.append("[#a{}]".format(old_index + 1))
             else:
-                suffixes.append("[#o{}]".format(old_index+1))
+                suffixes.append("[#o{}]".format(old_index + 1))
             if new_ts > old_ts:
-                suffixes.append("[#n{}]".format(old_index+1))
+                suffixes.append("[#n{}]".format(old_index + 1))
 
         # Put camelot key (7A) in the tag
         cam_key = aa.get_camelot_key(record["key"])
@@ -552,7 +552,7 @@ def export_rekordbox_xml(
             )
 
         if suffixes:
-            spaces = " " * (100-len(track))
+            spaces = " " * (100 - len(track))
             track = "{}{}{}".format(track, spaces, " ".join(suffixes))
 
         # Evidently getting these as unicode is important for some
@@ -610,7 +610,6 @@ def export_rekordbox_xml(
     # version playlist as root
     et_version_node = add_folder(et_root_node, "V{:02}".format(VERSION))
     ###### ^
-
 
     # This becomes irrelevant when you set NEW_OLD_YEARS large like you do!
     new_files, old_files = aa.generate_recent_and_old(
@@ -676,7 +675,7 @@ def export_rekordbox_xml(
         adder.add_playlist_for_files(parent, "New", aa.generate_alc(new_files, db_dict))
 
         # Old Songs!
-        #adder.add_playlist_for_files(parent, "Old", aa.generate_alc(old_files, db_dict))
+        # adder.add_playlist_for_files(parent, "Old", aa.generate_alc(old_files, db_dict))
 
         # All ordered by play
         adder.add_playlist_for_files(parent, "Top", aa.generate_num(files, db_dict))
