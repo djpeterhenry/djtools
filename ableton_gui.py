@@ -2,25 +2,17 @@
 
 from __future__ import print_function
 
-# dup import:
+# Figure out which these actually are
 from Tkinter import *
-import sys
+
 import os
 import os.path
-import glob
-import stat
-import shutil
 import argparse
-import re
 import random
 import subprocess
-import tkSimpleDialog
 import tkMessageBox
 import time
 import atexit
-import datetime
-import codecs
-from itertools import groupby
 
 import ableton_aid as aa
 from tag import Tag
@@ -54,7 +46,7 @@ class App:
             raise RuntimeError("Locked: {}".format(LOCK_FILEPATH))
         open(LOCK_FILEPATH, "a").close()
 
-        #### 
+        ####
         # Constants
 
         SEARCH_WIDTH = 10
@@ -68,7 +60,7 @@ class App:
         listbox_height = 14
 
         # other dimensions
-        
+
         init_bpm_range = 3
 
         # font (you dream of 'consolas')
