@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from Tkinter import *
 
 import os
@@ -58,7 +60,7 @@ class ListsSelector:
         # debug print (useful for copying too)
         if self.song_list:
             for s in self.song_list:
-                print s
+                print(s)
 
     def get_song_list(self, db_dict):
         if not self.song_list:

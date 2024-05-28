@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from Tkinter import *
 
 
@@ -41,7 +43,7 @@ class EntryText:
         self.entry.pack(side=LEFT)
 
     def update(self):
-        print "update"
+        print("update")
         self.update_int()
         self.update_fun()
 
