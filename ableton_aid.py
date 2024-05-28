@@ -3,8 +3,10 @@
 from __future__ import print_function
 
 # Mack input be raw_input on python2
-try: input = raw_input
-except NameError: pass
+try:
+    input = raw_input
+except NameError:
+    pass
 
 import sys
 import os
@@ -726,7 +728,7 @@ def get_song_in_db(s, db_dict):
 
 
 def get_list_from_file(filename, db_dict):
-    p_timestamp = re.compile(ur"\[[\d:]+\] (.*)")
+    p_timestamp = re.compile(r"\[[\d:]+\] (.*)")
     with open(filename) as f:
         song_list = [song.strip() for song in f.readlines()]
         display_and_file = []
@@ -1024,8 +1026,8 @@ def action_test_lists(args):
 
 def update_with_rekordbox_history(db_dict, history_filename):
     # get date from filename
-    p_filename = re.compile(ur"HISTORY (\d+)-(\d+)-(\d+)\.txt")
-    p_filename_paren = re.compile(ur"HISTORY (\d+)-(\d+)-(\d+) \((\d+)\)\.txt")
+    p_filename = re.compile(r"HISTORY (\d+)-(\d+)-(\d+)\.txt")
+    p_filename_paren = re.compile(r"HISTORY (\d+)-(\d+)-(\d+) \((\d+)\)\.txt")
     m_filename = p_filename.match(os.path.basename(history_filename))
     m_filename_paren = p_filename_paren.match(os.path.basename(history_filename))
     if m_filename_paren:
@@ -1053,7 +1055,7 @@ def update_with_rekordbox_history(db_dict, history_filename):
 
     with codecs.open(history_filename, encoding="utf-16le") as h:
         for index, line in enumerate(h.readlines()[1:]):
-            p_line = re.compile(ur"\d+\t(.*)\t([^\[]*) \[.*$")
+            p_line = re.compile(r"\d+\t(.*)\t([^\[]*) \[.*$")
             m = p_line.match(line)
             if m:
                 stamp_song(db_dict, date_ts, index, m.group(1), m.group(2))
@@ -1091,9 +1093,9 @@ def action_cue_to_tracklist(args):
     tracks = []
     track = Track()
     # assume [key] on all tracks?
-    p_title = re.compile(ur'\tTITLE "(.*) \[')
-    p_performer = re.compile(ur'\tPERFORMER "(.*)"')
-    p_index = re.compile(ur"\tINDEX 01 (.*)")
+    p_title = re.compile(r'\tTITLE "(.*) \[')
+    p_performer = re.compile(r'\tPERFORMER "(.*)"')
+    p_index = re.compile(r"\tINDEX 01 (.*)")
     with open(args.cue_filename) as f:
         for line in f.readlines():
             m_title = p_title.search(line)
