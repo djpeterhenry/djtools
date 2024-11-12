@@ -684,7 +684,14 @@ def export_rekordbox_xml(
         adder.add_playlist_for_files(
             parent,
             "Top (SF)",
-            aa.generate_num(files, db_dict, aa.SF_TS),
+            aa.generate_num(files, db_dict, aa.get_ts_for(2015, 7, 1)),
+        )
+
+        # All ordered by plays for the last 4 years
+        adder.add_playlist_for_files(
+            parent,
+            "Top (Last 4 Years)",
+            aa.generate_num(files, db_dict, aa.get_past_ts(aa.get_span_years(4))),
         )
 
         # Active list

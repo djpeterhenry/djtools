@@ -54,9 +54,6 @@ def get_ts_for(year, month, day):
 # I totally forget how I made that all work, but it seems to.
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
-# When I moved to SF
-SF_TS = get_ts_for(2015, 7, 1)
-
 LISTS_FOLDER = "/Users/peter/github/djpeterhenry.github.io/lists"
 
 COLLECTION_FOLDER = "/Users/peter/github/djpeterhenry.github.io/collection"
@@ -123,17 +120,27 @@ def read_db_file(db_filename):
 
 
 def write_db_file(db_filename, db_dict):
-    # very first thing make a backup
-    for x in xrange(int(1e6)):
-        backup_file = "aa_db.{:03}.txt".format(x)
-        if os.path.exists(backup_file):
-            continue
-        break
-    try:
-        shutil.copyfile(db_filename, backup_file)
-        print("created: {}".format(backup_file))
-    except:
-        print("failed backup: {} -> {}".format(db_filename, backup_file))
+    MAX_BACKUP = 50
+
+    def force_move(src, dst):
+        try:
+            os.remove(dst)
+        except OSError:
+            pass
+        try:
+            os.rename(src, dst)
+            # print("Renamed {} to {}".format(src, dst))
+        except OSError:
+            pass
+
+    for x in reversed(range(1, MAX_BACKUP)):
+        src = "{}.{}".format(db_filename, x)
+        dst = "{}.{}".format(db_filename, x + 1)
+        force_move(src, dst)
+
+    # use last value for "src" as our destination for the current file
+    force_move(db_filename, src)
+
     with open(db_filename, "w") as db_file:
         cPickle.dump(db_dict, db_file)
     print("Wrote: " + db_filename)
