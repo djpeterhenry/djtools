@@ -35,6 +35,7 @@ except NameError:
 # Expected pylance error: https://github.com/microsoft/pylance-release/issues/1343
 from six.moves import xrange
 
+DB_FILENAME = "aadb.txt"
 
 ABLETON_EXTENSIONS = [".alc", ".als"]
 SAMPLE_EXTENSIONS = [".mp3", ".m4a", ".wav", ".aiff", ".flac"]
@@ -100,23 +101,23 @@ def get_base_filename(filename, record):
     return result
 
 
-def read_db_file(db_filename):
+def read_db_file():
     db_dict = None
-    if os.path.exists(db_filename):
-        db_file = open(db_filename)
+    if os.path.exists(DB_FILENAME):
+        db_file = open(DB_FILENAME)
         try:
             db_dict = cPickle.load(db_file)
-            # print ("Loaded: " + db_filename)
+            # print ("Loaded: " + DB_FILENAME)
         except:
             print("Error opening pickle file...")
             sys.exit(1)
     else:
-        print("Will create new: " + db_filename)
+        print("Will create new: " + DB_FILENAME)
         db_dict = {}
     return db_dict
 
 
-def write_db_file(db_filename, db_dict):
+def write_db_file(db_dict):
     MAX_BACKUP = 50
 
     def force_move(src, dst):
@@ -131,16 +132,16 @@ def write_db_file(db_filename, db_dict):
             pass
 
     for x in reversed(range(1, MAX_BACKUP)):
-        src = "{}.{}".format(db_filename, x)
-        dst = "{}.{}".format(db_filename, x + 1)
+        src = "{}.{}".format(DB_FILENAME, x)
+        dst = "{}.{}".format(DB_FILENAME, x + 1)
         force_move(src, dst)
 
     # use last value for "src" as our destination for the current file
-    force_move(db_filename, src)
+    force_move(DB_FILENAME, src)
 
-    with open(db_filename, "w") as db_file:
+    with open(DB_FILENAME, "w") as db_file:
         cPickle.dump(db_dict, db_file)
-    print("Wrote: " + db_filename)
+    print("Wrote: " + DB_FILENAME)
 
 
 def use_for_rekordbox(record):
@@ -391,8 +392,8 @@ def reveal_file(filename):
     subprocess.call(command)
 
 
-def get_missing(db_filename):
-    db_dict = read_db_file(db_filename)
+def get_missing():
+    db_dict = read_db_file()
     alc_file_set = set(get_ableton_files())
     result = []
     for filename, _ in iter(sorted(db_dict.iteritems())):
@@ -667,11 +668,11 @@ def update_db_clips(valid_alc_files, db_dict, force_alc=False, force_als=False):
                 print("Updated clips:", f)
 
 
-def update_db_clips_safe(db_filename):
-    db_dict = read_db_file(db_filename)
+def update_db_clips_safe():
+    db_dict = read_db_file()
     valid_alc_files = get_valid_alc_files(db_dict)
     update_db_clips(valid_alc_files, db_dict)
-    write_db_file(db_filename, db_dict)
+    write_db_file(db_dict)
 
 
 def get_artist_and_track(filename):
@@ -761,7 +762,7 @@ def get_list_from_file(filename, db_dict):
 
 
 def action_add(args):
-    db_dict = read_db_file(args.db_filename)
+    db_dict = read_db_file()
     alc_files = get_ableton_files()
     for filename in alc_files:
         print(filename)
@@ -780,14 +781,14 @@ def action_add(args):
         new_record = {"bpm": bpm, "tags": [], "key": ""}
         db_dict[filename] = new_record
         print("Inserted: " + str(new_record))
-    write_db_file(args.db_filename, db_dict)
+    write_db_file(db_dict)
 
 
 def action_edit(args):
     # TODO(peter): clean up this shitty old function
     assert_exists(args.edit_filename)
     print(args.edit_filename)
-    db_dict = read_db_file(args.db_filename)
+    db_dict = read_db_file()
     bpm = None
     if db_dict.has_key(args.edit_filename):
         record = db_dict[args.edit_filename]
@@ -803,11 +804,11 @@ def action_edit(args):
     new_record["bpm"] = bpm
     db_dict[args.edit_filename] = new_record
     print("Inserted: " + str(new_record))
-    write_db_file(args.db_filename, db_dict)
+    write_db_file(db_dict)
 
 
 def action_add_missing_keys(args):
-    db_dict = read_db_file(args.db_filename)
+    db_dict = read_db_file()
     alc_file_set = set(get_ableton_files())
     for filename, record in db_dict.iteritems():
         if filename not in alc_file_set:
@@ -823,21 +824,22 @@ def action_add_missing_keys(args):
             new_record = record
             new_record["key"] = new_key
             db_dict[filename] = new_record
-            # write every time...this may take a while
-            write_db_file(args.db_filename, db_dict)
         else:
             pass
             # print ('had key:', key)
+    # Write the database only once at the end.
+    # If you ever need to batch process the whole library again (heaven forbid) change this.
+    write_db_file(db_dict)
 
 
-def action_print(args):
-    db_dict = read_db_file(args.db_filename)
+def action_print_raw(args):
+    db_dict = read_db_file()
     for filename, record in db_dict.iteritems():
         print(filename + " " + str(record))
 
 
-def action_key_frequency(args):
-    db_dict = read_db_file(args.db_filename)
+def action_print_key_frequency(args):
+    db_dict = read_db_file()
     alc_file_set = set(get_ableton_files())
     key_frequency = {}
     for filename, record in iter(sorted(db_dict.iteritems())):
@@ -862,16 +864,16 @@ def action_key_frequency(args):
 
 
 def action_rename_tag(args):
-    db_dict = read_db_file(args.db_filename)
+    db_dict = read_db_file()
     for _, record in iter(sorted(db_dict.iteritems())):
         tags = record["tags"]
         tags = [x if (x != args.tag_old) else args.tag_new for x in tags]
         record["tags"] = tags
-    write_db_file(args.db_filename, db_dict)
+    write_db_file(db_dict)
 
 
 def action_list_tags(args):
-    db_dict = read_db_file(args.db_filename)
+    db_dict = read_db_file()
     files = get_rekordbox_files(db_dict)
     tag_to_count = defaultdict(int)
     for f in files:
@@ -884,16 +886,16 @@ def action_list_tags(args):
 
 
 def action_list_missing(args):
-    missing = get_missing(args.db_filename)
+    missing = get_missing()
     for f in missing:
         print(f)
 
 
 def action_transfer_ts(args):
-    db_dict = read_db_file(args.db_filename)
+    db_dict = read_db_file()
     alc_file_set = set(get_ableton_files())
     alc_file_list = list(alc_file_set)
-    missing = get_missing(args.db_filename)
+    missing = get_missing()
     for f in missing:
         record = db_dict[f]
         ts_list = get_ts_list(record)
@@ -911,7 +913,7 @@ def action_transfer_ts(args):
         if choice is not None:
             if choice == -1:
                 del db_dict[f]
-                write_db_file(args.db_filename, db_dict)
+                write_db_file(db_dict)
             else:
                 try:
                     target = close[choice]
@@ -940,24 +942,7 @@ def action_transfer_ts(args):
                     target_record["key"] = key
                 # delete old record
                 del db_dict[f]
-                write_db_file(args.db_filename, db_dict)
-
-
-def action_export_sample_database(args):
-    db_dict = read_db_file(args.db_filename)
-    alc_file_set = set(get_ableton_files())
-    sample_db = {}
-    for filename, _ in iter(sorted(db_dict.iteritems())):
-        if filename not in alc_file_set:
-            continue
-        record = db_dict[filename]
-        sample_filepath = get_sample(record)
-        if not sample_filepath:
-            continue
-        sample_filename = os.path.basename(sample_filepath)
-        record["pretty_name"] = os.path.splitext(filename)[0]
-        sample_db[sample_filename] = record
-    write_db_file(args.sample_db_filename, sample_db)
+                write_db_file(db_dict)
 
 
 def action_print_xml(args):
@@ -976,21 +961,18 @@ def action_print_audioclips(args):
 
 
 def action_export_rekordbox_local(args):
-    export_rekordbox.export_rekordbox_xml(
-        db_filename=args.db_filename, rekordbox_filename=args.rekordbox_filename
-    )
+    export_rekordbox.export_rekordbox_xml(rekordbox_filename=args.rekordbox_filename)
 
 
 def action_export_rekordbox_xml(args):
     export_rekordbox.export_rekordbox_xml(
-        db_filename=args.db_filename,
         rekordbox_filename=args.rekordbox_filename,
         sample_root_path=args.sample_root_path,
     )
 
 
 def action_test_lists(args):
-    db_dict = read_db_file(args.db_filename)
+    db_dict = read_db_file()
     name_to_file = get_list_name_to_file(LISTS_FOLDER)
     for name, list_file in sorted(name_to_file.iteritems()):
         print("---", name)
@@ -1051,10 +1033,6 @@ def stamp_song(db_dict, date_ts, index, artist, title):
     # print ('{}:{}'.format(f, ts_to_write))
 
 
-def action_rekordbox_history(args):
-    export_rekordbox.export_rekordbox_history(args.db_filename)
-
-
 def action_cue_to_tracklist(args):
     class Track(object):
         def __init__(self):
@@ -1091,8 +1069,8 @@ def action_cue_to_tracklist(args):
             w.write("{}\n".format(str(t)))
 
 
-def generate_lists(db_filename, output_path=COLLECTION_FOLDER):
-    db_dict = read_db_file(db_filename)
+def generate_lists(output_path=COLLECTION_FOLDER):
+    db_dict = read_db_file()
     files = get_rekordbox_files(db_dict)
 
     def write_files(filename, files_to_write):
@@ -1110,11 +1088,11 @@ def generate_lists(db_filename, output_path=COLLECTION_FOLDER):
 
 
 def action_generate_lists(args):
-    generate_lists(args.db_filename, args.output_path)
+    generate_lists(args.output_path)
 
 
 def action_touch_list(args):
-    db_dict = read_db_file(args.db_filename)
+    db_dict = read_db_file()
     date_ts = get_ts_for(args.date[0], args.date[1], args.date[2])
     for counter, (_, f) in enumerate(get_list_from_file(args.list_file, db_dict)):
         if f is None:
@@ -1122,7 +1100,7 @@ def action_touch_list(args):
         record = db_dict[f]
         ts_to_add = date_ts + counter
         add_ts(record, ts_to_add)
-    write_db_file(args.db_filename, db_dict)
+    write_db_file(db_dict)
 
 
 def action_find_samples(args):
@@ -1139,7 +1117,6 @@ def action_relative_path(args):
 ###########
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("db_filename")
     subparsers = parser.add_subparsers()
 
     subparsers.add_parser("addbpm").set_defaults(func=action_add)
@@ -1148,12 +1125,6 @@ def parse_args():
     p_edit = subparsers.add_parser("edit")
     p_edit.add_argument("edit_filename")
     p_edit.set_defaults(func=action_edit)
-
-    # TODO: pick one?  print is raw, list is pretty
-    # This should match listing orders in GUI, be pretty, and be the new dump
-    subparsers.add_parser("print").set_defaults(func=action_print)
-
-    subparsers.add_parser("keyfreq").set_defaults(func=action_key_frequency)
 
     p_rename = subparsers.add_parser("rename_tag")
     p_rename.add_argument("tag_old")
@@ -1165,9 +1136,11 @@ def parse_args():
     subparsers.add_parser("list_missing").set_defaults(func=action_list_missing)
     subparsers.add_parser("transfer_ts").set_defaults(func=action_transfer_ts)
 
-    p_export = subparsers.add_parser("export_sample_db")
-    p_export.add_argument("sample_db_filename")
-    p_export.set_defaults(func=action_export_sample_database)
+    subparsers.add_parser("print_raw").set_defaults(func=action_print_raw)
+
+    subparsers.add_parser("print_key_frequency").set_defaults(
+        func=action_print_key_frequency
+    )
 
     p_xml = subparsers.add_parser("print_xml")
     p_xml.add_argument("alc_filename")
@@ -1191,9 +1164,6 @@ def parse_args():
     p_rekordbox.set_defaults(func=action_export_rekordbox_xml)
 
     subparsers.add_parser("test_lists").set_defaults(func=action_test_lists)
-
-    p_rekordbox_history = subparsers.add_parser("rekordbox_history")
-    p_rekordbox_history.set_defaults(func=action_rekordbox_history)
 
     p_cue_to_tracklist = subparsers.add_parser("cue_to_tracklist")
     p_cue_to_tracklist.add_argument("cue_filename")

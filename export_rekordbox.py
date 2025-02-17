@@ -39,28 +39,26 @@ def get_bpm_and_range_list():
     return bpm_and_range
 
 
-def export_rekordbox_history(db_filename, history_path=REKORDBOX_HISTORY_PATH):
-    db_dict = aa.read_db_file(db_filename)
+def export_rekordbox_history():
+    history_path = REKORDBOX_HISTORY_PATH
+    db_dict = aa.read_db_file()
 
     for fn in os.listdir(history_path):
         history_filepath = os.path.join(history_path, fn)
         aa.update_with_rekordbox_history(db_dict, history_filepath)
 
-    # write
-    aa.write_db_file(db_filename, db_dict)
+    aa.write_db_file(db_dict)
 
 
-def export_rekordbox_samples(
-    db_filename, sample_path, sample_key, convert_flac, always_copy
-):
-    aa.update_db_clips_safe(db_filename)
-    aa.generate_lists(db_filename)
+def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy):
+    aa.update_db_clips_safe()
+    aa.generate_lists()
 
     extensions_to_convert = [".mp4", ".m4a"]
     if convert_flac:
         extensions_to_convert.append(".flac")
 
-    db_dict = aa.read_db_file(db_filename)
+    db_dict = aa.read_db_file()
     files = aa.get_valid_alc_files(db_dict)
     for f in files:
         record = db_dict[f]
@@ -91,7 +89,7 @@ def export_rekordbox_samples(
             target = sample.encode("utf-8")
         assert aa.is_valid(target)
         record[sample_key] = target.decode("utf-8")
-    aa.write_db_file(db_filename, db_dict)
+    aa.write_db_file(db_dict)
 
 
 def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
@@ -465,25 +463,23 @@ def relative_path(path_from, path_to):
 
 
 def export_rekordbox_xml(
-    db_filename,
     rekordbox_filename,
     sample_root_path=None,
 ):
-    export_rekordbox_history(db_filename)
+    export_rekordbox_history()
 
     sample_dict = None
     if sample_root_path is not None:
         sample_dict = find_existing_samples(sample_root_path)
     else:
         export_rekordbox_samples(
-            db_filename,
             sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
             sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
             convert_flac=True,
             always_copy=True,
         )
 
-    db_dict = aa.read_db_file(db_filename)
+    db_dict = aa.read_db_file()
     files = aa.get_rekordbox_files(db_dict)
     files = aa.generate_date_plus_alc(files, db_dict)
 

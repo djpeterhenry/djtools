@@ -1,10 +1,11 @@
-# This was old functionality that I shouldn't have to support
-# Keeping for reference for a while.
+# I think the idea here was to export the entire library as MP3
+# I haven't done this in forever and I don't expect to either.
+# However it might be fun to do again at some point??
 
 MP3_SAMPLE_PATH = u"/Volumes/music/mp3_samples/"
 
 def action_export_mp3_samples(args):
-    db_dict = read_db_file(args.db_filename)
+    db_dict = read_db_file()
     files = get_ableton_files()
     for f in files:
         record = db_dict[f]
@@ -40,4 +41,4 @@ def action_export_mp3_samples(args):
         assert os.path.exists(target)
         os.utime(target, (time.time(), get_alc_ts(record)))
         record["mp3_sample"] = target.decode("utf-8")
-    write_db_file(args.db_filename, db_dict)
+    write_db_file(db_dict)

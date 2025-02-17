@@ -41,7 +41,7 @@ class App:
         # return ['bpm', 'alc', 'sample', 'date', 'date+alc', 'num', 'random']
         return ["date+alc", "num", "alc", "random"]
 
-    def __init__(self, master, db_filename, include_extra):
+    def __init__(self, master, include_extra):
         if os.path.exists(LOCK_FILEPATH):
             raise RuntimeError("Locked: {}".format(LOCK_FILEPATH))
         open(LOCK_FILEPATH, "a").close()
@@ -72,10 +72,9 @@ class App:
 
         # keep values
         self.master = master
-        self.db_filename = db_filename
 
         # core stuff
-        self.db_dict = aa.read_db_file(db_filename)
+        self.db_dict = aa.read_db_file()
         self.valid_alc_files = aa.get_valid_alc_files(self.db_dict)
         self.list_to_use = self.valid_alc_files
 
@@ -719,11 +718,9 @@ class App:
         self.update_listbox()
 
     def save_dialog(self):
-        do_save = tkMessageBox.askokcancel(
-            "Confirm Save", 'Save database "%s"?' % self.db_filename
-        )
+        do_save = tkMessageBox.askokcancel("Confirm Save", "Save database?")
         if do_save:
-            aa.write_db_file(self.db_filename, self.db_dict)
+            aa.write_db_file(self.db_dict)
 
     def command_save(self):
         return self.save_dialog()
@@ -854,7 +851,6 @@ class App:
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("db_filename")
     parser.add_argument("--always_on_top", "-t", action="store_true")
     parser.add_argument("--include_extra", "-e", action="store_true")
     return parser.parse_args()
@@ -862,7 +858,7 @@ def parse_args():
 
 def main(args):
     master = Tk()
-    app = App(master, args.db_filename, args.include_extra)
+    app = App(master, args.include_extra)
     on_top_str = "1" if args.always_on_top else "0"
     master.call("wm", "attributes", ".", "-topmost", on_top_str)
     master.mainloop()
