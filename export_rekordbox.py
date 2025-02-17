@@ -562,8 +562,8 @@ def export_rekordbox_xml(
         et_track.set("Location", sample_uri)
 
         # number of plays (now in Comments field)
-        num_plays = len(aa.get_ts_list(record))
-        et_track.set("Comments", "{:03}".format(num_plays))
+        play_count = aa.get_ts_date_count(record)
+        et_track.set("Comments", "{:03}".format(play_count))
 
         # alc
         et_track.set("DateAdded", aa.get_date_from_ts(aa.get_alc_ts(record)))

@@ -5,7 +5,6 @@ from __future__ import print_function
 import sys
 import os
 import cPickle
-import shutil
 import re
 import random
 import subprocess
@@ -17,13 +16,12 @@ import datetime
 import difflib
 from collections import defaultdict
 import argparse
-import shutil
 
 import export_rekordbox
 
 from tag import Tag
 
-# Mack input be raw_input on python2
+# Make input be raw_input on python2
 try:
     input = raw_input
 except NameError:
@@ -42,7 +40,6 @@ ABLETON_EXTENSIONS = [".alc", ".als"]
 SAMPLE_EXTENSIONS = [".mp3", ".m4a", ".wav", ".aiff", ".flac"]
 ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 
-REKORDBOX_SAMPLE_KEY = "rekordbox_sample"
 REKORDBOX_LOCAL_SAMPLE_KEY = "rekordbox_local_sample"
 
 
@@ -466,34 +463,42 @@ def get_past_ts(span):
     return now - span
 
 
-def add_ts(record, ts):
-    try:
-        current = record["ts_list"]
-        if ts not in current:
-            current.append(ts)
-    except KeyError:
-        record["ts_list"] = [ts]
-
-
 def get_ts_list(record):
-    try:
-        ts_list = record["ts_list"]
-    except:
-        ts_list = []
-    return ts_list
+    return sorted(record.get("ts_list", []))
 
 
-def get_ts_list_after(record, ts):
+def add_ts(record, ts):
     ts_list = get_ts_list(record)
-    return [x for x in ts_list if x >= ts]
+    if ts not in ts_list:
+        ts_list.append(ts)
+    record["ts_list"] = ts_list
 
 
 def get_last_ts(record):
     ts_list = get_ts_list(record)
     try:
-        return sorted(ts_list)[-1]
+        return ts_list[-1]
     except IndexError:
         return 0
+
+
+def get_ts_list_date_limited(record):
+    """Return a list of the timestamps, but only the latest one for each day (date)"""
+    ts_list = get_ts_list(record)
+    date_map = {}
+    for ts in ts_list:
+        date = datetime.date.fromtimestamp(ts)
+        previous_ts = date_map.get(date, 0)
+        if ts > previous_ts:
+            date_map[date] = ts
+    return sorted(date_map.values())
+
+
+def get_ts_date_count(record, ts_after=None):
+    ts_list = get_ts_list_date_limited(record)
+    if ts_after:
+        ts_list = [x for x in ts_list if x >= ts_after]
+    return len(ts_list)
 
 
 def get_alc_ts(record):
@@ -552,10 +557,7 @@ def generate_num_alc_pairs(valid_alc_files, db_dict, ts_after):
     num_file_tuples = []
     for file in valid_alc_files:
         record = db_dict[file]
-        ts_list = (
-            get_ts_list_after(record, ts_after) if ts_after else get_ts_list(record)
-        )
-        num = len(ts_list)
+        num = get_ts_date_count(record, ts_after)
         num_file_tuples.append((num, file))
     num_file_tuples.sort(reverse=True)
     return num_file_tuples

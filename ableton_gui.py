@@ -434,13 +434,13 @@ class App:
                 continue
 
             bpm, tag_list, key = (record["bpm"], record["tags"], record["key"])
-            ts_list = aa.get_ts_list(record)
+            play_count = aa.get_ts_date_count(record)
 
             keep = True
 
-            if min_plays > 0 and len(ts_list) < min_plays:
+            if min_plays > 0 and play_count < min_plays:
                 keep = False
-            if max_plays > 0 and len(ts_list) >= max_plays:
+            if max_plays > 0 and play_count >= max_plays:
                 keep = False
 
             # vocal affects others
@@ -516,7 +516,7 @@ class App:
             cool_filename = " %03d|%s|%02d| %s" % (
                 bpm,
                 key_display,
-                min(99, len(ts_list)),
+                min(99, play_count),
                 file,
             )
             filename_pairs_list.append((cool_filename, filename))
