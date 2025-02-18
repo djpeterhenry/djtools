@@ -72,7 +72,7 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
         # convert
         if sample_ext.lower() in extensions_to_convert:
             target = aa.get_export_sample_path(f, ".aiff", sample_path)
-            if not aa.is_valid(target):
+            if not os.path.isfile(target):
                 cmd = ["ffmpeg", "-i", sample, target]
                 subprocess.check_call(cmd)
         # copy
@@ -87,7 +87,7 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
                 # print ('Copied {} to {}'.format(sample, target))
         else:
             target = sample.encode("utf-8")
-        assert aa.is_valid(target)
+        assert os.path.isfile(target)
         record[sample_key] = target.decode("utf-8")
     aa.write_db_file(db_dict)
 
@@ -439,45 +439,15 @@ class PlaylistAdder(object):
         set_playlist_count(et_list)
 
 
-def find_existing_samples(root_path):
-    SAMPLE_EXTENSIONS = set((".mp3", ".flac", ".mp4", ".aiff", ".wav"))
-    # map from filename to path
-    result = {}
-    for dir_name, _, file_list in os.walk(root_path):
-        for f in file_list:
-            if os.path.splitext(f)[1] in SAMPLE_EXTENSIONS:
-                result[f] = os.path.join(dir_name, f)
-    return result
-
-
-def relative_path(path_from, path_to):
-    """
-    path_from: /Volumes/rekordbox.xml
-    path_to: /Volumes/somthing/stupid.mp3
-    """
-    path_from_full = os.path.dirname(os.path.abspath(path_from))
-    path_to_full = os.path.abspath(path_to)
-    common_prefix = os.path.commonprefix((path_from_full, path_to_full))
-    to_rel = os.path.relpath(path_to_full, common_prefix)
-    return to_rel
-
-
-def export_rekordbox_xml(
-    rekordbox_filename,
-    sample_root_path=None,
-):
+def export_rekordbox_xml(rekordbox_filename):
     export_rekordbox_history()
 
-    sample_dict = None
-    if sample_root_path is not None:
-        sample_dict = find_existing_samples(sample_root_path)
-    else:
-        export_rekordbox_samples(
-            sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
-            sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
-            convert_flac=True,
-            always_copy=True,
-        )
+    export_rekordbox_samples(
+        sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
+        sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
+        convert_flac=True,
+        always_copy=True,
+    )
 
     db_dict = aa.read_db_file()
     files = aa.get_rekordbox_files(db_dict)
@@ -498,8 +468,6 @@ def export_rekordbox_xml(
         sample = aa.get_existing_rekordbox_sample(
             record, sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY
         )
-        if sample_dict is not None:
-            sample = sample_dict.get(os.path.basename(sample))
         if sample is None:
             print("Error getting sample for {}".format(f))
             continue

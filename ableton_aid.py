@@ -13,27 +13,16 @@ import codecs
 import xml.etree.ElementTree as ET
 import time
 import datetime
-import difflib
 from collections import defaultdict
-import argparse
-
-import export_rekordbox
 
 from tag import Tag
 
-# Make input be raw_input on python2
-try:
-    input = raw_input
-except NameError:
-    pass
 
 try:
     UNICODE_EXISTS = bool(type(unicode))
 except NameError:
     from six import u as unicode
 
-# Expected pylance error: https://github.com/microsoft/pylance-release/issues/1343
-from six.moves import xrange
 
 DB_FILENAME = "aadb.txt"
 
@@ -59,11 +48,13 @@ COLLECTION_FOLDER = "/Users/peter/github/djpeterhenry.github.io/collection"
 ACTIVE_LIST = "/Users/peter/github/djtools/active_list.txt"
 
 
-def is_valid(filepath):
-    return os.path.exists(filepath) or os.path.islink(filepath)
-
-
 def get_int(prompt_string):
+    # Make input be raw_input on python2
+    try:
+        input = raw_input
+    except NameError:
+        pass
+
     ui = input(prompt_string)
     try:
         return int(ui)
@@ -644,11 +635,6 @@ def matches_bpm_filter(filter_bpm, bpm_range, bpm):
     return False
 
 
-def assert_exists(filename):
-    if not is_valid(filename):
-        raise ValueError("File does not exist: {}".format(filename))
-
-
 def update_db_clips(valid_alc_files, db_dict, force_alc=False, force_als=False):
     print("update_db_clips")
     for f in valid_alc_files:
@@ -710,7 +696,7 @@ def get_export_sample_path(f, sample_ext, target_path):
 def get_existing_rekordbox_sample(record, sample_key):
     try:
         sample = record[sample_key]
-        if is_valid(sample):
+        if os.path.isfile(sample):
             return sample
     except:
         pass
@@ -755,230 +741,6 @@ def get_list_from_file(filename, db_dict):
             t = get_song_in_db(s, db_dict)
             display_and_file.append(t)
         return display_and_file
-
-
-####################################
-# actions start here
-
-
-def action_add(args):
-    db_dict = read_db_file()
-    alc_files = get_ableton_files()
-    for filename in alc_files:
-        print(filename)
-        if db_dict.has_key(filename):
-            # print (db_dict[filename])
-            continue
-
-        ui = input("BPM: ")
-        try:
-            bpm = int(ui)
-        except ValueError:
-            print("Stopping and saving...")
-            break
-
-        # record the result in the database
-        new_record = {"bpm": bpm, "tags": [], "key": ""}
-        db_dict[filename] = new_record
-        print("Inserted: " + str(new_record))
-    write_db_file(db_dict)
-
-
-def action_edit(args):
-    # TODO(peter): clean up this shitty old function
-    assert_exists(args.edit_filename)
-    print(args.edit_filename)
-    db_dict = read_db_file()
-    bpm = None
-    if db_dict.has_key(args.edit_filename):
-        record = db_dict[args.edit_filename]
-        bpm = record["bpm"]
-    ui = input("BPM [%s]: " % bpm)
-    if ui:
-        try:
-            bpm = int(ui)
-        except ValueError:
-            print("Aborting single edit")
-            sys.exit(1)
-    new_record = record
-    new_record["bpm"] = bpm
-    db_dict[args.edit_filename] = new_record
-    print("Inserted: " + str(new_record))
-    write_db_file(db_dict)
-
-
-def action_add_missing_keys(args):
-    db_dict = read_db_file()
-    alc_file_set = set(get_ableton_files())
-    for filename, record in db_dict.iteritems():
-        if filename not in alc_file_set:
-            continue
-        # print ('considering:', filename)
-        key = record["key"]
-        if len(key) == 0 or key[-1] == "?":
-            filepath = os.path.abspath(filename)
-            new_key = get_key_from_alc(filepath)
-            print("new_key: " + new_key)
-            if new_key is None:
-                continue
-            new_record = record
-            new_record["key"] = new_key
-            db_dict[filename] = new_record
-        else:
-            pass
-            # print ('had key:', key)
-    # Write the database only once at the end.
-    # If you ever need to batch process the whole library again (heaven forbid) change this.
-    write_db_file(db_dict)
-
-
-def action_print_raw(args):
-    db_dict = read_db_file()
-    for filename, record in db_dict.iteritems():
-        print(filename + " " + str(record))
-
-
-def action_print_key_frequency(args):
-    db_dict = read_db_file()
-    alc_file_set = set(get_ableton_files())
-    key_frequency = {}
-    for filename, record in iter(sorted(db_dict.iteritems())):
-        if filename not in alc_file_set:
-            continue
-        key = record["key"]
-        cam_key = get_camelot_key(key)
-        if cam_key is None:
-            continue
-        key_key = reverse_camelot_dict[cam_key]
-        if key_key not in key_frequency:
-            key_frequency[key_key] = 0
-        key_frequency[key_key] = key_frequency[key_key] + 1
-    # sort by count
-    by_count = []
-    for key, count in iter(sorted(key_frequency.iteritems())):
-        by_count.append((count, key))
-    by_count.sort()
-    by_count.reverse()
-    for count, key in by_count:
-        print("%4s - %3s: %d" % (key, get_camelot_key(key), count))
-
-
-def action_rename_tag(args):
-    db_dict = read_db_file()
-    for _, record in iter(sorted(db_dict.iteritems())):
-        tags = record["tags"]
-        tags = [x if (x != args.tag_old) else args.tag_new for x in tags]
-        record["tags"] = tags
-    write_db_file(db_dict)
-
-
-def action_list_tags(args):
-    db_dict = read_db_file()
-    files = get_rekordbox_files(db_dict)
-    tag_to_count = defaultdict(int)
-    for f in files:
-        record = db_dict[f]
-        tags = record["tags"]
-        for tag in tags:
-            tag_to_count[tag] += 1
-    for tag, count in tag_to_count.iteritems():
-        print(tag, ":", count)
-
-
-def action_list_missing(args):
-    missing = get_missing()
-    for f in missing:
-        print(f)
-
-
-def action_transfer_ts(args):
-    db_dict = read_db_file()
-    alc_file_set = set(get_ableton_files())
-    alc_file_list = list(alc_file_set)
-    missing = get_missing()
-    for f in missing:
-        record = db_dict[f]
-        ts_list = get_ts_list(record)
-        ts_len = len(ts_list)
-        if ts_len == 0:
-            continue
-
-        print(f, "plays:", ts_len)
-
-        close = difflib.get_close_matches(f, alc_file_list, cutoff=0.3, n=10)
-        for index, other in enumerate(close):
-            print(index, ":", other)
-
-        choice = get_int("Choice (-1 explicit delete):")
-        if choice is not None:
-            if choice == -1:
-                del db_dict[f]
-                write_db_file(db_dict)
-            else:
-                try:
-                    target = close[choice]
-                except KeyError:
-                    continue
-                target_record = db_dict[target]
-                target_ts_list = get_ts_list(target_record)
-                both_ts_list = sorted(list(set(target_ts_list + ts_list)))
-                target_record["ts_list"] = both_ts_list
-                print(
-                    "ts_list:",
-                    ts_list,
-                    "target_ts_list:",
-                    target_ts_list,
-                    "both_ts_list:",
-                    both_ts_list,
-                )
-                # also transfer tags
-                for old_tag in record["tags"]:
-                    if old_tag not in target_record["tags"]:
-                        target_record["tags"].append(old_tag)
-                # also transfer key if not already present
-                old_key = target_record.get("key")
-                key = record.get("key")
-                if key and not old_key:
-                    target_record["key"] = key
-                # delete old record
-                del db_dict[f]
-                write_db_file(db_dict)
-
-
-def action_print_xml(args):
-    assert_exists(args.alc_filename)
-    print(alc_to_str(args.alc_filename))
-
-
-def action_print_audioclip(args):
-    assert_exists(args.alc_filename)
-    print(get_audioclip_from_alc(args.alc_filename))
-
-
-def action_print_audioclips(args):
-    assert_exists(args.als_filename)
-    print(get_audioclips_from_als(args.als_filename))
-
-
-def action_export_rekordbox_local(args):
-    export_rekordbox.export_rekordbox_xml(rekordbox_filename=args.rekordbox_filename)
-
-
-def action_export_rekordbox_xml(args):
-    export_rekordbox.export_rekordbox_xml(
-        rekordbox_filename=args.rekordbox_filename,
-        sample_root_path=args.sample_root_path,
-    )
-
-
-def action_test_lists(args):
-    db_dict = read_db_file()
-    name_to_file = get_list_name_to_file(LISTS_FOLDER)
-    for name, list_file in sorted(name_to_file.iteritems()):
-        print("---", name)
-        for display, f in get_list_from_file(list_file, db_dict):
-            if f is None:
-                print(display)
 
 
 def update_with_rekordbox_history(db_dict, history_filename):
@@ -1033,42 +795,6 @@ def stamp_song(db_dict, date_ts, index, artist, title):
     # print ('{}:{}'.format(f, ts_to_write))
 
 
-def action_cue_to_tracklist(args):
-    class Track(object):
-        def __init__(self):
-            self.artist = None
-            self.song = None
-            self.index = None
-
-        def __str__(self):
-            return "[{}] {} - {}".format(self.index, self.artist, self.song)
-
-    tracks = []
-    track = Track()
-    # assume [key] on all tracks?
-    p_title = re.compile(r'\tTITLE "(.*) \[')
-    p_performer = re.compile(r'\tPERFORMER "(.*)"')
-    p_index = re.compile(r"\tINDEX 01 (.*)")
-    with open(args.cue_filename) as f:
-        for line in f.readlines():
-            m_title = p_title.search(line)
-            m_performer = p_performer.search(line)
-            m_index = p_index.search(line)
-            if m_title:
-                track.song = m_title.group(1).strip()
-            elif m_performer:
-                track.artist = m_performer.group(1).strip()
-            elif m_index:
-                track.index = m_index.group(1).strip()
-                tracks.append(track)
-                track = Track()
-    # for t in tracks:
-    #     print (t)
-    with open(args.tracklist_filename, "w") as w:
-        for t in tracks:
-            w.write("{}\n".format(str(t)))
-
-
 def generate_lists(output_path=COLLECTION_FOLDER):
     db_dict = read_db_file()
     files = get_rekordbox_files(db_dict)
@@ -1085,115 +811,3 @@ def generate_lists(output_path=COLLECTION_FOLDER):
     write_files("num.txt", generate_num(files, db_dict))
     sets = generate_sets(files, db_dict)
     write_files("sets.txt", sets)
-
-
-def action_generate_lists(args):
-    generate_lists(args.output_path)
-
-
-def action_touch_list(args):
-    db_dict = read_db_file()
-    date_ts = get_ts_for(args.date[0], args.date[1], args.date[2])
-    for counter, (_, f) in enumerate(get_list_from_file(args.list_file, db_dict)):
-        if f is None:
-            continue
-        record = db_dict[f]
-        ts_to_add = date_ts + counter
-        add_ts(record, ts_to_add)
-    write_db_file(db_dict)
-
-
-def action_find_samples(args):
-    sample_dict = export_rekordbox.find_existing_samples(args.root_path)
-    print(sample_dict)
-    print("num_samples: {}".format(len(sample_dict)))
-
-
-def action_relative_path(args):
-    result = export_rekordbox.relative_path(args.path_from, args.path_to)
-    print(result)
-
-
-###########
-def parse_args():
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers()
-
-    subparsers.add_parser("addbpm").set_defaults(func=action_add)
-    subparsers.add_parser("addkey").set_defaults(func=action_add_missing_keys)
-
-    p_edit = subparsers.add_parser("edit")
-    p_edit.add_argument("edit_filename")
-    p_edit.set_defaults(func=action_edit)
-
-    p_rename = subparsers.add_parser("rename_tag")
-    p_rename.add_argument("tag_old")
-    p_rename.add_argument("tag_new")
-    p_rename.set_defaults(func=action_rename_tag)
-
-    subparsers.add_parser("list_tags").set_defaults(func=action_list_tags)
-
-    subparsers.add_parser("list_missing").set_defaults(func=action_list_missing)
-    subparsers.add_parser("transfer_ts").set_defaults(func=action_transfer_ts)
-
-    subparsers.add_parser("print_raw").set_defaults(func=action_print_raw)
-
-    subparsers.add_parser("print_key_frequency").set_defaults(
-        func=action_print_key_frequency
-    )
-
-    p_xml = subparsers.add_parser("print_xml")
-    p_xml.add_argument("alc_filename")
-    p_xml.set_defaults(func=action_print_xml)
-
-    p_audioclip = subparsers.add_parser("print_audioclip")
-    p_audioclip.add_argument("alc_filename")
-    p_audioclip.set_defaults(func=action_print_audioclip)
-
-    p_audioclip = subparsers.add_parser("print_audioclips")
-    p_audioclip.add_argument("als_filename")
-    p_audioclip.set_defaults(func=action_print_audioclips)
-
-    p_rekordbox = subparsers.add_parser("export_rekordbox_local")
-    p_rekordbox.add_argument("rekordbox_filename")
-    p_rekordbox.set_defaults(func=action_export_rekordbox_local)
-
-    p_rekordbox = subparsers.add_parser("export_rekordbox_xml")
-    p_rekordbox.add_argument("rekordbox_filename")
-    p_rekordbox.add_argument("sample_root_path")
-    p_rekordbox.set_defaults(func=action_export_rekordbox_xml)
-
-    subparsers.add_parser("test_lists").set_defaults(func=action_test_lists)
-
-    p_cue_to_tracklist = subparsers.add_parser("cue_to_tracklist")
-    p_cue_to_tracklist.add_argument("cue_filename")
-    p_cue_to_tracklist.add_argument("tracklist_filename")
-    p_cue_to_tracklist.set_defaults(func=action_cue_to_tracklist)
-
-    p_rekordbox_history = subparsers.add_parser("generate_lists")
-    p_rekordbox_history.add_argument("output_path")
-    p_rekordbox_history.set_defaults(func=action_generate_lists)
-
-    p_touch_list = subparsers.add_parser("touch_list")
-    p_touch_list.add_argument("list_file")
-    p_touch_list.add_argument("date", type=int, nargs=3)
-    p_touch_list.set_defaults(func=action_touch_list)
-
-    p_find_samples = subparsers.add_parser("find_samples")
-    p_find_samples.add_argument("root_path")
-    p_find_samples.set_defaults(func=action_find_samples)
-
-    p_relative_path = subparsers.add_parser("relative_path")
-    p_relative_path.add_argument("path_from")
-    p_relative_path.add_argument("path_to")
-    p_relative_path.set_defaults(func=action_relative_path)
-
-    return parser.parse_args()
-
-
-def main(args):
-    args.func(args)
-
-
-if __name__ == "__main__":
-    main(parse_args())
