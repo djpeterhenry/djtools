@@ -405,7 +405,7 @@ def get_missing():
     db_dict = read_db_file()
     alc_file_set = set(get_ableton_files())
     result = []
-    for filename, _ in iter(sorted(db_dict.iteritems())):
+    for filename, _ in sorted(db_dict.iteritems()):
         if filename not in alc_file_set:
             result.append(filename)
     return result
