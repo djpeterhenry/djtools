@@ -809,5 +809,4 @@ def generate_lists(output_path=COLLECTION_FOLDER):
     write_files("add.txt", generate_alc(files, db_dict))
     write_files("name.txt", files)
     write_files("num.txt", generate_num(files, db_dict))
-    sets = generate_sets(files, db_dict)
-    write_files("sets.txt", sets)
+    write_files("sets.txt", generate_sets(files, db_dict))
