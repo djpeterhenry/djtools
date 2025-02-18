@@ -40,8 +40,9 @@ def get_ts_for(year, month, day):
     return time.mktime(datetime.date(year, month, day).timetuple())
 
 
-# We use "old_alc_ts" for files with "alc_ts" before this datetime.
-# I totally forget how I made that all work, but it seems to.
+# To fetch the ts for alc ordering we use "old_alc_ts" for files with "alc_ts" before this datetime.
+# These files have a newer "alc_ts" with regard to clip updates that we want to ignore for ordering.
+# You don't want to lose the information in "old_alc_ts" even though it doesn't match the .alc file timestamps.
 OLD_ALC_TS_CUTOFF = get_ts_for(2016, 6, 12)
 
 LISTS_FOLDER = "/Users/peter/github/djpeterhenry.github.io/lists"

@@ -166,7 +166,9 @@ def print_records():
 def print_pretty(output_file):
     db_dict = aa.read_db_file()
     with open(output_file, "w") as f:
-        pprint.pprint(db_dict, f)
+        for filename, record in sorted(db_dict.iteritems()):
+            pprint.pprint(filename, f)
+            pprint.pprint(record, f)
 
 
 def print_key_frequency():
@@ -264,6 +266,10 @@ def generate_lists(output_path):
 
 
 def fix_alc_ts():
+    # Ran this success and leaving just as a reference
+    # THIS WAS BRUTAL AND WRONG
+    # old_alc_ts is the one you want for ordering and display if it exists.
+    # There are files edited right before old_alc_ts that you don't want to update "alc_ts" for.
     db_dict = aa.read_db_file()
     # Update alc_ts
     for filename, record in db_dict.iteritems():
@@ -271,6 +277,27 @@ def fix_alc_ts():
         if not alc_ts > 0:
             print(filename)
         record["alc_ts"] = alc_ts
+        try:
+            del record["old_alc_ts"]
+        except KeyError:
+            pass
+    aa.write_db_file(db_dict)
+
+
+def remove_old_fields():
+    # Ran this success and leaving just as a reference
+    db_dict = aa.read_db_file()
+
+    def del_field(record, field):
+        try:
+            del record[field]
+        except KeyError:
+            pass
+
+    for filename, record in db_dict.iteritems():
+        del_field(record, "mp3_sample")
+        del_field(record, "rekordbox_sample")
+    aa.write_db_file(db_dict)
 
 
 if __name__ == "__main__":
@@ -294,7 +321,7 @@ if __name__ == "__main__":
             test_lists,
             cue_to_tracklist,
             generate_lists,
-            fix_alc_ts,
+            remove_old_fields,
         ]
     )
     parser.dispatch()
