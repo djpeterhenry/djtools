@@ -108,7 +108,7 @@ def read_db_file():
     return db_dict
 
 
-def write_db_file(db_dict):
+def rotate_file(filename):
     MAX_BACKUP = 50
 
     def force_move(src, dst):
@@ -118,18 +118,21 @@ def write_db_file(db_dict):
             pass
         try:
             os.rename(src, dst)
-            # print("Renamed {} to {}".format(src, dst))
         except OSError:
             pass
 
     for x in reversed(range(1, MAX_BACKUP)):
-        src = "{}.{}".format(DB_FILENAME, x)
-        dst = "{}.{}".format(DB_FILENAME, x + 1)
+        src = "{}.{}".format(filename, x)
+        dst = "{}.{}".format(filename, x + 1)
         force_move(src, dst)
 
-    # use last value for "src" as our destination for the current file
-    force_move(DB_FILENAME, src)
+    # use last value for "src" as the backup target for filename
+    force_move(filename, src)
+    assert not os.path.isfile(filename)
 
+
+def write_db_file(db_dict):
+    rotate_file(DB_FILENAME)
     with open(DB_FILENAME, "w") as db_file:
         cPickle.dump(db_dict, db_file)
     print("Wrote: " + DB_FILENAME)
