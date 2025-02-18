@@ -167,6 +167,7 @@ def print_pretty(output_file):
     db_dict = aa.read_db_file()
     with open(output_file, "w") as f:
         for filename, record in sorted(db_dict.iteritems()):
+            print("---", file=f)
             pprint.pprint(filename, f)
             pprint.pprint(record, f)
 
