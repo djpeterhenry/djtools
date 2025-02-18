@@ -322,7 +322,6 @@ if __name__ == "__main__":
             test_lists,
             cue_to_tracklist,
             generate_lists,
-            remove_old_fields,
         ]
     )
     parser.dispatch()
