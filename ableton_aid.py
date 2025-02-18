@@ -14,6 +14,8 @@ import xml.etree.ElementTree as ET
 import time
 import datetime
 from collections import defaultdict
+import json
+import io
 
 from tag import Tag
 
@@ -25,6 +27,7 @@ except NameError:
 
 
 DB_FILENAME = "aadb.txt"
+DATABASE_JSON = "database.json"
 
 ABLETON_EXTENSIONS = [".alc", ".als"]
 SAMPLE_EXTENSIONS = [".mp3", ".m4a", ".wav", ".aiff", ".flac"]
@@ -136,6 +139,18 @@ def write_db_file(db_dict):
     with open(DB_FILENAME, "w") as db_file:
         cPickle.dump(db_dict, db_file)
     print("Wrote: " + DB_FILENAME)
+
+
+def write_db_json(db_dict):
+    # TODO(peter): Fix unicode in db_dict so this actually works
+    rotate_file(DATABASE_JSON)
+    # https://stackoverflow.com/questions/18337407/saving-utf-8-texts-with-json-dumps-as-utf-8-not-as-a-u-escape-sequence
+    # The above link has good info about python2 as well, including bugs in json module
+    # However this currently breaks, you have gross mix of unicode and encoded values in db_dict
+    with io.open(DATABASE_JSON, "w", encoding="utf8") as json_file:
+        data = json.dumps(db_dict, ensure_ascii=False, indent=4)
+        # unicode(data) auto-decodes data to unicode if str
+        json_file.write(unicode(data))
 
 
 def use_for_rekordbox(record):
