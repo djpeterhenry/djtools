@@ -10,6 +10,7 @@ import sys
 from collections import defaultdict
 import difflib
 import re
+import pprint
 
 
 def add_bpms():
@@ -79,7 +80,7 @@ def edit_bpm(edit_filename):
 
 def rename_tag(tag_old, tag_new):
     db_dict = aa.read_db_file()
-    for _, record in iter(sorted(db_dict.iteritems())):
+    for _, record in sorted(db_dict.iteritems()):
         tags = record["tags"]
         tags = [x if (x != tag_old) else tag_new for x in tags]
         record["tags"] = tags
@@ -114,9 +115,6 @@ def transfer_missing():
         record = db_dict[f]
         ts_list = aa.get_ts_list(record)
         ts_len = len(ts_list)
-        if ts_len == 0:
-            continue
-
         print(f, "plays:", ts_len)
 
         close = difflib.get_close_matches(f, alc_file_list, cutoff=0.3, n=10)
@@ -165,11 +163,17 @@ def print_records():
         print(filename + " " + str(record))
 
 
+def print_pretty(output_file):
+    db_dict = aa.read_db_file()
+    with open(output_file, "w") as f:
+        pprint.pprint(db_dict, f)
+
+
 def print_key_frequency():
     db_dict = aa.read_db_file()
     alc_file_set = set(aa.get_ableton_files())
     key_frequency = {}
-    for filename, record in iter(sorted(db_dict.iteritems())):
+    for filename, record in sorted(db_dict.iteritems()):
         if filename not in alc_file_set:
             continue
         key = record["key"]
@@ -182,7 +186,7 @@ def print_key_frequency():
         key_frequency[key_key] = key_frequency[key_key] + 1
     # sort by count
     by_count = []
-    for key, count in iter(sorted(key_frequency.iteritems())):
+    for key, count in sorted(key_frequency.iteritems()):
         by_count.append((count, key))
     by_count.sort()
     by_count.reverse()
@@ -259,6 +263,16 @@ def generate_lists(output_path):
     aa.generate_lists(output_path)
 
 
+def fix_alc_ts():
+    db_dict = aa.read_db_file()
+    # Update alc_ts
+    for filename, record in db_dict.iteritems():
+        alc_ts = aa.get_alc_ts(record)
+        if not alc_ts > 0:
+            print(filename)
+        record["alc_ts"] = alc_ts
+
+
 if __name__ == "__main__":
     parser = argh.ArghParser()
     parser.add_commands(
@@ -271,6 +285,7 @@ if __name__ == "__main__":
             list_missing,
             transfer_missing,
             print_records,
+            print_pretty,
             print_key_frequency,
             print_xml,
             print_audioclip,
@@ -279,6 +294,7 @@ if __name__ == "__main__":
             test_lists,
             cue_to_tracklist,
             generate_lists,
+            fix_alc_ts,
         ]
     )
     parser.dispatch()
