@@ -267,10 +267,13 @@ def generate_lists(output_path):
 
 
 def fix_alc_ts():
-    # Ran this success and leaving just as a reference
     # THIS WAS BRUTAL AND WRONG
     # old_alc_ts is the one you want for ordering and display if it exists.
-    # There are files edited right before old_alc_ts that you don't want to update "alc_ts" for.
+    # There are alc files with a modified timestamp before old_alc_ts.
+    # The value of "alc_ts" always matches the file timestamp, but may be newer than
+    # the corresponding "old_alc_ts".
+    # So for ordering, use "get_alc_ts",
+    # but for checking whether clips need to be updated, check the "alc_ts" record value directly.
     db_dict = aa.read_db_file()
     # Update alc_ts
     for filename, record in db_dict.iteritems():
@@ -286,7 +289,7 @@ def fix_alc_ts():
 
 
 def remove_old_fields():
-    # Ran this success and leaving just as a reference
+    # Ran this successfully and leaving just as a reference
     db_dict = aa.read_db_file()
 
     def del_field(record, field):
@@ -299,6 +302,35 @@ def remove_old_fields():
         del_field(record, "mp3_sample")
         del_field(record, "rekordbox_sample")
     aa.write_db_file(db_dict)
+
+
+def test_unicode_clip_samples():
+    db_dict = aa.read_db_file()
+    for filename, record in db_dict.iteritems():
+        # Confirm what I've observed that no filenames are currently unicode type
+        assert type(filename) != unicode
+        # if not all(0 <= ord(c) <= 127 for c in filename):
+        #     print(filename)
+        assert filename.decode("utf-8")
+
+        continue
+
+        clip_sample = record["clip"]["sample"]
+        if type(clip_sample) == unicode:
+            print(clip_sample)
+        else:
+            if not all(0 <= ord(c) <= 127 for c in clip_sample):
+                print(clip_sample)
+        assert os.path.isfile(clip_sample)
+
+
+def test_get_audioclip_from_alc():
+    """A slow test to make sure I can still parse all alc files"""
+    db_dict = aa.read_db_file()
+    for filename, record in db_dict.iteritems():
+        assert os.path.isfile(filename)
+        print(filename)
+        print(aa.get_audioclip_from_alc(filename))
 
 
 if __name__ == "__main__":
@@ -322,6 +354,8 @@ if __name__ == "__main__":
             test_lists,
             cue_to_tracklist,
             generate_lists,
+            test_unicode_clip_samples,
+            test_get_audioclip_from_alc,
         ]
     )
     parser.dispatch()

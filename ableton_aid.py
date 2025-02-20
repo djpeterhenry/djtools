@@ -189,6 +189,8 @@ def alc_to_str(alc_filename):
 
 
 def alc_to_xml(alc_filename):
+    # Something I saw on google:
+    # XML carries it's own encoding information (defaulting to UTF-8) and ElementTree does the work for you.
     return ET.fromstring(alc_to_str(alc_filename))
 
 
@@ -244,6 +246,10 @@ def get_audioclips_from_als(als_filename):
 
 
 def get_sample_from_xml(xml_root):
+    """
+    This function was written specifically for keyfinding before I stored clip info.
+    It could probably be removed now and replaced with "clip" functionality.
+    """
     sample_refs = xml_root.findall(".//SampleRef")
     # right now, just the first
     sample_ref = sample_refs[0]
@@ -266,6 +272,14 @@ def get_sample_from_xml(xml_root):
 
 
 def get_sample_from_alc_file(alc_filename):
+    """
+    I guess this also returns the file itself it it happens to be a "sample" already.
+    I think this was an attempt to generalize key finding to both .alc files and audio files.
+    I think this is only used in get_key_from_alc.
+
+    I also think this is the only function that uses "get_sample_from_xml".
+    This is confusing, should consistently use "clip"->"sample" instead I think.
+    """
     if os.path.splitext(alc_filename)[1] in SAMPLE_EXTENSIONS:
         return alc_filename
     return get_sample_from_xml(alc_to_xml(alc_filename))
@@ -692,10 +706,14 @@ def get_artist_and_track(filename):
 
 
 def get_sample_value_as_unicode(sample):
-    """This works around some of my samples being unicode and some not.  Kind of"""
-    # Ok, this seems to work to get all the samples to unicode...
-    # Still not sure why some samples (Take Over Control Acapella) are unicode
+    """
+    Some of the clip "sample" are unicode and some are not.
+    This is an old function from before I understood everything.
+    This is a way to get a string value as a unicode value.
+    """
     if not isinstance(sample, unicode):
+        # TODO(peter): I think just unicode(sample) would also work, but this is more explicit.
+        # I've actually confirmed that the non-unicode sample values are all pure ascii.
         sample = sample.decode("utf-8")
     return sample
 
@@ -708,6 +726,9 @@ def get_sample_unicode(record):
 
 
 def get_export_sample_path(f, sample_ext, target_path):
+    # TODO(peter): This is a place I currently assume that f is an alc filename str encoded as utf-8
+    # This happens to be the case in my current db_dict, but I would like to change it to be unicode.
+    # Also why the hell do I re-encode the result?  I want it as encoded utf-8 for some reason??
     f_base, _ = os.path.splitext(f.decode("utf-8"))
     return os.path.join(target_path, f_base + sample_ext).encode("utf-8")
 
