@@ -27,6 +27,7 @@ except NameError:
 
 
 DB_FILENAME = "aadb.txt"
+DB_FILENAME = "aadb_unicode.txt"
 DATABASE_JSON = "database.json"
 
 ABLETON_EXTENSIONS = [".alc", ".als"]
@@ -725,12 +726,16 @@ def get_sample_unicode(record):
     return get_sample_value_as_unicode(sample)
 
 
-def get_export_sample_path(f, sample_ext, target_path):
+def get_export_sample_path_kill(f, sample_ext, target_path):
     # TODO(peter): This is a place I currently assume that f is an alc filename str encoded as utf-8
     # This happens to be the case in my current db_dict, but I would like to change it to be unicode.
     # Also why the hell do I re-encode the result?  I want it as encoded utf-8 for some reason??
     f_base, _ = os.path.splitext(f.decode("utf-8"))
     return os.path.join(target_path, f_base + sample_ext).encode("utf-8")
+
+def get_export_sample_path(f, sample_ext, target_path):
+    f_base, _ = os.path.splitext(f)
+    return os.path.join(target_path, f_base + sample_ext)
 
 
 def get_existing_rekordbox_sample(record, sample_key):
@@ -804,17 +809,12 @@ def update_with_rekordbox_history(db_dict, history_filename):
     date_ts = get_ts_for(year, month, day)
     if paren_num is not None:
         date_ts += 1000.0 * paren_num
-    # fun print of those later:
-    if False:
-        for f, record in db_dict.iteritems():
-            last_ts = get_alc_or_last_ts(record)
-            if last_ts > date_ts:
-                print(f)
-        return
 
-    with codecs.open(history_filename, encoding="utf-16le") as h:
+    # TODO(peter): This still doesn't correctly match unicde filenames.
+    # with codecs.open(history_filename, encoding="utf-16le") as h:
+    with io.open(history_filename, encoding="utf-16le") as h:
         for index, line in enumerate(h.readlines()[1:]):
-            p_line = re.compile(r"\d+\t(.*)\t([^\[]*) \[.*$")
+            p_line = re.compile(ur"\d+\t(.*)\t([^\[]*) \[.*$", re.UNICODE)
             m = p_line.match(line)
             if m:
                 stamp_song(db_dict, date_ts, index, m.group(1), m.group(2))

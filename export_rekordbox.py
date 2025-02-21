@@ -72,12 +72,14 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
         # convert
         if sample_ext.lower() in extensions_to_convert:
             target = aa.get_export_sample_path(f, ".aiff", sample_path)
+            assert os.path.isfile(target)
             if not os.path.isfile(target):
                 cmd = ["ffmpeg", "-i", sample, target]
                 subprocess.check_call(cmd)
         # copy
         elif always_copy:
             target = aa.get_export_sample_path(f, sample_ext, sample_path)
+            assert os.path.isfile(target)
             # remove existing target link to fix
             if os.path.islink(target):
                 os.unlink(target)
@@ -86,9 +88,12 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
                 # TODO: fix this so it handles unicode.  Some recent Ame track broke it.
                 # print ('Copied {} to {}'.format(sample, target))
         else:
-            target = sample.encode("utf-8")
+            # TODO(peter): I haven't tested this path yet
+            # target = sample.encode("utf-8")
+            target = sample
         assert os.path.isfile(target)
         record[sample_key] = target.decode("utf-8")
+    assert False
     aa.write_db_file(db_dict)
 
 

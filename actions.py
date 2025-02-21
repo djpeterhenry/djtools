@@ -304,17 +304,16 @@ def remove_old_fields():
     aa.write_db_file(db_dict)
 
 
+def test_filenames():
+    db_dict = aa.read_db_file()
+    for filename, record in db_dict.iteritems():
+        assert type(filename) == unicode
+        assert os.path.isfile(filename)
+
+
 def test_unicode_clip_samples():
     db_dict = aa.read_db_file()
     for filename, record in db_dict.iteritems():
-        # Confirm what I've observed that no filenames are currently unicode type
-        assert type(filename) != unicode
-        # if not all(0 <= ord(c) <= 127 for c in filename):
-        #     print(filename)
-        assert filename.decode("utf-8")
-
-        continue
-
         clip_sample = record["clip"]["sample"]
         if type(clip_sample) == unicode:
             print(clip_sample)
@@ -331,6 +330,17 @@ def test_get_audioclip_from_alc():
         assert os.path.isfile(filename)
         print(filename)
         print(aa.get_audioclip_from_alc(filename))
+
+
+def convert_keys_to_unicode():
+    db_dict = aa.read_db_file()
+    new_dict = {}
+    for filename, record in db_dict.iteritems():
+        assert os.path.isfile(filename)
+        new_key = filename.decode("utf-8")
+        new_dict[new_key] = record
+        print(repr(new_key))
+    aa.write_db_file(new_dict)
 
 
 if __name__ == "__main__":
@@ -354,8 +364,10 @@ if __name__ == "__main__":
             test_lists,
             cue_to_tracklist,
             generate_lists,
+            test_filenames,
             test_unicode_clip_samples,
             test_get_audioclip_from_alc,
+            convert_keys_to_unicode,
         ]
     )
     parser.dispatch()
