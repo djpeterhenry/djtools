@@ -71,17 +71,14 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
         # convert
         if sample_ext.lower() in extensions_to_convert:
             target = aa.get_export_sample_path(f, ".aiff", sample_path)
-            # Unicode testing: should already exist
-            assert os.path.isfile(target)
+            assert type(target) == unicode
             if not os.path.isfile(target):
                 cmd = ["ffmpeg", "-i", sample, target]
                 subprocess.check_call(cmd)
         # copy
         elif always_copy:
             target = aa.get_export_sample_path(f, sample_ext, sample_path)
-            # Unicode testing: should already exist
-            assert os.path.isfile(target)
-
+            assert type(target) == unicode
             # At one point had symlinks.  This was a one-time fix:
             if os.path.islink(target):
                 os.unlink(target)
