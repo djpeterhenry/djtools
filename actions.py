@@ -304,6 +304,7 @@ def remove_old_fields():
     aa.write_db_file(db_dict)
 
 
+# todo: kill eventually
 def test_filenames():
     db_dict = aa.read_db_file()
     for filename, record in db_dict.iteritems():
@@ -311,6 +312,7 @@ def test_filenames():
         assert os.path.isfile(filename)
 
 
+# todo: kill eventually
 def test_unicode_clip_samples():
     db_dict = aa.read_db_file()
     for filename, record in db_dict.iteritems():
@@ -323,15 +325,8 @@ def test_unicode_clip_samples():
         assert os.path.isfile(clip_sample)
 
 
-def test_get_audioclip_from_alc():
-    db_dict = aa.read_db_file()
-    for filename, record in db_dict.iteritems():
-        assert os.path.isfile(filename)
-        print(filename)
-        print(aa.get_audioclip_from_alc(filename))
-
-# I ran this successfully
 def convert_keys_to_unicode():
+    # I ran this successfully
     db_dict = aa.read_db_file()
     new_dict = {}
     for filename, record in db_dict.iteritems():
@@ -340,6 +335,16 @@ def convert_keys_to_unicode():
         new_dict[new_key] = record
         print(repr(new_key))
     aa.write_db_file(new_dict)
+
+
+def test_db_json():
+    db_dict = aa.read_db_file()
+    # write as json
+    aa.write_db_json(db_dict)
+    db_dict_json = aa.read_db_json()
+
+    # They produce exactly the same in-memory db_dict!
+    assert db_dict == db_dict_json
 
 
 if __name__ == "__main__":
@@ -365,8 +370,7 @@ if __name__ == "__main__":
             generate_lists,
             test_filenames,
             test_unicode_clip_samples,
-            test_get_audioclip_from_alc,
-            convert_keys_to_unicode,
+            test_db_json,
         ]
     )
     parser.dispatch()

@@ -144,14 +144,17 @@ def write_db_file(db_dict):
 
 
 def write_db_json(db_dict):
-    # TODO(peter): Fix unicode in db_dict so this actually works
     rotate_file(DATABASE_JSON)
-    # https://stackoverflow.com/questions/18337407/saving-utf-8-texts-with-json-dumps-as-utf-8-not-as-a-u-escape-sequence
-    # The above link has good info about python2 as well, including bugs in json module
-    # However this currently breaks, you have gross mix of unicode and encoded values in db_dict
     with io.open(DATABASE_JSON, "w", encoding="utf8") as json_file:
         data = json.dumps(db_dict, ensure_ascii=False, indent=4)
         json_file.write(unicode(data))
+
+
+def read_db_json():
+    assert os.path.isfile(DATABASE_JSON)
+    with io.open(DATABASE_JSON, "r", encoding="utf8") as json_file:
+        db_dict = json.load(json_file)
+    return db_dict
 
 
 def use_for_rekordbox(record):
@@ -828,7 +831,9 @@ def generate_lists(output_path=COLLECTION_FOLDER):
     files = get_rekordbox_files(db_dict)
 
     def write_files(filename, alc_filenames_to_write):
-        with io.open(os.path.join(output_path, filename), "w", encoding="utf-8") as outfile:
+        with io.open(
+            os.path.join(output_path, filename), "w", encoding="utf-8"
+        ) as outfile:
             for f in alc_filenames_to_write:
                 f_print = os.path.splitext(f)[0]
                 outfile.write(u"{}\n".format(f_print))
