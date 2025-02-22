@@ -9,13 +9,13 @@ import re
 import random
 import subprocess
 import gzip
-import codecs
 import xml.etree.ElementTree as ET
 import time
 import datetime
 from collections import defaultdict
 import json
 import io
+import string
 
 from tag import Tag
 
@@ -73,7 +73,7 @@ def is_ableton_file(filename):
 
 
 def get_ableton_files():
-    walk_result = os.walk(".")
+    walk_result = os.walk(u".")
     result = []
     for dirpath, _, filenames in walk_result:
         for f in filenames:
@@ -81,7 +81,7 @@ def get_ableton_files():
             filename = os.path.join(dirpath, f)[2:]
             if is_ableton_file(filename):
                 result.append(filename)
-    return sorted(result, key=str.lower)
+    return sorted(result, key=string.lower)
 
 
 def get_base_filename(filename, record):
@@ -151,7 +151,6 @@ def write_db_json(db_dict):
     # However this currently breaks, you have gross mix of unicode and encoded values in db_dict
     with io.open(DATABASE_JSON, "w", encoding="utf8") as json_file:
         data = json.dumps(db_dict, ensure_ascii=False, indent=4)
-        # unicode(data) auto-decodes data to unicode if str
         json_file.write(unicode(data))
 
 
@@ -696,10 +695,10 @@ def update_db_clips_safe():
 
 
 def get_artist_and_track(filename):
-    delimiter = " - "
+    delimiter = u" - "
     split = os.path.splitext(filename)[0].split(delimiter)
     if len(split) == 1:
-        return "", split[0]
+        return u"", split[0]
     elif len(split) == 2:
         return split[0], split[1]
     else:
@@ -725,13 +724,6 @@ def get_sample_unicode(record):
     sample = record["clip"]["sample"]
     return get_sample_value_as_unicode(sample)
 
-
-def get_export_sample_path_kill(f, sample_ext, target_path):
-    # TODO(peter): This is a place I currently assume that f is an alc filename str encoded as utf-8
-    # This happens to be the case in my current db_dict, but I would like to change it to be unicode.
-    # Also why the hell do I re-encode the result?  I want it as encoded utf-8 for some reason??
-    f_base, _ = os.path.splitext(f.decode("utf-8"))
-    return os.path.join(target_path, f_base + sample_ext).encode("utf-8")
 
 def get_export_sample_path(f, sample_ext, target_path):
     f_base, _ = os.path.splitext(f)
@@ -810,11 +802,9 @@ def update_with_rekordbox_history(db_dict, history_filename):
     if paren_num is not None:
         date_ts += 1000.0 * paren_num
 
-    # TODO(peter): This still doesn't correctly match unicde filenames.
-    # with codecs.open(history_filename, encoding="utf-16le") as h:
+    p_line = re.compile(r"\d+\t(.*)\t([^\[]*) \[.*$")
     with io.open(history_filename, encoding="utf-16le") as h:
         for index, line in enumerate(h.readlines()[1:]):
-            p_line = re.compile(ur"\d+\t(.*)\t([^\[]*) \[.*$", re.UNICODE)
             m = p_line.match(line)
             if m:
                 stamp_song(db_dict, date_ts, index, m.group(1), m.group(2))
@@ -823,27 +813,25 @@ def update_with_rekordbox_history(db_dict, history_filename):
 
 
 def stamp_song(db_dict, date_ts, index, artist, title):
-    s = u"{} - {}".format(artist.strip(), title.strip())
-    s_str = s.encode("utf8")
-    _, f = get_song_in_db(s_str, db_dict)
+    alc_filename = u"{} - {}".format(artist.strip(), title.strip())
+    _, f = get_song_in_db(alc_filename, db_dict)
     if f is None:
-        print("Failure to stamp: {}".format(s_str))
+        print("Failure to stamp: {}".format(alc_filename))
         return
     record = db_dict[f]
     ts_to_write = date_ts + index
     add_ts(record, ts_to_write)
-    # print ('{}:{}'.format(f, ts_to_write))
 
 
 def generate_lists(output_path=COLLECTION_FOLDER):
     db_dict = read_db_file()
     files = get_rekordbox_files(db_dict)
 
-    def write_files(filename, files_to_write):
-        with open(os.path.join(output_path, filename), "w") as outfile:
-            for f in files_to_write:
+    def write_files(filename, alc_filenames_to_write):
+        with io.open(os.path.join(output_path, filename), "w", encoding="utf-8") as outfile:
+            for f in alc_filenames_to_write:
                 f_print = os.path.splitext(f)[0]
-                outfile.write("{}\n".format(f_print))
+                outfile.write(u"{}\n".format(f_print))
 
     write_files("date_or_add.txt", generate_date_plus_alc(files, db_dict))
     write_files("add.txt", generate_alc(files, db_dict))

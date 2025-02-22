@@ -324,14 +324,13 @@ def test_unicode_clip_samples():
 
 
 def test_get_audioclip_from_alc():
-    """A slow test to make sure I can still parse all alc files"""
     db_dict = aa.read_db_file()
     for filename, record in db_dict.iteritems():
         assert os.path.isfile(filename)
         print(filename)
         print(aa.get_audioclip_from_alc(filename))
 
-
+# I ran this successfully
 def convert_keys_to_unicode():
     db_dict = aa.read_db_file()
     new_dict = {}

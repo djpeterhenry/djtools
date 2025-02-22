@@ -39,12 +39,11 @@ def get_bpm_and_range_list():
     return bpm_and_range
 
 
-def export_rekordbox_history():
-    history_path = REKORDBOX_HISTORY_PATH
+def stamp_from_all_recordbox_history_files():
     db_dict = aa.read_db_file()
 
-    for fn in os.listdir(history_path):
-        history_filepath = os.path.join(history_path, fn)
+    for fn in os.listdir(REKORDBOX_HISTORY_PATH):
+        history_filepath = os.path.join(REKORDBOX_HISTORY_PATH, fn)
         aa.update_with_rekordbox_history(db_dict, history_filepath)
 
     aa.write_db_file(db_dict)
@@ -72,6 +71,7 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
         # convert
         if sample_ext.lower() in extensions_to_convert:
             target = aa.get_export_sample_path(f, ".aiff", sample_path)
+            # Unicode testing: should already exist
             assert os.path.isfile(target)
             if not os.path.isfile(target):
                 cmd = ["ffmpeg", "-i", sample, target]
@@ -79,21 +79,20 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
         # copy
         elif always_copy:
             target = aa.get_export_sample_path(f, sample_ext, sample_path)
+            # Unicode testing: should already exist
             assert os.path.isfile(target)
-            # remove existing target link to fix
+
+            # At one point had symlinks.  This was a one-time fix:
             if os.path.islink(target):
                 os.unlink(target)
             if not os.path.exists(target):
                 shutil.copy(sample, target)
-                # TODO: fix this so it handles unicode.  Some recent Ame track broke it.
-                # print ('Copied {} to {}'.format(sample, target))
         else:
-            # TODO(peter): I haven't tested this path yet
-            # target = sample.encode("utf-8")
+            # TODO(peter): I haven't tested this path recently since I always_copy
+            assert False, "Untested code path"
             target = sample
         assert os.path.isfile(target)
-        record[sample_key] = target.decode("utf-8")
-    assert False
+        record[sample_key] = target
     aa.write_db_file(db_dict)
 
 
@@ -445,7 +444,7 @@ class PlaylistAdder(object):
 
 
 def export_rekordbox_xml(rekordbox_filename):
-    export_rekordbox_history()
+    stamp_from_all_recordbox_history_files()
 
     export_rekordbox_samples(
         sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
@@ -457,7 +456,7 @@ def export_rekordbox_xml(rekordbox_filename):
     db_dict = aa.read_db_file()
     files = aa.get_rekordbox_files(db_dict)
     files = aa.generate_date_plus_alc(files, db_dict)
-
+    
     # testing filter
     # files = [f for f in files if 'Everything But The Girl - Lullaby Of Clubland.als' in f]
     # print (files)
@@ -479,6 +478,8 @@ def export_rekordbox_xml(rekordbox_filename):
 
         et_track = ET.SubElement(et_collection, "TRACK")
         artist, track = aa.get_artist_and_track(f)
+        assert type(artist) == unicode
+        assert type(track) == unicode
 
         # Accumulate suffixes for tags and keys
         suffixes = []
@@ -521,13 +522,18 @@ def export_rekordbox_xml(rekordbox_filename):
             )
 
         if suffixes:
-            spaces = " " * (100 - len(track))
-            track = "{}{}{}".format(track, spaces, " ".join(suffixes))
+            spaces = u" " * (100 - len(track))
+            track = u"{}{}{}".format(track, spaces, u" ".join(suffixes))
+
+        assert type(artist) == unicode
+        assert type(track) == unicode
 
         # Evidently getting these as unicode is important for some
-        et_track.set("Name", track.decode("utf-8"))
-        et_track.set("Artist", artist.decode("utf-8"))
-        sample_uri = "file://localhost" + os.path.abspath(sample)
+        et_track.set("Name", track)
+        et_track.set("Artist", artist)
+        sample_abspath = os.path.abspath(sample)
+        assert os.path.isfile(sample_abspath)
+        sample_uri = "file://localhost" + sample_abspath
         et_track.set("Location", sample_uri)
 
         # number of plays (now in Comments field)
