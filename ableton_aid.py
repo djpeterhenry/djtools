@@ -26,7 +26,7 @@ except NameError:
     from six import u as unicode
 
 
-DB_FILENAME = "aadb.txt"
+# DB_FILENAME = "aadb.txt"
 DB_FILENAME = "aadb_unicode.txt"
 DATABASE_JSON = "database.json"
 
