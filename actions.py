@@ -339,7 +339,6 @@ def convert_keys_to_unicode():
 
 def test_db_json():
     db_dict = aa.read_db_file()
-    # write as json
     aa.write_db_json(db_dict)
     db_dict_json = aa.read_db_json()
 
