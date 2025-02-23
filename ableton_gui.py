@@ -1,16 +1,21 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import print_function
 
-# Figure out which these actually are
-from Tkinter import *
+import sys
+if sys.version_info[0] == 3:
+    from tkinter import *
+    # This is particularly gross, fix at some point:
+    import tkinter.messagebox as tkMessageBox
+else:
+    from Tkinter import *
+    import tkMessageBox
 
 import os
 import os.path
 import argparse
 import random
 import subprocess
-import tkMessageBox
 import time
 import atexit
 
