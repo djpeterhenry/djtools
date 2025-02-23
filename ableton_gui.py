@@ -1,15 +1,20 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.11
 
 from __future__ import print_function
 
 import sys
+
 if sys.version_info[0] == 3:
     from tkinter import *
+
     # This is particularly gross, fix at some point:
     import tkinter.messagebox as tkMessageBox
 else:
     from Tkinter import *
     import tkMessageBox
+    from entry_text import EntryText
+    from lists_selector import ListsSelector
+    from widgets import Checkbox
 
 import os
 import os.path
@@ -21,10 +26,6 @@ import atexit
 
 import ableton_aid as aa
 from tag import Tag
-
-from entry_text import EntryText
-from lists_selector import ListsSelector
-from widgets import Checkbox
 
 
 LOCK_FILEPATH = "/tmp/ableton_gui.lock"
