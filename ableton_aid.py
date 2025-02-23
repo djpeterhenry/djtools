@@ -16,6 +16,7 @@ from collections import defaultdict
 import json
 import io
 import string
+from timing import timing
 
 from tag import Tag
 
@@ -97,7 +98,8 @@ def get_base_filename(filename, record):
     return result
 
 
-def read_db_file():
+@timing
+def read_db_file_pickle():
     db_dict = None
     if os.path.exists(DB_FILENAME):
         db_file = open(DB_FILENAME)
@@ -136,25 +138,37 @@ def rotate_file(filename):
     assert not os.path.isfile(filename)
 
 
-def write_db_file(db_dict):
+@timing
+def write_db_file_pickle(db_dict):
     rotate_file(DB_FILENAME)
     with open(DB_FILENAME, "w") as db_file:
         cPickle.dump(db_dict, db_file)
     print("Wrote: " + DB_FILENAME)
 
 
+@timing
 def write_db_json(db_dict):
     rotate_file(DATABASE_JSON)
     with io.open(DATABASE_JSON, "w", encoding="utf8") as json_file:
-        data = json.dumps(db_dict, ensure_ascii=False, indent=4)
+        # data = json.dumps(db_dict, ensure_ascii=False, indent=4)
+        data = json.dumps(db_dict, ensure_ascii=False)
         json_file.write(unicode(data))
 
 
+@timing
 def read_db_json():
     assert os.path.isfile(DATABASE_JSON)
     with io.open(DATABASE_JSON, "r", encoding="utf8") as json_file:
         db_dict = json.load(json_file)
     return db_dict
+
+
+def read_db_file():
+    return read_db_json()
+
+
+def write_db_file(db_dict):
+    write_db_json(db_dict)
 
 
 def use_for_rekordbox(record):

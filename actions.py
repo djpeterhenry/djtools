@@ -337,15 +337,6 @@ def convert_keys_to_unicode():
     aa.write_db_file(new_dict)
 
 
-def test_db_json():
-    db_dict = aa.read_db_file()
-    aa.write_db_json(db_dict)
-    db_dict_json = aa.read_db_json()
-
-    # They produce exactly the same in-memory db_dict!
-    assert db_dict == db_dict_json
-
-
 if __name__ == "__main__":
     parser = argh.ArghParser()
     parser.add_commands(
@@ -369,7 +360,6 @@ if __name__ == "__main__":
             generate_lists,
             test_filenames,
             test_unicode_clip_samples,
-            test_db_json,
         ]
     )
     parser.dispatch()
