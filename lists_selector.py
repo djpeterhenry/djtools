@@ -41,7 +41,7 @@ class ListsSelector:
             if ext in (".txt", "") and not name.startswith("."):
                 self.name_to_file[name] = f
         names_to_list = [""] + sorted(
-            self.name_to_file.iterkeys(), key=lambda x: x.lower()
+            self.name_to_file.keys(), key=lambda x: x.lower()
         )
         return names_to_list
 

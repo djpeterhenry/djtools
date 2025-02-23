@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import print_function
 
@@ -17,7 +17,7 @@ def add_bpms():
     db_dict = aa.read_db_file()
     alc_files = aa.get_ableton_files()
     for filename in alc_files:
-        if db_dict.has_key(filename):
+        if filename in db_dict:
             continue
 
         print(filename)
@@ -36,7 +36,7 @@ def add_bpms():
 def add_keys():
     db_dict = aa.read_db_file()
     alc_file_set = set(aa.get_ableton_files())
-    for filename, record in db_dict.iteritems():
+    for filename, record in db_dict.items():
         if filename not in alc_file_set:
             continue
         # print ('considering:', filename)
@@ -64,7 +64,7 @@ def edit_bpm(edit_filename):
     print(edit_filename)
     db_dict = aa.read_db_file()
     bpm = None
-    if db_dict.has_key(edit_filename):
+    if edit_filename in db_dict:
         record = db_dict[edit_filename]
         bpm = record["bpm"]
     bpm = aa.get_int("BPM [%s]: " % bpm)
@@ -80,7 +80,7 @@ def edit_bpm(edit_filename):
 
 def rename_tag(tag_old, tag_new):
     db_dict = aa.read_db_file()
-    for _, record in sorted(db_dict.iteritems()):
+    for _, record in sorted(db_dict.items()):
         tags = record["tags"]
         tags = [x if (x != tag_old) else tag_new for x in tags]
         record["tags"] = tags
@@ -96,7 +96,7 @@ def list_tags():
         tags = record["tags"]
         for tag in tags:
             tag_to_count[tag] += 1
-    for tag, count in tag_to_count.iteritems():
+    for tag, count in tag_to_count.items():
         print(tag, ":", count)
 
 
@@ -159,14 +159,14 @@ def transfer_missing():
 
 def print_records():
     db_dict = aa.read_db_file()
-    for filename, record in db_dict.iteritems():
+    for filename, record in db_dict.items():
         print(filename + " " + str(record))
 
 
 def print_pretty(output_file):
     db_dict = aa.read_db_file()
     with open(output_file, "w") as f:
-        for filename, record in sorted(db_dict.iteritems()):
+        for filename, record in sorted(db_dict.items()):
             print("---", file=f)
             pprint.pprint(filename, f)
             pprint.pprint(record, f)
@@ -176,7 +176,7 @@ def print_key_frequency():
     db_dict = aa.read_db_file()
     alc_file_set = set(aa.get_ableton_files())
     key_frequency = {}
-    for filename, record in sorted(db_dict.iteritems()):
+    for filename, record in sorted(db_dict.items()):
         if filename not in alc_file_set:
             continue
         key = record["key"]
@@ -189,7 +189,7 @@ def print_key_frequency():
         key_frequency[key_key] = key_frequency[key_key] + 1
     # sort by count
     by_count = []
-    for key, count in sorted(key_frequency.iteritems()):
+    for key, count in sorted(key_frequency.items()):
         by_count.append((count, key))
     by_count.sort()
     by_count.reverse()
@@ -219,7 +219,7 @@ def rekordbox_xml(rekordbox_filename):
 def test_lists():
     db_dict = aa.read_db_file()
     name_to_file = aa.get_list_name_to_file(aa.LISTS_FOLDER)
-    for name, list_file in sorted(name_to_file.iteritems()):
+    for name, list_file in sorted(name_to_file.items()):
         print("---", name)
         for display, f in aa.get_list_from_file(list_file, db_dict):
             if f is None:
@@ -276,7 +276,7 @@ def fix_alc_ts():
     # but for checking whether clips need to be updated, check the "alc_ts" record value directly.
     db_dict = aa.read_db_file()
     # Update alc_ts
-    for filename, record in db_dict.iteritems():
+    for filename, record in db_dict.items():
         alc_ts = aa.get_alc_ts(record)
         if not alc_ts > 0:
             print(filename)
@@ -298,43 +298,27 @@ def remove_old_fields():
         except KeyError:
             pass
 
-    for filename, record in db_dict.iteritems():
+    for filename, record in db_dict.items():
         del_field(record, "mp3_sample")
         del_field(record, "rekordbox_sample")
     aa.write_db_file(db_dict)
-
-
-# todo: kill eventually
-def test_filenames():
-    db_dict = aa.read_db_file()
-    for filename, record in db_dict.iteritems():
-        assert type(filename) == unicode
-        assert os.path.isfile(filename)
-
-
-# todo: kill eventually
-def test_unicode_clip_samples():
-    db_dict = aa.read_db_file()
-    for filename, record in db_dict.iteritems():
-        clip_sample = record["clip"]["sample"]
-        if type(clip_sample) == unicode:
-            print(clip_sample)
-        else:
-            if not all(0 <= ord(c) <= 127 for c in clip_sample):
-                print(clip_sample)
-        assert os.path.isfile(clip_sample)
 
 
 def convert_keys_to_unicode():
     # I ran this successfully
     db_dict = aa.read_db_file()
     new_dict = {}
-    for filename, record in db_dict.iteritems():
+    for filename, record in db_dict.items():
         assert os.path.isfile(filename)
         new_key = filename.decode("utf-8")
         new_dict[new_key] = record
         print(repr(new_key))
     aa.write_db_file(new_dict)
+
+
+def test_camelot_dicts():
+    print(aa.camelot_dict)
+    print(aa.reverse_camelot_dict)
 
 
 if __name__ == "__main__":
@@ -358,8 +342,7 @@ if __name__ == "__main__":
             test_lists,
             cue_to_tracklist,
             generate_lists,
-            test_filenames,
-            test_unicode_clip_samples,
+            test_camelot_dicts,
         ]
     )
     parser.dispatch()

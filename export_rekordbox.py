@@ -71,14 +71,12 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
         # convert
         if sample_ext.lower() in extensions_to_convert:
             target = aa.get_export_sample_path(f, ".aiff", sample_path)
-            assert type(target) == unicode
             if not os.path.isfile(target):
                 cmd = ["ffmpeg", "-i", sample, target]
                 subprocess.check_call(cmd)
         # copy
         elif always_copy:
             target = aa.get_export_sample_path(f, sample_ext, sample_path)
-            assert type(target) == unicode
             # At one point had symlinks.  This was a one-time fix:
             if os.path.islink(target):
                 os.unlink(target)
@@ -140,11 +138,11 @@ def get_beat_relative_to_marker(ref_marker, seconds):
 
 
 def set_folder_count(et):
-    et.set("Count", str(len(et.getchildren())))
+    et.set("Count", str(len(et)))
 
 
 def set_playlist_count(et):
-    et.set("Entries", str(len(et.getchildren())))
+    et.set("Entries", str(len(et)))
 
 
 def add_folder(et_parent, name):
@@ -344,10 +342,6 @@ def get_track_info(filename, record):
 def get_als_track_info(filename, record):
     first_clip = record["clips"][0]
     first_sample = first_clip["sample"]
-    try:
-        as_unicode = aa.get_sample_value_as_unicode(first_sample)
-    except:
-        print("Some bullshit unicode")
 
     # prune to just those matching the first sample.  For now...
     clips_in_als_order = [c for c in record["clips"] if c["sample"] == first_sample]
@@ -475,8 +469,6 @@ def export_rekordbox_xml(rekordbox_filename):
 
         et_track = ET.SubElement(et_collection, "TRACK")
         artist, track = aa.get_artist_and_track(f)
-        assert type(artist) == unicode
-        assert type(track) == unicode
 
         # Accumulate suffixes for tags and keys
         suffixes = []
@@ -522,10 +514,6 @@ def export_rekordbox_xml(rekordbox_filename):
             spaces = u" " * (100 - len(track))
             track = u"{}{}{}".format(track, spaces, u" ".join(suffixes))
 
-        assert type(artist) == unicode
-        assert type(track) == unicode
-
-        # Evidently getting these as unicode is important for some
         et_track.set("Name", track)
         et_track.set("Artist", artist)
         sample_abspath = os.path.abspath(sample)

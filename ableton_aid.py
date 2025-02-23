@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 # Created on May 14, 2009
 from __future__ import print_function
 
 import sys
 import os
-import cPickle
 import re
 import random
 import subprocess
@@ -15,7 +13,6 @@ import datetime
 from collections import defaultdict
 import json
 import io
-import string
 from timing import timing
 
 from tag import Tag
@@ -82,7 +79,7 @@ def get_ableton_files():
             filename = os.path.join(dirpath, f)[2:]
             if is_ableton_file(filename):
                 result.append(filename)
-    return sorted(result, key=string.lower)
+    return sorted(result, key=lambda x: x.lower())
 
 
 def get_base_filename(filename, record):
@@ -380,13 +377,13 @@ def generate_camelot_dict():
     ab = ["A", "B"]
     # this shit was fucking clever:
     for i, k in enumerate(camelot_list):
-        camelot_name = str(i / 2 + 1) + ab[i % 2]
+        camelot_name = str(i // 2 + 1) + ab[i % 2]
         if i % 2 == 0:
             k = k + "m"
         initial_dict[k] = camelot_name
         reverse_dict[camelot_name] = k
     full_dict = initial_dict.copy()
-    for k, c in initial_dict.iteritems():
+    for k, c in initial_dict.items():
         if len(k) > 1 and k[1] == "b":
             key_char = k[0]
             key_ascii = ord(key_char)
@@ -437,7 +434,7 @@ def get_missing():
     db_dict = read_db_file()
     alc_file_set = set(get_ableton_files())
     result = []
-    for filename, _ in sorted(db_dict.iteritems()):
+    for filename, _ in sorted(db_dict.items()):
         if filename not in alc_file_set:
             result.append(filename)
     return result
@@ -445,7 +442,7 @@ def get_missing():
 
 def get_db_by_ts(db_dict):
     result = defaultdict(list)
-    for f, record in db_dict.iteritems():
+    for f, record in db_dict.items():
         ts_list = get_ts_list(record)
         for ts in ts_list:
             result[ts].append(f)
@@ -454,7 +451,7 @@ def get_db_by_ts(db_dict):
 
 def get_valid_alc_files(db_dict):
     alc_files = get_ableton_files()
-    valid_alc_files = [filename for filename in alc_files if db_dict.has_key(filename)]
+    valid_alc_files = [filename for filename in alc_files if filename in db_dict]
     valid_alc_files.sort(key=lambda s: s.lower())
     return valid_alc_files
 
@@ -639,7 +636,7 @@ def generate_random(files):
 
 def generate_sets(files, db_dict):
     ts_db_dict = get_db_by_ts(db_dict)
-    ts_sorted = sorted(ts_db_dict.iterkeys(), reverse=True)
+    ts_sorted = sorted(ts_db_dict.keys(), reverse=True)
 
     file_set = set(files)
 
@@ -722,24 +719,11 @@ def get_artist_and_track(filename):
         return split[0], delimiter.join(split[1:])
 
 
-def get_sample_value_as_unicode(sample):
-    """
-    Some of the clip "sample" are unicode and some are not.
-    This is an old function from before I understood everything.
-    This is a way to get a string value as a unicode value.
-    """
-    if not isinstance(sample, unicode):
-        # TODO(peter): I think just unicode(sample) would also work, but this is more explicit.
-        # I've actually confirmed that the non-unicode sample values are all pure ascii.
-        sample = sample.decode("utf-8")
-    return sample
-
-
 def get_sample_unicode(record):
     if "clip" not in record:
         return None
     sample = record["clip"]["sample"]
-    return get_sample_value_as_unicode(sample)
+    return sample
 
 
 def get_export_sample_path(f, sample_ext, target_path):
