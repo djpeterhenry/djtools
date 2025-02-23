@@ -4,20 +4,21 @@ from __future__ import print_function
 
 import sys
 
-if sys.version_info[0] == 3:
-    from tkinter import *
 
-    # This is particularly gross, fix at some point:
-    import tkinter.messagebox as tkMessageBox
+if sys.version_info[0] == 3:
+    import tkinter as tk
+    import tkinter.messagebox as tkm
 else:
-    from Tkinter import *
-    import tkMessageBox
-    from entry_text import EntryText
-    from lists_selector import ListsSelector
-    from widgets import Checkbox
+    import Tkinter as tk
+    import tkMessageBox as tkm
+
+# My helper UI classes
+from entry_text import EntryText
+from lists_selector import ListsSelector
+from check_box import Checkbox
+
 
 import os
-import os.path
 import argparse
 import random
 import subprocess
@@ -26,6 +27,7 @@ import atexit
 
 import ableton_aid as aa
 from tag import Tag
+from timing import timing
 
 
 LOCK_FILEPATH = "/tmp/ableton_gui.lock"
@@ -95,8 +97,8 @@ class App:
 
         #################
         # first row
-        frame_top = Frame(master)
-        frame_top.pack(side=TOP, fill=X)
+        frame_top = tk.Frame(master)
+        frame_top.pack(side=tk.TOP, fill=tk.X)
 
         def just_update(a, b, c):
             self.update_listbox()
@@ -130,36 +132,36 @@ class App:
         self.bpm_star = Checkbox(frame_top, "*", just_update)
 
         self.order_list = self.get_order_list()
-        self.order_var = StringVar(frame_top)
+        self.order_var = tk.StringVar(frame_top)
         self.order_var.trace(
             "w", lambda name, index, mode: self.generate_and_set_from_current_button()
         )
         self.order_var.set(self.order_list[0])
         for s in self.order_list:
-            b = Radiobutton(
+            b = tk.Radiobutton(
                 frame_top, text=s + " ", variable=self.order_var, value=s, takefocus=0
             )
-            b.pack(side=LEFT, anchor=W)
+            b.pack(side=tk.LEFT, anchor=tk.W)
 
         self.lists_selector = ListsSelector(
             frame_top, aa.LISTS_FOLDER, self.update_listbox
         )
 
         # key Label
-        self.key_label_var = StringVar()
-        key_label = Label(frame_top, textvariable=self.key_label_var)
-        key_label.pack(side=LEFT)
+        self.key_label_var = tk.StringVar()
+        key_label = tk.Label(frame_top, textvariable=self.key_label_var)
+        key_label.pack(side=tk.LEFT)
 
         # count Label
-        self.count_label_var = StringVar()
-        count_label = Label(frame_top, textvariable=self.count_label_var)
-        count_label.pack(side=LEFT)
+        self.count_label_var = tk.StringVar()
+        count_label = tk.Label(frame_top, textvariable=self.count_label_var)
+        count_label.pack(side=tk.LEFT)
 
         #################
         # second row
         tag_list = self.get_tag_list()
-        frame_edit = Frame(master)
-        frame_edit.pack(side=TOP, fill=X)
+        frame_edit = tk.Frame(master)
+        frame_edit.pack(side=tk.TOP, fill=tk.X)
 
         # extra stuff...put it first on line 2
         self.entry_bpm_edit = None
@@ -194,24 +196,24 @@ class App:
         self.key_4 = Checkbox(frame_edit, "4", just_update)
         self.key_star = Checkbox(frame_edit, "*", just_update)
 
-        self.tag_var = StringVar(master)
+        self.tag_var = tk.StringVar(master)
         self.tag_var.trace("w", just_update)
-        self.tag_list_menu = OptionMenu(frame_edit, self.tag_var, *tag_list)
+        self.tag_list_menu = tk.OptionMenu(frame_edit, self.tag_var, *tag_list)
         self.tag_list_menu.config(width=TAG_WIDTH)
-        self.tag_list_menu.pack(side=LEFT)
+        self.tag_list_menu.pack(side=tk.LEFT)
 
         self.tag_invert = Checkbox(frame_edit, "Invert", just_update)
         self.tag_vocal = Checkbox(frame_edit, "[Vocal]", just_update)
         self.tag_ss = Checkbox(frame_edit, "[SS]", just_update)
 
-        self.reveal_var = IntVar(master)
-        self.reveal_button = Checkbutton(
+        self.reveal_var = tk.IntVar(master)
+        self.reveal_button = tk.Checkbutton(
             frame_edit, text="Reveal", variable=self.reveal_var, takefocus=0
         )
-        self.reveal_button.pack(side=LEFT)
+        self.reveal_button.pack(side=tk.LEFT)
 
-        min_label = Label(frame_edit, text="M:")
-        min_label.pack(side=LEFT)
+        min_label = tk.Label(frame_edit, text="M:")
+        min_label.pack(side=tk.LEFT)
         self.min_amount = EntryText(
             frame_edit,
             int_only=True,
@@ -234,11 +236,11 @@ class App:
         #################
         # last row (listbox)
 
-        frame = Frame(master)
-        frame.pack(fill=BOTH, expand=1)
+        frame = tk.Frame(master)
+        frame.pack(fill=tk.BOTH, expand=1)
 
-        self.scrollbar = Scrollbar(frame, orient=VERTICAL)
-        self.listbox = Listbox(
+        self.scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL)
+        self.listbox = tk.Listbox(
             frame,
             yscrollcommand=self.scrollbar.set,
             width=listbox_width,
@@ -246,8 +248,8 @@ class App:
             font=listbox_font,
         )
         self.scrollbar.config(command=self.listbox.yview)
-        self.listbox.pack(side=LEFT, fill=BOTH, expand=1)
-        self.scrollbar.pack(side=RIGHT, fill=Y)
+        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # TODO(peter): bind to master
         self.listbox_target_string = None
@@ -316,7 +318,7 @@ class App:
         # also check the dictionary
         # want to sort those from the dictionary
         others = set()
-        for record in self.db_dict.itervalues():
+        for record in self.db_dict.values():
             for tag in record["tags"]:
                 if tag not in result:
                     others.add(tag)
@@ -332,8 +334,8 @@ class App:
         result = [tag for tag in result if not exclude(tag)]
         return result
 
+    @timing
     def update_listbox(self):
-        time_start = time.clock()
 
         try:
             self.listbox
@@ -341,7 +343,7 @@ class App:
             return
 
         # start by clearing
-        self.listbox.delete(0, END)
+        self.listbox.delete(0, tk.END)
         self.active_alc_files = []
 
         tag = self.tag_var.get()
@@ -539,9 +541,7 @@ class App:
         # fill out the important results
         if filename_pairs_list:
             files_display, filenames = zip(*filename_pairs_list)
-            t = time.time()
-            self.listbox.insert(END, *files_display)
-            print("self.listbox.insert(END, *files_display) took:", (time.time() - t))
+            self.listbox.insert(tk.END, *files_display)
             self.active_alc_files = filenames
 
         # search for previous_name
@@ -575,10 +575,6 @@ class App:
 
         self.count_label_var.set(str(len(filename_pairs_list)))
         print("Listbox length:", len(filename_pairs_list))
-
-        # timing
-        time_end = time.clock()
-        print("[time] update_listbox:", str(time_end - time_start))
 
     def update_bpm_edit(self):
         filename = self.get_selected_filename()
@@ -724,7 +720,7 @@ class App:
         self.update_listbox()
 
     def save_dialog(self):
-        do_save = tkMessageBox.askokcancel("Confirm Save", "Save database?")
+        do_save = tkm.askokcancel("Confirm Save", "Save database?")
         if do_save:
             aa.write_db_file(self.db_dict)
 
@@ -863,7 +859,7 @@ def parse_args():
 
 
 def main(args):
-    master = Tk()
+    master = tk.Tk()
     app = App(master, args.include_extra)
     on_top_str = "1" if args.always_on_top else "0"
     master.call("wm", "attributes", ".", "-topmost", on_top_str)

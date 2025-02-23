@@ -1,8 +1,13 @@
 from __future__ import print_function
 
-from Tkinter import *
-
 import os
+
+import sys
+
+if sys.version_info[0] == 3:
+    import tkinter as tk
+else:
+    import Tkinter as tk
 
 
 class ListsSelector:
@@ -17,19 +22,19 @@ class ListsSelector:
         if not os.path.exists(path):
             return
 
-        self.string_var = StringVar(root)
+        self.string_var = tk.StringVar(root)
         self.string_var.trace("w", lambda a, b, c: self.update())
-        self.option_menu = OptionMenu(
+        self.option_menu = tk.OptionMenu(
             root, self.string_var, *self.update_and_get_names()
         )
-        self.option_menu.pack(side=LEFT)
+        self.option_menu.pack(side=tk.LEFT)
 
-        self.disabled_var = IntVar(root)
+        self.disabled_var = tk.IntVar(root)
         self.disabled_var.trace("w", lambda a, b, c: self.update())
-        disabled_key_button = Checkbutton(
+        disabled_key_button = tk.Checkbutton(
             root, text="*", variable=self.disabled_var, takefocus=0
         )
-        disabled_key_button.pack(side=LEFT)
+        disabled_key_button.pack(side=tk.LEFT)
 
     def update_and_get_names(self):
         files = [os.path.join(self.path, f) for f in os.listdir(self.path)]
@@ -40,9 +45,7 @@ class ListsSelector:
             name, ext = os.path.splitext(os.path.basename(f))
             if ext in (".txt", "") and not name.startswith("."):
                 self.name_to_file[name] = f
-        names_to_list = [""] + sorted(
-            self.name_to_file.keys(), key=lambda x: x.lower()
-        )
+        names_to_list = [""] + sorted(self.name_to_file.keys(), key=lambda x: x.lower())
         return names_to_list
 
     def update(self):

@@ -1,6 +1,10 @@
 from __future__ import print_function
 
-from Tkinter import *
+import sys
+if sys.version_info[0] == 3:
+    import tkinter as tk
+else:
+    import Tkinter as tk
 
 
 class EntryText:
@@ -23,7 +27,7 @@ class EntryText:
         self.update_fun = update_fun
 
         # TODO: callback before set?
-        self.stringvar = StringVar(root)
+        self.stringvar = tk.StringVar(root)
         self.stringvar.set(initial_value)
         self.stringvar.trace("w", lambda name, index, mode: self.update())
 
@@ -31,7 +35,7 @@ class EntryText:
             takefocus_num = 1
         else:
             takefocus_num = 0
-        self.entry = Entry(
+        self.entry = tk.Entry(
             root, textvariable=self.stringvar, width=text_width, takefocus=takefocus_num
         )
 
@@ -40,7 +44,7 @@ class EntryText:
         self.entry.bind("<Up>", self.key_uparrow)
         self.entry.bind("<Down>", self.key_downarrow)
 
-        self.entry.pack(side=LEFT)
+        self.entry.pack(side=tk.LEFT)
 
     def update(self):
         print("update")
@@ -64,7 +68,7 @@ class EntryText:
         self.stringvar.set("")
 
     def insert_space(self):
-        self.entry.insert(INSERT, " ")
+        self.entry.insert(tk.INSERT, " ")
         return self.key_break()
 
     def key_break(self):
