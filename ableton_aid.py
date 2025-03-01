@@ -50,14 +50,14 @@ COLLECTION_FOLDER = "/Users/peter/github/djpeterhenry.github.io/collection"
 
 ACTIVE_LIST = "/Users/peter/github/djtools/active_list.txt"
 
+# Make input be raw_input on python2
+try:
+    input = raw_input
+except NameError:
+    pass
+
 
 def get_int(prompt_string):
-    # Make input be raw_input on python2
-    try:
-        input = raw_input
-    except NameError:
-        pass
-
     ui = input(prompt_string)
     try:
         return int(ui)
@@ -315,7 +315,7 @@ def get_key_from_sample(sample_fullpath):
     keyfinder_app = "/Applications/KeyFinder.app/Contents/MacOS/KeyFinder"
     command = '"%s" -f "%s"' % (keyfinder_app, sample_fullpath)
     result = subprocess.check_output(command, shell=True)
-    return result
+    return str(result)
 
 
 def get_key_from_alc(alc_filename):
