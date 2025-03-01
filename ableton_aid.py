@@ -315,7 +315,7 @@ def get_key_from_sample(sample_fullpath):
     keyfinder_app = "/Applications/KeyFinder.app/Contents/MacOS/KeyFinder"
     command = '"%s" -f "%s"' % (keyfinder_app, sample_fullpath)
     result = subprocess.check_output(command, shell=True)
-    return str(result)
+    return result.decode("utf8")
 
 
 def get_key_from_alc(alc_filename):
