@@ -171,7 +171,7 @@ def transfer_other(other_db_filename):
                 print(filename, "adding", num_new_ts, "new timestamps")
                 both_ts_list = sorted(list(set(other_ts_list + ts_list)))
                 record["ts_list"] = both_ts_list
-    # aa.write_db_file(db_dict)
+    aa.write_db_file(db_dict)
 
 
 def print_records():
