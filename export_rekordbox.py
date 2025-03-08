@@ -40,6 +40,10 @@ def get_bpm_and_range_list():
 
 
 def stamp_from_all_recordbox_history_files():
+    if not os.path.isdir(REKORDBOX_HISTORY_PATH):
+        print("REKORDBOX_HISTORY_PATH not found: {}".format(REKORDBOX_HISTORY_PATH))
+        return
+
     db_dict = aa.read_db_file()
 
     for fn in os.listdir(REKORDBOX_HISTORY_PATH):
@@ -52,6 +56,9 @@ def stamp_from_all_recordbox_history_files():
 def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy):
     aa.update_db_clips_safe()
     aa.generate_lists()
+
+    if not os.path.exists(sample_path):
+        os.makedirs(sample_path)
 
     extensions_to_convert = [".mp4", ".m4a"]
     if convert_flac:
