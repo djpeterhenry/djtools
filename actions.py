@@ -157,6 +157,23 @@ def transfer_missing():
                 aa.write_db_file(db_dict)
 
 
+def transfer_other(other_db_filename):
+    db_dict = aa.read_db_file()
+    other_db_dict = aa.read_db_file(other_db_filename)
+    for filename, record in db_dict.items():
+        if filename in other_db_dict:
+            other_record = other_db_dict[filename]
+            other_ts_list = aa.get_ts_list(other_record)
+            ts_list = aa.get_ts_list(record)
+            # See if we are adding any new timestamps for sanity
+            num_new_ts = len(set(other_ts_list) - set(ts_list))
+            if num_new_ts > 0:
+                print(filename, "adding", num_new_ts, "new timestamps")
+                both_ts_list = sorted(list(set(other_ts_list + ts_list)))
+                record["ts_list"] = both_ts_list
+    # aa.write_db_file(db_dict)
+
+
 def print_records():
     db_dict = aa.read_db_file()
     for filename, record in db_dict.items():
@@ -332,6 +349,7 @@ if __name__ == "__main__":
             list_tags,
             list_missing,
             transfer_missing,
+            transfer_other,
             print_records,
             print_pretty,
             print_key_frequency,

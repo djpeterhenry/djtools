@@ -71,7 +71,7 @@ def is_ableton_file(filename):
 
 
 def get_ableton_files():
-    walk_result = os.walk(u".")
+    walk_result = os.walk(".")
     result = []
     for dirpath, _, filenames in walk_result:
         for f in filenames:
@@ -153,15 +153,15 @@ def write_db_json(db_dict):
 
 
 @timing
-def read_db_json():
-    assert os.path.isfile(DATABASE_JSON)
-    with io.open(DATABASE_JSON, "r", encoding="utf8") as json_file:
+def read_db_json(filename=DATABASE_JSON):
+    assert os.path.isfile(filename)
+    with io.open(filename, "r", encoding="utf8") as json_file:
         db_dict = json.load(json_file)
     return db_dict
 
 
-def read_db_file():
-    return read_db_json()
+def read_db_file(filename=DATABASE_JSON):
+    return read_db_json(filename)
 
 
 def write_db_file(db_dict):
@@ -709,10 +709,10 @@ def update_db_clips_safe():
 
 
 def get_artist_and_track(filename):
-    delimiter = u" - "
+    delimiter = " - "
     split = os.path.splitext(filename)[0].split(delimiter)
     if len(split) == 1:
-        return u"", split[0]
+        return "", split[0]
     elif len(split) == 2:
         return split[0], split[1]
     else:
@@ -814,7 +814,7 @@ def update_with_rekordbox_history(db_dict, history_filename):
 
 
 def stamp_song(db_dict, date_ts, index, artist, title):
-    alc_filename = u"{} - {}".format(artist.strip(), title.strip())
+    alc_filename = "{} - {}".format(artist.strip(), title.strip())
     _, f = get_song_in_db(alc_filename, db_dict)
     if f is None:
         print("Failure to stamp: {}".format(alc_filename))
@@ -834,7 +834,7 @@ def generate_lists(output_path=COLLECTION_FOLDER):
         ) as outfile:
             for f in alc_filenames_to_write:
                 f_print = os.path.splitext(f)[0]
-                outfile.write(u"{}\n".format(f_print))
+                outfile.write("{}\n".format(f_print))
 
     write_files("date_or_add.txt", generate_date_plus_alc(files, db_dict))
     write_files("add.txt", generate_alc(files, db_dict))
