@@ -291,7 +291,7 @@ def get_audioclips_from_als(als_filename):
 
 def get_key_from_keyfinder_cli(sample_fullpath):
     result = subprocess.check_output(["keyfinder-cli", sample_fullpath])
-    return result.decode("utf8")
+    return result.decode("utf8").strip()
 
 
 def get_key_from_keyfinder_old(sample_fullpath):
