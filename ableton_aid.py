@@ -199,12 +199,13 @@ def is_als_file(f):
 
 def alc_to_str(alc_filename):
     with gzip.open(alc_filename, "rb") as f:
-        return f.read()
+        return f.read().decode("utf8")
 
 
 def alc_to_xml(alc_filename):
     # Something I saw on google:
     # XML carries it's own encoding information (defaulting to UTF-8) and ElementTree does the work for you.
+    # So I could almost certainly continue to pass a bytestring to ET.fromstring like I was doing until recently.
     return ET.fromstring(alc_to_str(alc_filename))
 
 
@@ -228,12 +229,41 @@ def get_xml_clip_info(xml_clip):
     )
     result["hidden_loop_start"] = float(xml_loop.find("HiddenLoopStart").get("Value"))
     result["hidden_loop_end"] = float(xml_loop.find("HiddenLoopEnd").get("Value"))
-    # also sample info
+    # Get verified sample path and timestamp
     xml_fileref = xml_clip.find("SampleRef/FileRef")
-    relative_path = os.path.join(
-        "..", *[x.get("Dir") for x in xml_fileref.find("RelativePath")]
-    )
-    sample_filepath = os.path.join(relative_path, xml_fileref.find("Name").get("Value"))
+
+    def get_sample_filepath_old():
+        # Example in <FileRef>
+        # <HasRelativePath Value="true" />
+        # <RelativePathType Value="3" />
+        # <RelativePath>
+        #     <RelativePathElement Dir="Samples" />
+        #     <RelativePathElement Dir="Imported" />
+        # </RelativePath>
+        # <Name Value="deadmau5 - Arguru 2k19 (Original Mix).aiff" />
+        try:
+            sample_filename = xml_fileref.find("Name").get("Value")
+        except AttributeError:
+            return None
+        relative_path = os.path.join(
+            "..", *[x.get("Dir") for x in xml_fileref.find("RelativePath")]
+        )
+        return os.path.join(relative_path, sample_filename)
+
+    def get_sample_filepath_new():
+        # Example in <FileRef>
+        # <RelativePathType Value="3" />
+        # <RelativePath Value="Samples/Imported/Bob Sinclar - Cinderella (She said her name) (Meridian Remix).aiff" />
+        # <Path Value="/Users/peter/Music/Ableton/djpeterhenry/Samples/Imported/Bob Sinclar - Cinderella (She said her name) (Meridian Remix).aiff" />
+
+        # I guess I'll keep the previous behavior of keepting this path relative to the .alc file
+        # This means I have to go up one folder using ".." because the sample relative path is to the top level djpeterhenry project
+        return os.path.join("..", xml_fileref.find("RelativePath").get("Value"))
+
+    sample_filepath = get_sample_filepath_old()
+    if not sample_filepath:
+        sample_filepath = get_sample_filepath_new()
+
     if os.path.exists(sample_filepath):
         result["sample"] = sample_filepath
         result["sample_ts"] = os.path.getmtime(sample_filepath)
@@ -259,47 +289,13 @@ def get_audioclips_from_als(als_filename):
     return result
 
 
-def get_sample_from_xml(xml_root):
-    """
-    This function was written specifically for keyfinding before I stored clip info.
-    It could probably be removed now and replaced with "clip" functionality.
-    """
-    sample_refs = xml_root.findall(".//SampleRef")
-    # right now, just the first
-    sample_ref = sample_refs[0]
-    sample_filename = sample_ref.find("FileRef/Name").attrib["Value"]
-    sample_path_list = [
-        x.attrib["Dir"]
-        for x in sample_ref.findall("FileRef/SearchHint/PathHint/RelativePathElement")
-    ]
-    sample_file_folder = os.path.join("/", *sample_path_list)
-    sample_file_fullpath = os.path.join(sample_file_folder, sample_filename)
-    if os.path.exists(sample_file_fullpath):
-        return sample_file_fullpath
-    # for some reason, files can have an invalid path and still work??
-    # it's just PathHints after all
-    sample_file_folder = "/Users/peter/Music/Ableton/djpeterhenry/Samples/Imported"
-    sample_file_fullpath = os.path.join(sample_file_folder, sample_filename)
-    if os.path.exists(sample_file_fullpath):
-        return sample_file_fullpath
-    return None
+def get_key_from_keyfinder_cli(sample_fullpath):
+    result = subprocess.check_output(["keyfinder-cli", sample_fullpath])
+    return result.decode("utf8")
 
 
-def get_sample_from_alc_file(alc_filename):
-    """
-    I guess this also returns the file itself it it happens to be a "sample" already.
-    I think this was an attempt to generalize key finding to both .alc files and audio files.
-    I think this is only used in get_key_from_alc.
-
-    I also think this is the only function that uses "get_sample_from_xml".
-    This is confusing, should consistently use "clip"->"sample" instead I think.
-    """
-    if os.path.splitext(alc_filename)[1] in SAMPLE_EXTENSIONS:
-        return alc_filename
-    return get_sample_from_xml(alc_to_xml(alc_filename))
-
-
-def get_key_from_sample(sample_fullpath):
+def get_key_from_keyfinder_old(sample_fullpath):
+    # This was the old way, leaving here for reference for a while, because this didn't need keyfinder-cli
     """
     Sort of. Call the executable with the command line arguments -f filepath to
     have the key estimate printed to stdout (and/or any errors to stderr).
@@ -318,11 +314,7 @@ def get_key_from_sample(sample_fullpath):
     return result.decode("utf8")
 
 
-def get_key_from_alc(alc_filename):
-    sample_file = get_sample_from_alc_file(alc_filename)
-    return get_key_from_sample(sample_file)
-
-
+# TODO(peter): This function is no longer used anywhere
 def get_clips_from_als(als_filename):
     xml_root = alc_to_xml(als_filename)
     audio_clips = xml_root.findall(".//AudioClip")
@@ -689,13 +681,21 @@ def update_db_clips(valid_alc_files, db_dict, force_alc=False, force_als=False):
         f_ts = os.path.getmtime(f)
         # Get the first clip for key/update purposes from both alc and als
         if is_alc_file(f) or is_als_file(f):
-            if force_alc or record.get("alc_ts") != f_ts:
+            if (
+                force_alc
+                or record.get("alc_ts") != f_ts
+                or not record.get("clip", None)
+            ):
                 record["clip"] = get_audioclip_from_alc(f)
                 record["alc_ts"] = f_ts
                 print("Updated clip:", f)
         # If it's an als file, get the "clips" as well
         if is_als_file(f):
-            if force_als or record.get("als_ts") != f_ts:
+            if (
+                force_als
+                or record.get("als_ts") != f_ts
+                or not record.get("clips", None)
+            ):
                 record["clips"] = get_audioclips_from_als(f)
                 record["als_ts"] = f_ts
                 print("Updated clips:", f)

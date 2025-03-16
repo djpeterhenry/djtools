@@ -35,26 +35,30 @@ def add_bpms():
 
 def add_keys():
     db_dict = aa.read_db_file()
-    alc_file_set = set(aa.get_ableton_files())
-    for filename, record in db_dict.items():
-        if filename not in alc_file_set:
-            continue
-        # print ('considering:', filename)
+
+    valid_alc_files = aa.get_valid_alc_files(db_dict)
+    aa.update_db_clips(valid_alc_files, db_dict)
+    # Write the updated clips before considering any keys
+    aa.write_db_file(db_dict)
+
+    for filename in valid_alc_files:
+        record = db_dict[filename]
         key = record["key"]
         if len(key) == 0 or key[-1] == "?":
-            filepath = os.path.abspath(filename)
-            new_key = aa.get_key_from_alc(filepath)
+            print("Need key for: " + filename)
+
+            sample_filepath = os.path.abspath(record["clip"]["sample"])
+            assert os.path.isfile(sample_filepath)
+
+            new_key = aa.get_key_from_keyfinder_cli(sample_filepath)
             print("new_key: " + new_key)
             if new_key is None:
                 continue
-            new_record = record
-            new_record["key"] = new_key
-            db_dict[filename] = new_record
+            record["key"] = new_key
         else:
             pass
-            # print ('had key:', key)
     # Write the database only once at the end.
-    # If you ever need to batch process the whole library again (heaven forbid) change this.
+    # If you ever need to batch process the whole library again (heaven forbid) then change this.
     aa.write_db_file(db_dict)
 
 
@@ -178,6 +182,12 @@ def print_records():
     db_dict = aa.read_db_file()
     for filename, record in db_dict.items():
         print(filename + " " + str(record))
+
+
+def print_record(alc_filename):
+    db_dict = aa.read_db_file()
+    record = db_dict[alc_filename]
+    pprint.pprint(record)
 
 
 def print_pretty(output_file):
@@ -351,6 +361,7 @@ if __name__ == "__main__":
             transfer_missing,
             transfer_other,
             print_records,
+            print_record,
             print_pretty,
             print_key_frequency,
             print_xml,
