@@ -709,6 +709,7 @@ def update_db_clips_safe():
 
 
 def get_artist_and_track(filename):
+    """Extract artist and track name from a filename."""
     delimiter = " - "
     split = os.path.splitext(filename)[0].split(delimiter)
     if len(split) == 1:

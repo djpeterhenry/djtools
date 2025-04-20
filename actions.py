@@ -11,6 +11,7 @@ from collections import defaultdict
 import difflib
 import re
 import pprint
+import discogs_client
 
 
 def add_bpms():
@@ -348,6 +349,39 @@ def test_camelot_dicts():
     print(aa.reverse_camelot_dict)
 
 
+def search_release_dates():
+    """Search for release dates on Discogs for all files in the database."""
+    db_dict = aa.read_db_file()
+    d = discogs_client.Client('DJTools/1.0', user_token='HmnXmNploYjFjezfQWhqzrsJxgnSMioqaqNwHvMo')
+
+    for filename, record in db_dict.items():
+        artist, track = aa.get_artist_and_track(filename)
+        if not artist or not track:
+            print(f"Skipping {filename}: Unable to parse artist and track.")
+            continue
+
+        print(f"Searching for: {artist} - {track}")
+        try:
+            results = d.search(track, artist=artist, type='release')
+            if not results:
+                # Retry by removing the last part of the track name in parentheses
+                track = re.sub(r"\s*\(.*\)$", "", track).strip()
+                print(f"Retrying with modified track name: {artist} - {track}")
+                results = d.search(track, artist=artist, type='release')
+
+            if results:
+                release = results[0]
+                release_date = release.year
+                if release_date:
+                    print(f"Found release date for {filename}: {release_date}")
+                else:
+                    print(f"No release date found for {filename}.")
+            else:
+                print(f"No results found for {filename}.")
+        except Exception as e:
+            print(f"Error searching for {filename}: {e}")
+
+
 if __name__ == "__main__":
     parser = argh.ArghParser()
     parser.add_commands(
@@ -372,6 +406,7 @@ if __name__ == "__main__":
             cue_to_tracklist,
             generate_lists,
             test_camelot_dicts,
+            search_release_dates,
         ]
     )
     parser.dispatch()
