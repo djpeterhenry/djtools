@@ -12,6 +12,7 @@ import difflib
 import re
 import pprint
 import discogs_client
+from googleapiclient.discovery import build
 
 
 def add_bpms():
@@ -349,37 +350,145 @@ def test_camelot_dicts():
     print(aa.reverse_camelot_dict)
 
 
-def search_release_dates():
-    """Search for release dates on Discogs for all files in the database."""
+def _simplify_track(track):
+    """Remove common suffixes like (Original Mix), (Radio Edit), (Acapella) from track name."""
+    if not re.search(r"\s*\((Original|Radio|Acapella)", track, re.IGNORECASE):
+        return None
+    simplified = re.sub(r"\s*\((Original|Radio|Acapella)[^)]*\)", "", track, flags=re.IGNORECASE).strip()
+    print(f"Trying simplified track name: {simplified}")
+    return simplified
+
+
+def _process_track_metadata(db_dict, filename, record, source_name):
+    """Common helper for processing track metadata from different sources."""
+    # Skip if we already have info for this source
+    year_key = f"release_year_{source_name}"
+    if year_key in record:
+        return None, None
+        
+    artist, track = aa.get_artist_and_track(filename)
+    if not artist or not track:
+        print(f"Skipping {filename}: Unable to parse artist and track.")
+        record[year_key] = None
+        aa.write_db_file(db_dict)
+        return None, None
+        
+    print(f"Searching for: {artist} - {track}")
+    return artist, track
+
+
+def release_dates_youtube():
+    """Search for release dates on YouTube for all files in the database."""
     db_dict = aa.read_db_file()
-    d = discogs_client.Client('DJTools/1.0', user_token='HmnXmNploYjFjezfQWhqzrsJxgnSMioqaqNwHvMo')
+    youtube = build('youtube', 'v3', developerKey=aa.YOUTUBE_API_KEY)
 
     for filename, record in db_dict.items():
-        artist, track = aa.get_artist_and_track(filename)
-        if not artist or not track:
-            print(f"Skipping {filename}: Unable to parse artist and track.")
+        artist, track = _process_track_metadata(db_dict, filename, record, "youtube")
+        if not artist:  # Skip if we couldn't process metadata
             continue
 
-        print(f"Searching for: {artist} - {track}")
         try:
+            # Try with original track name first
+            query = f"{artist} {track}"
+            response = youtube.search().list(
+                q=query,
+                part='snippet',
+                type='video',
+                maxResults=50
+            ).execute()
+
+            # If no results, try with simplified track name
+            if not response.get('items'):
+                simplified = _simplify_track(track)
+                if simplified:
+                    query = f"{artist} {simplified}"
+                    response = youtube.search().list(
+                        q=query,
+                        part='snippet',
+                        type='video',
+                        maxResults=50
+                    ).execute()
+
+            if response.get('items'):
+                # Find earliest upload date among results
+                earliest_video = min(response['items'], 
+                    key=lambda x: x['snippet']['publishedAt'])
+                published_year = int(earliest_video['snippet']['publishedAt'][:4])  # Get YYYY as int
+                record["release_year_youtube"] = published_year
+                print(f"Found earliest upload date for {filename}: {published_year}")
+                aa.write_db_file(db_dict)
+            else:
+                print(f"No results found for {filename}.")
+                record["release_year_youtube"] = None
+                aa.write_db_file(db_dict)
+
+        except Exception as e:
+            print(f"Error searching for {filename}: {e}")
+
+
+def release_dates_discogs():
+    """Search for release dates on Discogs for all files in the database."""
+    db_dict = aa.read_db_file()
+    d = discogs_client.Client('DJTools/1.0', user_token=aa.DISCOGS_API_KEY)
+
+    for filename, record in db_dict.items():
+        artist, track = _process_track_metadata(db_dict, filename, record, "discogs")
+        if not artist:  # Skip if we couldn't process metadata
+            continue
+
+        try:
+            # Try with original track name first
             results = d.search(track, artist=artist, type='release')
+            
+            # If no results, try with simplified track name
             if not results:
-                # Retry by removing the last part of the track name in parentheses
-                track = re.sub(r"\s*\(.*\)$", "", track).strip()
-                print(f"Retrying with modified track name: {artist} - {track}")
-                results = d.search(track, artist=artist, type='release')
+                simplified = _simplify_track(track)
+                if simplified:
+                    results = d.search(simplified, artist=artist, type='release')
 
             if results:
                 release = results[0]
-                release_date = release.year
-                if release_date:
-                    print(f"Found release date for {filename}: {release_date}")
+                labels = [label.name for label in release.labels]
+                
+                record["release_year_discogs"] = release.year
+                if labels:  # Only store labels if we found some
+                    record["labels_discogs"] = labels
+                
+                if release.year:
+                    print(f"Found release date for {filename}: {release.year}")
+                    print(f"Label(s): {', '.join(labels) if labels else 'Unknown'}")
+                    aa.write_db_file(db_dict)
                 else:
                     print(f"No release date found for {filename}.")
+                    print(f"Label(s): {', '.join(labels) if labels else 'Unknown'}")
+                    record["release_year_discogs"] = None
+                    aa.write_db_file(db_dict)
             else:
                 print(f"No results found for {filename}.")
+                record["release_year_discogs"] = None
+                aa.write_db_file(db_dict)
+
         except Exception as e:
             print(f"Error searching for {filename}: {e}")
+
+
+def clear_release_date_none_values():
+    """Remove any None values for release date fields in the database."""
+    db_dict = aa.read_db_file()
+    date_fields = ["release_year_discogs", "release_year_youtube"]
+    
+    modified = False
+    for _, record in db_dict.items():
+        for field in date_fields:
+            if field in record and record[field] is None:
+                del record[field]
+                modified = True
+    
+    if modified:
+        aa.write_db_file(db_dict)
+        print("Removed None values from release date fields")
+    else:
+        print("No None values found in release date fields")
 
 
 if __name__ == "__main__":
@@ -406,7 +515,9 @@ if __name__ == "__main__":
             cue_to_tracklist,
             generate_lists,
             test_camelot_dicts,
-            search_release_dates,
+            release_dates_discogs,
+            release_dates_youtube,
+            clear_release_date_none_values,
         ]
     )
     parser.dispatch()

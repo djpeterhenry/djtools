@@ -28,6 +28,9 @@ except NameError:
 DB_FILENAME = "aadb_unicode.txt"
 DATABASE_JSON = "database.json"
 
+YOUTUBE_API_KEY = "AIzaSyDAnMhITl7CeycHuOeTqYxY0T2vLgZWzwk"
+DISCOGS_API_KEY = "HmnXmNploYjFjezfQWhqzrsJxgnSMioqaqNwHvMo"
+
 ABLETON_EXTENSIONS = [".alc", ".als"]
 SAMPLE_EXTENSIONS = [".mp3", ".m4a", ".wav", ".aiff", ".flac"]
 ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
