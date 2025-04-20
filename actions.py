@@ -16,6 +16,7 @@ from googleapiclient.discovery import build
 
 
 def add_bpms():
+    """Add BPM values for new files in the database. Input required for each file."""
     db_dict = aa.read_db_file()
     alc_files = aa.get_ableton_files()
     for filename in alc_files:
@@ -36,6 +37,7 @@ def add_bpms():
 
 
 def add_keys():
+    """Add musical keys for files in the database by analyzing audio using keyfinder-cli."""
     db_dict = aa.read_db_file()
 
     valid_alc_files = aa.get_valid_alc_files(db_dict)
@@ -65,7 +67,7 @@ def add_keys():
 
 
 def edit_bpm(edit_filename):
-    """"""
+    """Edit BPM value for a specific file."""
     assert os.path.isfile(edit_filename)
     print(edit_filename)
     db_dict = aa.read_db_file()
@@ -85,6 +87,7 @@ def edit_bpm(edit_filename):
 
 
 def rename_tag(tag_old, tag_new):
+    """Rename a tag throughout the database."""
     db_dict = aa.read_db_file()
     for _, record in sorted(db_dict.items()):
         tags = record["tags"]
@@ -94,6 +97,7 @@ def rename_tag(tag_old, tag_new):
 
 
 def list_tags():
+    """List all tags and their frequencies used in the database."""
     db_dict = aa.read_db_file()
     files = aa.get_rekordbox_files(db_dict)
     tag_to_count = defaultdict(int)
@@ -107,12 +111,14 @@ def list_tags():
 
 
 def list_missing():
+    """List files that are in the database but no longer exist in the filesystem."""
     missing = aa.get_missing()
     for f in missing:
         print(f)
 
 
 def transfer_missing():
+    """Interactive tool to handle missing files by transferring their data to similar files or deleting them."""
     db_dict = aa.read_db_file()
     alc_file_set = set(aa.get_ableton_files())
     alc_file_list = list(alc_file_set)
@@ -164,6 +170,7 @@ def transfer_missing():
 
 
 def transfer_other(other_db_filename):
+    """Transfer timestamp data from another database file into the current database."""
     db_dict = aa.read_db_file()
     other_db_dict = aa.read_db_file(other_db_filename)
     for filename, record in db_dict.items():
@@ -181,18 +188,21 @@ def transfer_other(other_db_filename):
 
 
 def print_records():
+    """Print all records in the database."""
     db_dict = aa.read_db_file()
     for filename, record in db_dict.items():
         print(filename + " " + str(record))
 
 
 def print_record(alc_filename):
+    """Print detailed information for a specific file."""
     db_dict = aa.read_db_file()
     record = db_dict[alc_filename]
     pprint.pprint(record)
 
 
 def print_pretty(output_file):
+    """Write database contents to a file in a readable format."""
     db_dict = aa.read_db_file()
     with open(output_file, "w") as f:
         for filename, record in sorted(db_dict.items()):
@@ -202,6 +212,7 @@ def print_pretty(output_file):
 
 
 def print_key_frequency():
+    """Print frequency of musical keys in the database."""
     db_dict = aa.read_db_file()
     alc_file_set = set(aa.get_ableton_files())
     key_frequency = {}
@@ -227,25 +238,30 @@ def print_key_frequency():
 
 
 def print_xml(alc_filename):
+    """Print the XML content of an Ableton Live clip file."""
     assert os.path.isfile(alc_filename)
     print(aa.alc_to_str(alc_filename))
 
 
 def print_audioclip(alc_filename):
+    """Print audio clip information from an Ableton Live clip file."""
     assert os.path.isfile(alc_filename)
     print(aa.get_audioclip_from_alc(alc_filename))
 
 
 def print_audioclips(als_filename):
+    """Print all audio clip information from an Ableton Live set file."""
     assert os.path.isfile(als_filename)
     print(aa.get_audioclips_from_als(als_filename))
 
 
 def rekordbox_xml(rekordbox_filename):
+    """Export database to Rekordbox XML format."""
     export_rekordbox.export_rekordbox_xml(rekordbox_filename=rekordbox_filename)
 
 
 def test_lists():
+    """Test reading track lists from the lists folder."""
     db_dict = aa.read_db_file()
     name_to_file = aa.get_list_name_to_file(aa.LISTS_FOLDER)
     for name, list_file in sorted(name_to_file.items()):
@@ -256,6 +272,7 @@ def test_lists():
 
 
 def cue_to_tracklist(cue_filename, tracklist_filename):
+    """Convert a cue sheet to a tracklist format."""
     class Track(object):
         def __init__(self):
             self.artist = None
@@ -292,6 +309,7 @@ def cue_to_tracklist(cue_filename, tracklist_filename):
 
 
 def generate_lists(output_path):
+    """Generate various sorted track lists and save them to files."""
     aa.generate_lists(output_path)
 
 
@@ -343,11 +361,6 @@ def convert_keys_to_unicode():
         new_dict[new_key] = record
         print(repr(new_key))
     aa.write_db_file(new_dict)
-
-
-def test_camelot_dicts():
-    print(aa.camelot_dict)
-    print(aa.reverse_camelot_dict)
 
 
 def _simplify_track(track):
@@ -514,7 +527,6 @@ if __name__ == "__main__":
             test_lists,
             cue_to_tracklist,
             generate_lists,
-            test_camelot_dicts,
             release_dates_discogs,
             release_dates_youtube,
             clear_release_date_none_values,
