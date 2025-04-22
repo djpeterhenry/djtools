@@ -273,6 +273,7 @@ def test_lists():
 
 def cue_to_tracklist(cue_filename, tracklist_filename):
     """Convert a cue sheet to a tracklist format."""
+
     class Track(object):
         def __init__(self):
             self.artist = None
@@ -367,7 +368,9 @@ def _simplify_track(track):
     """Remove common suffixes like (Original Mix), (Radio Edit), (Acapella) from track name."""
     if not re.search(r"\s*\((Original|Radio|Acapella)", track, re.IGNORECASE):
         return None
-    simplified = re.sub(r"\s*\((Original|Radio|Acapella)[^)]*\)", "", track, flags=re.IGNORECASE).strip()
+    simplified = re.sub(
+        r"\s*\((Original|Radio|Acapella)[^)]*\)", "", track, flags=re.IGNORECASE
+    ).strip()
     print(f"Trying simplified track name: {simplified}")
     return simplified
 
@@ -378,14 +381,14 @@ def _process_track_metadata(db_dict, filename, record, source_name):
     year_key = f"release_year_{source_name}"
     if year_key in record:
         return None, None
-        
+
     artist, track = aa.get_artist_and_track(filename)
     if not artist or not track:
         print(f"Skipping {filename}: Unable to parse artist and track.")
         record[year_key] = None
         aa.write_db_file(db_dict)
         return None, None
-        
+
     print(f"Searching for: {artist} - {track}")
     return artist, track
 
@@ -393,7 +396,7 @@ def _process_track_metadata(db_dict, filename, record, source_name):
 def release_dates_youtube():
     """Search for release dates on YouTube for all files in the database."""
     db_dict = aa.read_db_file()
-    youtube = build('youtube', 'v3', developerKey=aa.YOUTUBE_API_KEY)
+    youtube = build("youtube", "v3", developerKey=aa.YOUTUBE_API_KEY)
 
     for filename, record in db_dict.items():
         artist, track = _process_track_metadata(db_dict, filename, record, "youtube")
@@ -403,30 +406,31 @@ def release_dates_youtube():
         try:
             # Try with original track name first
             query = f"{artist} {track}"
-            response = youtube.search().list(
-                q=query,
-                part='snippet',
-                type='video',
-                maxResults=50
-            ).execute()
+            response = (
+                youtube.search()
+                .list(q=query, part="snippet", type="video", maxResults=50)
+                .execute()
+            )
 
             # If no results, try with simplified track name
-            if not response.get('items'):
+            if not response.get("items"):
                 simplified = _simplify_track(track)
                 if simplified:
                     query = f"{artist} {simplified}"
-                    response = youtube.search().list(
-                        q=query,
-                        part='snippet',
-                        type='video',
-                        maxResults=50
-                    ).execute()
+                    response = (
+                        youtube.search()
+                        .list(q=query, part="snippet", type="video", maxResults=50)
+                        .execute()
+                    )
 
-            if response.get('items'):
+            if response.get("items"):
                 # Find earliest upload date among results
-                earliest_video = min(response['items'], 
-                    key=lambda x: x['snippet']['publishedAt'])
-                published_year = int(earliest_video['snippet']['publishedAt'][:4])  # Get YYYY as int
+                earliest_video = min(
+                    response["items"], key=lambda x: x["snippet"]["publishedAt"]
+                )
+                published_year = int(
+                    earliest_video["snippet"]["publishedAt"][:4]
+                )  # Get YYYY as int
                 record["release_year_youtube"] = published_year
                 print(f"Found earliest upload date for {filename}: {published_year}")
                 aa.write_db_file(db_dict)
@@ -442,7 +446,7 @@ def release_dates_youtube():
 def release_dates_discogs():
     """Search for release dates on Discogs for all files in the database."""
     db_dict = aa.read_db_file()
-    d = discogs_client.Client('DJTools/1.0', user_token=aa.DISCOGS_API_KEY)
+    d = discogs_client.Client("DJTools/1.0", user_token=aa.DISCOGS_API_KEY)
 
     for filename, record in db_dict.items():
         artist, track = _process_track_metadata(db_dict, filename, record, "discogs")
@@ -451,22 +455,22 @@ def release_dates_discogs():
 
         try:
             # Try with original track name first
-            results = d.search(track, artist=artist, type='release')
-            
+            results = d.search(track, artist=artist, type="release")
+
             # If no results, try with simplified track name
             if not results:
                 simplified = _simplify_track(track)
                 if simplified:
-                    results = d.search(simplified, artist=artist, type='release')
+                    results = d.search(simplified, artist=artist, type="release")
 
             if results:
                 release = results[0]
                 labels = [label.name for label in release.labels]
-                
+
                 record["release_year_discogs"] = release.year
                 if labels:  # Only store labels if we found some
                     record["labels_discogs"] = labels
-                
+
                 if release.year:
                     print(f"Found release date for {filename}: {release.year}")
                     print(f"Label(s): {', '.join(labels) if labels else 'Unknown'}")
@@ -489,19 +493,50 @@ def clear_release_date_none_values():
     """Remove any None values for release date fields in the database."""
     db_dict = aa.read_db_file()
     date_fields = ["release_year_discogs", "release_year_youtube"]
-    
+
     modified = False
     for _, record in db_dict.items():
         for field in date_fields:
             if field in record and record[field] is None:
                 del record[field]
                 modified = True
-    
+
     if modified:
         aa.write_db_file(db_dict)
         print("Removed None values from release date fields")
     else:
         print("No None values found in release date fields")
+
+
+def summarize_discogs_release_years():
+    """Print summary statistics about Discogs release years in the database."""
+    db_dict = aa.read_db_file()
+
+    total_files = len(db_dict)
+    files_with_year = 0
+    year_counts = defaultdict(int)
+
+    for filename, record in db_dict.items():
+        year = record.get("release_year_discogs")
+        if year is not None:
+            files_with_year += 1
+            try:
+                # Ensure year is an integer
+                year = int(year)
+                year_counts[year] += 1
+            except (ValueError, TypeError):
+                print(f"Warning: Invalid year value for {filename}: {year}")
+
+    files_without_year = total_files - files_with_year
+
+    print(f"Files with release year: {files_with_year}")
+    print(f"Files without release year: {files_without_year}")
+    print("\nRelease year distribution:")
+
+    # Sort years numerically
+    for year in sorted(year_counts.keys()):
+        count = year_counts[year]
+        print(f"{year}: {count}")
 
 
 if __name__ == "__main__":
@@ -530,6 +565,7 @@ if __name__ == "__main__":
             release_dates_discogs,
             release_dates_youtube,
             clear_release_date_none_values,
+            summarize_discogs_release_years,
         ]
     )
     parser.dispatch()
