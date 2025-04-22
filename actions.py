@@ -368,22 +368,34 @@ def convert_keys_to_unicode():
 
 
 def _simplify_track(track):
-    """Remove common suffixes like (Original Mix), (Radio Edit), (Acapella) from track name."""
-    if not re.search(r"\s*\((Original|Radio|Acapella)", track, re.IGNORECASE):
+    """Remove common suffixes like (Original Mix), (Radio Edit), (Acapella), (feat. Artist) from track name."""
+    pattern = r"\s*\((Original|Radio|Acapella|feat[^)]*)[^)]*\)"
+    if not re.search(pattern, track, re.IGNORECASE):
         return None
-    simplified = re.sub(
-        r"\s*\((Original|Radio|Acapella)[^)]*\)", "", track, flags=re.IGNORECASE
-    ).strip()
+    simplified = re.sub(pattern, "", track, flags=re.IGNORECASE)
+    # Keep removing parentheses blocks until no more matches
+    while re.search(pattern, simplified, re.IGNORECASE):
+        simplified = re.sub(pattern, "", simplified, flags=re.IGNORECASE)
+    simplified = simplified.strip()
     print(f"Trying simplified track name: {simplified}")
     return simplified
 
 
-def _process_track_metadata(db_dict, filename, record, source_name):
-    """Common helper for processing track metadata from different sources."""
-    # Skip if we already have info for this source
+def _process_track_metadata(db_dict, filename, record, source_name, retry=False):
+    """Common helper for processing track metadata from different sources.
+    
+    Args:
+        db_dict: Database dictionary
+        filename: Name of file to process
+        record: Record from database
+        source_name: Source name (e.g. "discogs", "bandcamp")
+        retry: If True, process even if source already has data (unless it has a valid year)
+    """
     year_key = f"release_year_{source_name}"
+    # Skip if we already have info and not in retry mode, or if we have a valid year in retry mode
     if year_key in record:
-        return None, None
+        if not retry or record[year_key] is not None:
+            return None, None
 
     artist, track = aa.get_artist_and_track(filename)
     if not artist or not track:
@@ -446,18 +458,41 @@ def release_dates_youtube():
             print(f"Error searching for {filename}: {e}")
 
 
-def release_dates_discogs():
-    """Search for release dates on Discogs for all files in the database."""
+def release_dates_discogs(n: int = None, retry: bool = False):
+    """Search for release dates on Discogs for songs ordered by play count.
+    
+    Args:
+        n: Number of songs to process (None for all)
+        retry: If True, only process songs with None for release_year_discogs
+    """
     db_dict = aa.read_db_file()
     d = discogs_client.Client("DJTools/1.0", user_token=aa.DISCOGS_API_KEY)
 
+    # Get list of files to process, sorted by play count
+    process_files = []
     for filename, record in db_dict.items():
-        artist, track = _process_track_metadata(db_dict, filename, record, "discogs")
+        if retry and record.get("release_year_discogs") is not None:
+            continue
+        ts_count = len(aa.get_ts_list_date_limited(record))
+        if ts_count > 0:  # Only include songs that have been played
+            process_files.append((ts_count, filename))
+    
+    # Sort by play count (descending)
+    process_files.sort(reverse=True)
+    if n is not None:
+        process_files = process_files[:n]
+    
+    print(f"Processing {len(process_files)} songs{' (retry mode)' if retry else ''}")
+    
+    for plays, filename in process_files:
+        record = db_dict[filename]
+        print(f"\n{plays} plays: {filename}")
+        
+        artist, track = _process_track_metadata(db_dict, filename, record, "discogs", retry=retry)
         if not artist:  # Skip if we couldn't process metadata
             continue
 
         try:
-            # Try with original track name first
             results = d.search(track, artist=artist, type="release")
 
             # If no results, try with simplified track name
@@ -526,9 +561,10 @@ def release_dates_bandcamp(n: int):
         print(f"\n{plays} plays: {filename}")
         print(f"Discogs year: {discogs_year}")
         
-        artist, track = aa.get_artist_and_track(filename)
-        print(f"Parsed artist: '{artist}', track: '{track}'")
-        
+        artist, track = _process_track_metadata(db_dict, filename, record, "bandcamp")
+        if not artist:  # Skip if we couldn't process metadata
+            continue
+
         try:
             # Try with original track name first
             url = _get_bandcamp_url(artist, track)
