@@ -520,12 +520,7 @@ def summarize_discogs_release_years():
         year = record.get("release_year_discogs")
         if year is not None:
             files_with_year += 1
-            try:
-                # Ensure year is an integer
-                year = int(year)
-                year_counts[year] += 1
-            except (ValueError, TypeError):
-                print(f"Warning: Invalid year value for {filename}: {year}")
+            year_counts[year] += 1
 
     files_without_year = total_files - files_with_year
 
@@ -533,7 +528,6 @@ def summarize_discogs_release_years():
     print(f"Files without release year: {files_without_year}")
     print("\nRelease year distribution:")
 
-    # Sort years numerically
     for year in sorted(year_counts.keys()):
         count = year_counts[year]
         print(f"{year}: {count}")
