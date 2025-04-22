@@ -587,8 +587,6 @@ def release_dates_bandcamp(n: int):
                     print("No valid release date found in any selector")
             else:
                 print("No results found in HTML")
-                print("Page content preview:")
-                print(soup.get_text()[:500])
             
             if "release_year_bandcamp" not in record:
                 record["release_year_bandcamp"] = None
