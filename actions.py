@@ -533,6 +533,33 @@ def summarize_discogs_release_years():
         print(f"{year}: {count}")
 
 
+def print_no_release_year_top(n: int):
+    """Print the top N most-played songs that are missing Discogs release years."""
+    db_dict = aa.read_db_file()
+    
+    # Collect files missing release years along with their play counts
+    missing_year_files = []
+    for filename, record in db_dict.items():
+        if record.get("release_year_discogs") is None:
+            ts_count = len(aa.get_ts_list_date_limited(record))
+            if ts_count > 0:  # Only include songs that have been played
+                missing_year_files.append((ts_count, filename))
+    
+    # Sort by play count (descending) and take top N
+    missing_year_files.sort(reverse=True)
+    top_n = missing_year_files[:n]
+    
+    if not top_n:
+        print("No files found missing Discogs release years")
+        return
+        
+    print(f"Top {n} most-played songs missing Discogs release years:")
+    print("\nPlays | Filename")
+    print("-" * 50)
+    for plays, filename in top_n:
+        print(f"{plays:5d} | {filename}")
+
+
 if __name__ == "__main__":
     parser = argh.ArghParser()
     parser.add_commands(
@@ -560,6 +587,7 @@ if __name__ == "__main__":
             release_dates_youtube,
             clear_release_date_none_values,
             summarize_discogs_release_years,
+            print_no_release_year_top,
         ]
     )
     parser.dispatch()
