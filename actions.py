@@ -526,47 +526,78 @@ def release_dates_bandcamp(n: int):
         print(f"\n{plays} plays: {filename}")
         print(f"Discogs year: {discogs_year}")
         
-        artist, track = _process_track_metadata(db_dict, filename, record, "bandcamp")
-        if not artist:  # Skip if we couldn't process metadata
-            continue
-
+        artist, track = aa.get_artist_and_track(filename)
+        print(f"Parsed artist: '{artist}', track: '{track}'")
+        
         try:
             # Try with original track name first
             url = _get_bandcamp_url(artist, track)
+            print(f"Searching URL: {url}")
             response = requests.get(url)
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Try searching with simplified track name if no results
-            if "No results found" in soup.text:
+            # Look for any search results using broader selectors
+            results = soup.select('li.searchresult')
+            if not results:
+                results = soup.select('.result-items li')  # Another common Bandcamp selector
+                
+            print(f"Found {len(results)} results")
+            
+            if not results:
                 simplified = _simplify_track(track)
                 if simplified:
                     url = _get_bandcamp_url(artist, simplified)
+                    print(f"Trying simplified URL: {url}")
                     response = requests.get(url)
                     soup = BeautifulSoup(response.text, 'html.parser')
+                    results = soup.select('li.searchresult') or soup.select('.result-items li')
+                    print(f"Found {len(results)} results with simplified search")
             
-            # Look for release date in search results
-            result_items = soup.select('.result-items li')
-            if result_items:
-                # Get the first result's release date
-                result = result_items[0]
-                date_text = result.select_one('.result-released')
-                if date_text:
-                    try:
-                        # Extract year from date text
-                        year = int(date_text.text.strip().split()[-1])
-                        record["release_year_bandcamp"] = year
-                        print(f"Found release date: {year}")
-                        aa.write_db_file(db_dict)
-                        continue
-                    except (ValueError, IndexError):
-                        pass
+            if results:
+                result = results[0]
+                print("First result HTML:")
+                print(result.prettify()[:500])  # Print first 500 chars of the HTML
+                
+                # Try multiple selectors for date
+                date_selectors = [
+                    '.released',
+                    '.release-date',
+                    'div[class*="release"]',  # Any class containing "release"
+                    '.subhead'  # Sometimes contains the date
+                ]
+                
+                for selector in date_selectors:
+                    date_el = result.select_one(selector)
+                    if date_el:
+                        date_text = date_el.text.strip()
+                        print(f"Found date text with selector {selector}: {date_text}")
+                        try:
+                            # Look for a year in the text
+                            year_match = re.search(r'\b20\d{2}\b', date_text)
+                            if year_match:
+                                year = int(year_match.group(0))
+                                record["release_year_bandcamp"] = year
+                                print(f"Found release year: {year}")
+                                aa.write_db_file(db_dict)
+                                break
+                        except (ValueError, IndexError) as e:
+                            print(f"Failed to parse date text: {date_text}")
+                            print(f"Error: {e}")
+                else:
+                    print("No valid release date found in any selector")
+            else:
+                print("No results found in HTML")
+                print("Page content preview:")
+                print(soup.get_text()[:500])
             
-            print("No results found.")
-            record["release_year_bandcamp"] = None
-            aa.write_db_file(db_dict)
+            if "release_year_bandcamp" not in record:
+                record["release_year_bandcamp"] = None
+                aa.write_db_file(db_dict)
 
         except Exception as e:
             print(f"Error searching: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 def clear_release_date_none_values():
