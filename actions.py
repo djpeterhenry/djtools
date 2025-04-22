@@ -13,6 +13,9 @@ import re
 import pprint
 import discogs_client
 from googleapiclient.discovery import build
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import quote_plus
 
 
 def add_bpms():
@@ -489,6 +492,83 @@ def release_dates_discogs():
             print(f"Error searching for {filename}: {e}")
 
 
+def _get_missing_release_dates(db_dict):
+    missing_year_files = []
+    for filename, record in db_dict.items():
+        discogs_year = record.get("release_year_discogs")
+        bandcamp_year = record.get("release_year_bandcamp")
+        if discogs_year is None and bandcamp_year is None:
+            ts_count = len(aa.get_ts_list_date_limited(record))
+            if ts_count > 0:  # Only include songs that have been played
+                missing_year_files.append((ts_count, filename))
+    
+    # Sort by play count (descending)
+    missing_year_files.sort(reverse=True)
+    return missing_year_files
+
+
+def release_dates_bandcamp(n: int):
+    """Search for release dates on Bandcamp for the top N most-played songs missing dates."""
+    db_dict = aa.read_db_file()
+    missing_year_files = _get_missing_release_dates(db_dict)
+    top_n = missing_year_files[:n]
+    
+    if not top_n:
+        print("No files found missing release years")
+        return
+
+    print(f"Searching Bandcamp for top {n} most-played songs missing dates:")
+    print("-" * 70)
+    
+    for plays, filename in top_n:
+        record = db_dict[filename]
+        discogs_year = record.get("release_year_discogs", "None")
+        print(f"\n{plays} plays: {filename}")
+        print(f"Discogs year: {discogs_year}")
+        
+        artist, track = _process_track_metadata(db_dict, filename, record, "bandcamp")
+        if not artist:  # Skip if we couldn't process metadata
+            continue
+
+        try:
+            # Try with original track name first
+            url = _get_bandcamp_url(artist, track)
+            response = requests.get(url)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Try searching with simplified track name if no results
+            if "No results found" in soup.text:
+                simplified = _simplify_track(track)
+                if simplified:
+                    url = _get_bandcamp_url(artist, simplified)
+                    response = requests.get(url)
+                    soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Look for release date in search results
+            result_items = soup.select('.result-items li')
+            if result_items:
+                # Get the first result's release date
+                result = result_items[0]
+                date_text = result.select_one('.result-released')
+                if date_text:
+                    try:
+                        # Extract year from date text
+                        year = int(date_text.text.strip().split()[-1])
+                        record["release_year_bandcamp"] = year
+                        print(f"Found release date: {year}")
+                        aa.write_db_file(db_dict)
+                        continue
+                    except (ValueError, IndexError):
+                        pass
+            
+            print("No results found.")
+            record["release_year_bandcamp"] = None
+            aa.write_db_file(db_dict)
+
+        except Exception as e:
+            print(f"Error searching: {e}")
+
+
 def clear_release_date_none_values():
     """Remove any None values for release date fields in the database."""
     db_dict = aa.read_db_file()
@@ -534,30 +614,32 @@ def summarize_discogs_release_years():
 
 
 def print_no_release_year_top(n: int):
-    """Print the top N most-played songs that are missing Discogs release years."""
+    """Print the top N most-played songs missing release years from either source."""
     db_dict = aa.read_db_file()
-    
-    # Collect files missing release years along with their play counts
-    missing_year_files = []
-    for filename, record in db_dict.items():
-        if record.get("release_year_discogs") is None:
-            ts_count = len(aa.get_ts_list_date_limited(record))
-            if ts_count > 0:  # Only include songs that have been played
-                missing_year_files.append((ts_count, filename))
-    
-    # Sort by play count (descending) and take top N
-    missing_year_files.sort(reverse=True)
+    missing_year_files = _get_missing_release_dates(db_dict)
     top_n = missing_year_files[:n]
     
     if not top_n:
-        print("No files found missing Discogs release years")
+        print("No files found missing release years")
         return
         
-    print(f"Top {n} most-played songs missing Discogs release years:")
-    print("\nPlays | Filename")
-    print("-" * 50)
+    print(f"Top {n} most-played songs missing release years:")
+    print("\nPlays | Discogs | Bandcamp | Filename")
+    print("-" * 70)
     for plays, filename in top_n:
-        print(f"{plays:5d} | {filename}")
+        record = db_dict[filename]
+        discogs_year = record.get("release_year_discogs")
+        bandcamp_year = record.get("release_year_bandcamp")
+        # Convert years to strings, using "None" for missing values
+        discogs_str = str(discogs_year) if discogs_year is not None else "None"
+        bandcamp_str = str(bandcamp_year) if bandcamp_year is not None else "None"
+        print(f"{plays:5d} | {discogs_str:7} | {bandcamp_str:8} | {filename}")
+
+
+def _get_bandcamp_url(artist, track):
+    """Helper to construct Bandcamp search URL."""
+    search_term = quote_plus(f"{artist} {track}")
+    return f"https://bandcamp.com/search?q={search_term}&item_type=t"
 
 
 if __name__ == "__main__":
@@ -585,6 +667,7 @@ if __name__ == "__main__":
             generate_lists,
             release_dates_discogs,
             release_dates_youtube,
+            release_dates_bandcamp,
             clear_release_date_none_values,
             summarize_discogs_release_years,
             print_no_release_year_top,
