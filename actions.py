@@ -533,8 +533,9 @@ def _get_missing_release_dates(db_dict):
     for filename, record in db_dict.items():
         discogs_year = record.get("release_year_discogs")
         bandcamp_year = record.get("release_year_bandcamp")
+        soundcloud_year = record.get("release_year_soundcloud")
         # Only include if all sources are missing or None
-        if all(year is None for year in [discogs_year, bandcamp_year]):
+        if all(year is None for year in [discogs_year, bandcamp_year, soundcloud_year]):
             ts_count = len(aa.get_ts_list_date_limited(record))
             if ts_count > 0:  # Only include songs that have been played
                 missing_year_files.append((ts_count, filename))
@@ -642,6 +643,104 @@ def _get_bandcamp_url(artist, track):
     return f"https://bandcamp.com/search?q={search_term}&item_type=t"
 
 
+def _get_soundcloud_url(artist, track):
+    """Helper to construct Soundcloud search URL."""
+    search_term = quote_plus(f"{artist} {track}")
+    return f"https://soundcloud.com/search/sounds?q={search_term}"
+
+
+def release_dates_soundcloud(n: int):
+    """Search for release dates on Soundcloud for the top N most-played songs missing dates."""
+    db_dict = aa.read_db_file()
+    missing_year_files = _get_missing_release_dates(db_dict)
+    top_n = missing_year_files[:n]
+    
+    if not top_n:
+        print("No files found missing release years")
+        return
+
+    print(f"Searching Soundcloud for top {n} most-played songs missing dates:")
+    print("-" * 70)
+    
+    for plays, filename in top_n:
+        record = db_dict[filename]
+        discogs_year = record.get("release_year_discogs", "None")
+        print(f"\n{plays} plays: {filename}")
+        print(f"Discogs year: {discogs_year}")
+        
+        artist, track = _process_track_metadata(db_dict, filename, record, "soundcloud")
+        if not artist:  # Skip if we couldn't process metadata
+            continue
+
+        try:
+            # Try with original track name first
+            url = _get_soundcloud_url(artist, track)
+            print(f"Searching URL: {url}")
+            response = requests.get(url)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Look for any search results
+            results = soup.select('li[class*="searchItem"]')
+            if not results:
+                results = soup.select('[class*="searchResult"]')
+                
+            print(f"Found {len(results)} results")
+            
+            if not results:
+                simplified = _simplify_track(track)
+                if simplified:
+                    url = _get_soundcloud_url(artist, simplified)
+                    print(f"Trying simplified URL: {url}")
+                    response = requests.get(url)
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    results = soup.select('li[class*="searchItem"]') or soup.select('[class*="searchResult"]')
+                    print(f"Found {len(results)} results with simplified search")
+            
+            if results:
+                result = results[0]
+                print("First result HTML:")
+                print(result.prettify()[:500])
+                
+                # Try multiple selectors for date
+                date_selectors = [
+                    '[class*="uploadTime"]',
+                    'time',
+                    '[class*="created-at"]',
+                    '[class*="releaseDate"]'
+                ]
+                
+                for selector in date_selectors:
+                    date_el = result.select_one(selector)
+                    if date_el:
+                        date_text = date_el.text.strip()
+                        print(f"Found date text with selector {selector}: {date_text}")
+                        try:
+                            # Look for a year in the text
+                            year_match = re.search(r'\b20\d{2}\b', date_text)
+                            if year_match:
+                                year = int(year_match.group(0))
+                                record["release_year_soundcloud"] = year
+                                print(f"Found release year: {year}")
+                                aa.write_db_file(db_dict)
+                                break
+                        except (ValueError, IndexError) as e:
+                            print(f"Failed to parse date text: {date_text}")
+                            print(f"Error: {e}")
+                else:
+                    print("No valid release date found in any selector")
+            else:
+                print("No results found in HTML")
+            
+            if "release_year_soundcloud" not in record:
+                record["release_year_soundcloud"] = None
+                aa.write_db_file(db_dict)
+
+        except Exception as e:
+            print(f"Error searching: {e}")
+            import traceback
+            traceback.print_exc()
+
+
 def clear_release_date_none_values():
     """Remove any None values for release date fields in the database."""
     db_dict = aa.read_db_file()
@@ -697,16 +796,18 @@ def print_no_release_year_top(n: int):
         return
         
     print(f"Top {n} most-played songs missing release years:")
-    print("\nPlays | Discogs | Bandcamp | Filename")
-    print("-" * 70)
+    print("\nPlays | Discogs | Bandcamp | Soundcloud | Filename")
+    print("-" * 80)
     for plays, filename in top_n:
         record = db_dict[filename]
         discogs_year = record.get("release_year_discogs")
         bandcamp_year = record.get("release_year_bandcamp")
+        soundcloud_year = record.get("release_year_soundcloud")
         # Convert years to strings, using "None" for missing values
         discogs_str = str(discogs_year) if discogs_year is not None else "None"
         bandcamp_str = str(bandcamp_year) if bandcamp_year is not None else "None"
-        print(f"{plays:5d} | {discogs_str:7} | {bandcamp_str:8} | {filename}")
+        soundcloud_str = str(soundcloud_year) if soundcloud_year is not None else "None"
+        print(f"{plays:5d} | {discogs_str:7} | {bandcamp_str:8} | {soundcloud_str:9} | {filename}")
 
 
 if __name__ == "__main__":
@@ -735,6 +836,7 @@ if __name__ == "__main__":
             release_dates_discogs,
             release_dates_youtube,
             release_dates_bandcamp,
+            release_dates_soundcloud,
             clear_release_date_none_values,
             summarize_discogs_release_years,
             print_no_release_year_top,
