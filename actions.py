@@ -16,6 +16,7 @@ from googleapiclient.discovery import build
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
+import time
 
 
 def add_bpms():
@@ -532,9 +533,8 @@ def _get_missing_release_dates(db_dict):
     for filename, record in db_dict.items():
         discogs_year = record.get("release_year_discogs")
         bandcamp_year = record.get("release_year_bandcamp")
-        beatport_year = record.get("release_year_beatport")
         # Only include if all sources are missing or None
-        if all(year is None for year in [discogs_year, bandcamp_year, beatport_year]):
+        if all(year is None for year in [discogs_year, bandcamp_year]):
             ts_count = len(aa.get_ts_list_date_limited(record))
             if ts_count > 0:  # Only include songs that have been played
                 missing_year_files.append((ts_count, filename))
@@ -642,142 +642,6 @@ def _get_bandcamp_url(artist, track):
     return f"https://bandcamp.com/search?q={search_term}&item_type=t"
 
 
-def _get_beatport_url(artist, track):
-    """Helper to construct Beatport search URL."""
-    # Beatport works better with just the track name
-    search_term = quote_plus(track)
-    return f"https://www.beatport.com/search/tracks?q={search_term}"
-
-
-def release_dates_beatport(n: int):
-    """Search for release dates on Beatport for the top N most-played songs missing dates."""
-    db_dict = aa.read_db_file()
-    missing_year_files = _get_missing_release_dates(db_dict)
-    top_n = missing_year_files[:n]
-    
-    if not top_n:
-        print("No files found missing release years")
-        return
-
-    # Expanded headers to look more like a real browser
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
-    }
-
-    print(f"Searching Beatport for top {n} most-played songs missing dates:")
-    print("-" * 70)
-    
-    for plays, filename in top_n:
-        record = db_dict[filename]
-        print(f"\n{plays} plays: {filename}")
-        
-        artist, track = aa.get_artist_and_track(filename)
-        print(f"Parsed artist: '{artist}', track: '{track}'")
-        
-        if not track:  # Skip if we couldn't parse track
-            print("Skipping: No track name found")
-            continue
-
-        try:
-            # Try with original track name 
-            url = _get_beatport_url(artist, track)
-            print(f"Searching URL: {url}")
-            response = requests.get(url, headers=headers, timeout=10)
-            print(f"Response status: {response.status_code}")
-            
-            if response.status_code != 200:
-                print(f"Error: Got status code {response.status_code}")
-                continue
-                
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Updated selectors for latest Beatport HTML
-            results = soup.select('[data-redux-location="search"] [data-testid="track-grid-item"]')
-            if not results:
-                results = soup.select('.tracks [data-testid="track-grid-item"]')
-            
-            print(f"Found {len(results)} results")
-            
-            # Try simplified search if needed
-            if not results:
-                simplified = _simplify_track(track)
-                if simplified:
-                    url = _get_beatport_url(artist, simplified)
-                    print(f"Trying simplified URL: {url}")
-                    response = requests.get(url, headers=headers, timeout=10)
-                    print(f"Response status: {response.status_code}")
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    results = soup.select('[data-redux-location="search"] [data-testid="track-grid-item"]')
-                    if not results:
-                        results = soup.select('.tracks [data-testid="track-grid-item"]')
-                    print(f"Found {len(results)} results with simplified search")
-            
-            if results:
-                result = results[0]
-                print("\nFirst result found. Looking for date...")
-                
-                # Save full HTML for debugging
-                with open('beatport_debug.html', 'w', encoding='utf-8') as f:
-                    f.write(soup.prettify())
-                
-                # Try multiple ways to find the date
-                date_text = None
-                
-                # Try data attributes first
-                if 'data-date' in result.attrs:
-                    date_text = result['data-date']
-                    print(f"Found date in data-date attribute: {date_text}")
-                
-                # Try nested elements with date information
-                date_selectors = [
-                    '[data-testid="track-released-date"]',
-                    '.track-released',
-                    '.release-date',
-                    '[class*="released"]',
-                    'time'
-                ]
-                
-                for selector in date_selectors:
-                    elements = result.select(selector)
-                    for el in elements:
-                        # Try datetime attribute first
-                        if el.has_attr('datetime'):
-                            date_text = el['datetime']
-                        else:
-                            date_text = el.text.strip()
-                        print(f"Found date text with selector {selector}: {date_text}")
-                        
-                        try:
-                            year_match = re.search(r'\b20\d{2}\b', date_text)
-                            if year_match:
-                                year = int(year_match.group(0))
-                                record["release_year_beatport"] = year
-                                print(f"Found release year: {year}")
-                                aa.write_db_file(db_dict)
-                                break
-                        except (ValueError, IndexError) as e:
-                            print(f"Failed to parse date: {e}")
-                
-                if "release_year_beatport" not in record:
-                    print("No valid release date found in result")
-                    record["release_year_beatport"] = None
-                    aa.write_db_file(db_dict)
-            else:
-                print("No results found")
-                record["release_year_beatport"] = None
-                aa.write_db_file(db_dict)
-
-        except Exception as e:
-            print(f"Error searching: {str(e)}")
-            import traceback
-            traceback.print_exc()
-
-
 def clear_release_date_none_values():
     """Remove any None values for release date fields in the database."""
     db_dict = aa.read_db_file()
@@ -839,12 +703,10 @@ def print_no_release_year_top(n: int):
         record = db_dict[filename]
         discogs_year = record.get("release_year_discogs")
         bandcamp_year = record.get("release_year_bandcamp")
-        beatport_year = record.get("release_year_beatport")
         # Convert years to strings, using "None" for missing values
         discogs_str = str(discogs_year) if discogs_year is not None else "None"
         bandcamp_str = str(bandcamp_year) if bandcamp_year is not None else "None"
-        beatport_str = str(beatport_year) if beatport_year is not None else "None"
-        print(f"{plays:5d} | {discogs_str:7} | {bandcamp_str:8} | {beatport_str:8} | {filename}")
+        print(f"{plays:5d} | {discogs_str:7} | {bandcamp_str:8} | {filename}")
 
 
 if __name__ == "__main__":
@@ -873,7 +735,6 @@ if __name__ == "__main__":
             release_dates_discogs,
             release_dates_youtube,
             release_dates_bandcamp,
-            release_dates_beatport,
             clear_release_date_none_values,
             summarize_discogs_release_years,
             print_no_release_year_top,
