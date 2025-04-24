@@ -828,6 +828,19 @@ def stamp_song(db_dict, date_ts, index, artist, title):
     add_ts(record, ts_to_write)
 
 
+def get_release_year(record):
+    """Get the earliest valid release year from available sources."""
+    years = []
+    # Add years from each source if they're valid (not None)
+    if record.get("release_year_discogs") is not None:
+        years.append(record["release_year_discogs"])
+    if record.get("release_year_bandcamp") is not None:
+        years.append(record["release_year_bandcamp"])
+    
+    # Return the earliest year if we found any
+    return min(years) if years else None
+
+
 def generate_lists(output_path=COLLECTION_FOLDER):
     db_dict = read_db_file()
     files = get_rekordbox_files(db_dict)

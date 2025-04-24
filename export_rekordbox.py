@@ -532,6 +532,11 @@ def export_rekordbox_xml(rekordbox_filename):
         play_count = aa.get_ts_date_count(record)
         et_track.set("Comments", "{:03}".format(play_count))
 
+        # Add year if available
+        year = aa.get_release_year(record)
+        if year:
+            et_track.set("Year", str(year))
+
         # alc
         et_track.set("DateAdded", aa.get_date_from_ts(aa.get_alc_ts(record)))
 
