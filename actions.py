@@ -383,7 +383,7 @@ def _simplify_track(track):
 
 def _process_track_metadata(db_dict, filename, record, source_name, retry=False):
     """Common helper for processing track metadata from different sources.
-    
+
     Args:
         db_dict: Database dictionary
         filename: Name of file to process
@@ -410,7 +410,7 @@ def _process_track_metadata(db_dict, filename, record, source_name, retry=False)
 
 def release_dates_discogs(n: int = None, retry: bool = False):
     """Search for release dates on Discogs for songs ordered by play count.
-    
+
     Args:
         n: Number of songs to process (None for all)
         retry: If True, only process songs with None for release_year_discogs
@@ -426,19 +426,21 @@ def release_dates_discogs(n: int = None, retry: bool = False):
         ts_count = len(aa.get_ts_list_date_limited(record))
         if ts_count > 0:  # Only include songs that have been played
             process_files.append((ts_count, filename))
-    
+
     # Sort by play count (descending)
     process_files.sort(reverse=True)
     if n is not None:
         process_files = process_files[:n]
-    
+
     print(f"Processing {len(process_files)} songs{' (retry mode)' if retry else ''}")
-    
+
     for plays, filename in process_files:
         record = db_dict[filename]
         print(f"\n{plays} plays: {filename}")
-        
-        artist, track = _process_track_metadata(db_dict, filename, record, "discogs", retry=retry)
+
+        artist, track = _process_track_metadata(
+            db_dict, filename, record, "discogs", retry=retry
+        )
         if not artist:  # Skip if we couldn't process metadata
             continue
 
@@ -487,7 +489,7 @@ def _get_missing_release_dates(db_dict):
             ts_count = len(aa.get_ts_list_date_limited(record))
             if ts_count > 0:  # Only include songs that have been played
                 missing_year_files.append((ts_count, filename))
-    
+
     # Sort by play count (descending)
     missing_year_files.sort(reverse=True)
     return missing_year_files
@@ -498,20 +500,20 @@ def release_dates_bandcamp(n: int):
     db_dict = aa.read_db_file()
     missing_year_files = _get_missing_release_dates(db_dict)
     top_n = missing_year_files[:n]
-    
+
     if not top_n:
         print("No files found missing release years")
         return
 
     print(f"Searching Bandcamp for top {n} most-played songs missing dates:")
     print("-" * 70)
-    
+
     for plays, filename in top_n:
         record = db_dict[filename]
         discogs_year = record.get("release_year_discogs", "None")
         print(f"\n{plays} plays: {filename}")
         print(f"Discogs year: {discogs_year}")
-        
+
         artist, track = _process_track_metadata(db_dict, filename, record, "bandcamp")
         if not artist:  # Skip if we couldn't process metadata
             continue
@@ -521,38 +523,42 @@ def release_dates_bandcamp(n: int):
             url = _get_bandcamp_url(artist, track)
             print(f"Searching URL: {url}")
             response = requests.get(url)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
+            soup = BeautifulSoup(response.text, "html.parser")
+
             # Look for any search results using broader selectors
-            results = soup.select('li.searchresult')
+            results = soup.select("li.searchresult")
             if not results:
-                results = soup.select('.result-items li')  # Another common Bandcamp selector
-                
+                results = soup.select(
+                    ".result-items li"
+                )  # Another common Bandcamp selector
+
             print(f"Found {len(results)} results")
-            
+
             if not results:
                 simplified = _simplify_track(track)
                 if simplified:
                     url = _get_bandcamp_url(artist, simplified)
                     print(f"Trying simplified URL: {url}")
                     response = requests.get(url)
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    results = soup.select('li.searchresult') or soup.select('.result-items li')
+                    soup = BeautifulSoup(response.text, "html.parser")
+                    results = soup.select("li.searchresult") or soup.select(
+                        ".result-items li"
+                    )
                     print(f"Found {len(results)} results with simplified search")
-            
+
             if results:
                 result = results[0]
                 print("First result HTML:")
                 print(result.prettify()[:500])  # Print first 500 chars of the HTML
-                
+
                 # Try multiple selectors for date
                 date_selectors = [
-                    '.released',
-                    '.release-date',
+                    ".released",
+                    ".release-date",
                     'div[class*="release"]',  # Any class containing "release"
-                    '.subhead'  # Sometimes contains the date
+                    ".subhead",  # Sometimes contains the date
                 ]
-                
+
                 for selector in date_selectors:
                     date_el = result.select_one(selector)
                     if date_el:
@@ -560,7 +566,7 @@ def release_dates_bandcamp(n: int):
                         print(f"Found date text with selector {selector}: {date_text}")
                         try:
                             # Look for a year in the text
-                            year_match = re.search(r'\b20\d{2}\b', date_text)
+                            year_match = re.search(r"\b20\d{2}\b", date_text)
                             if year_match:
                                 year = int(year_match.group(0))
                                 record["release_year_bandcamp"] = year
@@ -574,7 +580,7 @@ def release_dates_bandcamp(n: int):
                     print("No valid release date found in any selector")
             else:
                 print("No results found in HTML")
-            
+
             if "release_year_bandcamp" not in record:
                 record["release_year_bandcamp"] = None
                 aa.write_db_file(db_dict)
@@ -582,6 +588,7 @@ def release_dates_bandcamp(n: int):
         except Exception as e:
             print(f"Error searching: {e}")
             import traceback
+
             traceback.print_exc()
 
 
@@ -640,32 +647,33 @@ def print_no_release_year_top(n: int):
     db_dict = aa.read_db_file()
     missing_year_files = _get_missing_release_dates(db_dict)
     top_n = missing_year_files[:n]
-    
+
     if not top_n:
         print("No files found missing release years")
         return
-        
+
     print(f"Top {n} most-played songs missing release years:")
     print("\nPlays | Discogs | Bandcamp | Filename")
     print("-" * 70)
     for plays, filename in top_n:
         record = db_dict[filename]
         discogs_year = record.get("release_year_discogs")
-        bandcamp_year = record.get("release_year_bandcamp") 
+        bandcamp_year = record.get("release_year_bandcamp")
         # Convert years to strings, using "None" for missing values
         discogs_str = str(discogs_year) if discogs_year is not None else "None"
         bandcamp_str = str(bandcamp_year) if bandcamp_year is not None else "None"
         print(f"{plays:5d} | {discogs_str:7} | {bandcamp_str:8} | {filename}")
 
+
 def release_dates_manual():
     """Manually enter release dates for files that don't have one."""
     db_dict = aa.read_db_file()
     missing_year_files = _get_missing_release_dates(db_dict)
-        
+
     for _, filename in missing_year_files:
         record = db_dict[filename]
         print(f"\n{filename}")
-        
+
         year = aa.get_int("Enter release year (or leave blank to skip): ")
         if year is not None:
             record["release_year_manual"] = year
@@ -673,6 +681,7 @@ def release_dates_manual():
             aa.write_db_file(db_dict)
         else:
             print("Skipping this file.")
+
 
 if __name__ == "__main__":
     parser = argh.ArghParser()
@@ -702,7 +711,7 @@ if __name__ == "__main__":
             clear_release_date_none_values,
             summarize_discogs_release_years,
             print_no_release_year_top,
-            release_dates_manual
+            release_dates_manual,
         ]
     )
     parser.dispatch()

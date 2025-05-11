@@ -833,14 +833,14 @@ def get_release_year(record):
     # First check manual entry as it has highest priority
     if record.get("release_year_manual") is not None:
         return record["release_year_manual"]
-        
+
     years = []
     # Add years from each source if they're valid (not None)
     if record.get("release_year_discogs") is not None:
         years.append(record["release_year_discogs"])
     if record.get("release_year_bandcamp") is not None:
         years.append(record["release_year_bandcamp"])
-    
+
     # Return the earliest year if we found any
     return min(years) if years else None
 
