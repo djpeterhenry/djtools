@@ -482,13 +482,13 @@ def release_dates_discogs(n: int = None, retry: bool = False):
 def _get_missing_release_dates(db_dict):
     missing_year_files = []
     for filename, record in db_dict.items():
-        discogs_year = record.get("release_year_discogs")
-        bandcamp_year = record.get("release_year_bandcamp")
-        # Only include if all sources are missing or None
-        if all(year is None for year in [discogs_year, bandcamp_year]):
-            ts_count = len(aa.get_ts_list_date_limited(record))
-            if ts_count > 0:  # Only include songs that have been played
-                missing_year_files.append((ts_count, filename))
+        year = aa.get_release_year(record)
+        if year is not None:
+            continue
+
+        ts_count = len(aa.get_ts_list_date_limited(record))
+        if ts_count > 0:  # Only include songs that have been played
+            missing_year_files.append((ts_count, filename))
 
     # Sort by play count (descending)
     missing_year_files.sort(reverse=True)
@@ -617,7 +617,7 @@ def clear_release_date_none_values():
         print("No None values found in release date fields")
 
 
-def summarize_discogs_release_years():
+def summarize_release_years():
     """Print summary statistics about Discogs release years in the database."""
     db_dict = aa.read_db_file()
 
@@ -626,7 +626,7 @@ def summarize_discogs_release_years():
     year_counts = defaultdict(int)
 
     for filename, record in db_dict.items():
-        year = record.get("release_year_discogs")
+        year = aa.get_release_year(record)
         if year is not None:
             files_with_year += 1
             year_counts[year] += 1
@@ -674,6 +674,12 @@ def release_dates_manual():
         record = db_dict[filename]
         print(f"\n{filename}")
 
+        query = f"{os.path.splitext(filename)[0]} release date"
+        # Form a clickable google query for this
+        # Make the query clickable
+        print(f"Google query: https://www.google.com/search?q={quote_plus(query)}")
+
+
         year = aa.get_int("Enter release year (or leave blank to skip): ")
         if year is not None:
             record["release_year_manual"] = year
@@ -709,7 +715,7 @@ if __name__ == "__main__":
             release_dates_discogs,
             release_dates_bandcamp,
             clear_release_date_none_values,
-            summarize_discogs_release_years,
+            summarize_release_years,
             print_no_release_year_top,
             release_dates_manual,
         ]
