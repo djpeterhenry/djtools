@@ -829,7 +829,11 @@ def stamp_song(db_dict, date_ts, index, artist, title):
 
 
 def get_release_year(record):
-    """Get the earliest valid release year from available sources."""
+    """Get the earliest valid release year from available sources, prioritizing manual entries."""
+    # First check manual entry as it has highest priority
+    if record.get("release_year_manual") is not None:
+        return record["release_year_manual"]
+        
     years = []
     # Add years from each source if they're valid (not None)
     if record.get("release_year_discogs") is not None:

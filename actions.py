@@ -657,6 +657,22 @@ def print_no_release_year_top(n: int):
         bandcamp_str = str(bandcamp_year) if bandcamp_year is not None else "None"
         print(f"{plays:5d} | {discogs_str:7} | {bandcamp_str:8} | {filename}")
 
+def release_dates_manual():
+    """Manually enter release dates for files that don't have one."""
+    db_dict = aa.read_db_file()
+    missing_year_files = _get_missing_release_dates(db_dict)
+        
+    for _, filename in missing_year_files:
+        record = db_dict[filename]
+        print(f"\n{filename}")
+        
+        year = aa.get_int("Enter release year (or leave blank to skip): ")
+        if year is not None:
+            record["release_year_manual"] = year
+            print(f"Added release year: {year}")
+            aa.write_db_file(db_dict)
+        else:
+            print("Skipping this file.")
 
 if __name__ == "__main__":
     parser = argh.ArghParser()
@@ -686,6 +702,7 @@ if __name__ == "__main__":
             clear_release_date_none_values,
             summarize_discogs_release_years,
             print_no_release_year_top,
+            release_dates_manual
         ]
     )
     parser.dispatch()
