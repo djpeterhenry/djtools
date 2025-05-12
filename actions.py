@@ -33,7 +33,7 @@ def add_bpms():
             break
 
         # record the result in the database
-        new_record = {"bpm": bpm, "tags": [], "key": ""}
+        new_record = {"bpm": bpm, "tags": []}
         db_dict[filename] = new_record
         print("Inserted: " + str(new_record))
     aa.write_db_file(db_dict)
@@ -50,8 +50,8 @@ def add_keys():
 
     for filename in valid_alc_files:
         record = db_dict[filename]
-        key = record["key"]
-        if len(key) == 0 or key[-1] == "?":
+        key = record.get("key")
+        if not key or key[-1] == "?":
             print("Need key for: " + filename)
 
             sample_filepath = os.path.abspath(record["clip"]["sample"])
@@ -230,7 +230,7 @@ def print_key_frequency():
     for filename, record in sorted(db_dict.items()):
         if filename not in alc_file_set:
             continue
-        key = record["key"]
+        key = record.get("key")
         cam_key = aa.get_camelot_key(key)
         if cam_key is None:
             continue

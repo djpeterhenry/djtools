@@ -837,7 +837,7 @@ class App:
         key_file_tuples = []
         for file in self.valid_alc_files:
             record = self.db_dict[file]
-            key_song = record["key"]
+            key_song = record.get("key")
             cam_song = aa.get_camelot_key(key_song)
             if cam_song is not None:
                 cam_sort = ("%02d" % int(cam_song[:-1])) + cam_song[-1]
