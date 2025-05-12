@@ -488,18 +488,9 @@ def release_dates_discogs(n: int = None, retry: bool = False):
 
 
 def _get_missing_release_dates(db_dict, order_by_date=False):
-    files = set()
-    for filename, record in db_dict.items():
-        year = aa.get_release_year(record)
-        if year is not None:
-            continue
+    # Get a list of files with no release year
+    files_list = [f for f, record in db_dict.items() if aa.get_release_year(record) is None]
 
-        ts_count = len(aa.get_ts_list_date_limited(record))
-        if ts_count > 0:  # Only include songs that have been played
-            files.add(filename)
-
-    # Convert set to list and sort appropriately
-    files_list = list(files)
     if order_by_date:
         return aa.generate_date_plus_alc(files_list, db_dict)
     else:
