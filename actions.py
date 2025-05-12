@@ -651,7 +651,7 @@ def summarize_release_years():
         print(f"{year}: {count}")\
 
 
-def release_dates_manual(order_by_date: bool = False):
+def release_dates_manual(order_by_date: bool = True):
     """Manually enter release dates for files that don't have one.
 
     Args:
