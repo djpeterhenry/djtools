@@ -158,16 +158,24 @@ def transfer_missing():
                     "both_ts_list:",
                     both_ts_list,
                 )
-                # also transfer tags
+                # Transfer tags
                 for old_tag in record["tags"]:
                     if old_tag not in target_record["tags"]:
                         target_record["tags"].append(old_tag)
-                # also transfer key if not already present
-                old_key = target_record.get("key")
-                key = record.get("key")
-                if key and not old_key:
-                    target_record["key"] = key
-                # delete old record
+
+                # Transfer a bunch of metadata.
+                # It would be nice to organize this better in the record.
+                for field in [
+                    "key",
+                    "release_year_discogs",
+                    "release_year_bandcamp",
+                    "release_year_manual",
+                    "labels_discogs",
+                ]:
+                    if field in record and field not in target_record:
+                        target_record[field] = record[field]
+
+                # Delete old record
                 del db_dict[f]
                 aa.write_db_file(db_dict)
 
@@ -648,7 +656,7 @@ def summarize_release_years():
 
     for year in sorted(year_counts.keys()):
         count = year_counts[year]
-        print(f"{year}: {count}")\
+        print(f"{year}: {count}")
 
 
 def release_dates_manual(order_by_date: bool = True):
