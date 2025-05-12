@@ -479,8 +479,8 @@ def release_dates_discogs(n: int = None, retry: bool = False):
             print(f"Error searching for {filename}: {e}")
 
 
-def _get_missing_release_dates(db_dict):
-    missing_year_files = []
+def _get_missing_release_dates(db_dict, order_by_date=False):
+    files = set()
     for filename, record in db_dict.items():
         year = aa.get_release_year(record)
         if year is not None:
@@ -488,31 +488,40 @@ def _get_missing_release_dates(db_dict):
 
         ts_count = len(aa.get_ts_list_date_limited(record))
         if ts_count > 0:  # Only include songs that have been played
-            missing_year_files.append((ts_count, filename))
+            files.add(filename)
 
-    # Sort by play count (descending)
-    missing_year_files.sort(reverse=True)
-    return missing_year_files
+    # Convert set to list and sort appropriately
+    files_list = list(files)
+    if order_by_date:
+        return aa.generate_date_plus_alc(files_list, db_dict)
+    else:
+        # Sort by play count
+        count_tuples = [
+            (len(aa.get_ts_list_date_limited(db_dict[f])), f) for f in files_list
+        ]
+        count_tuples.sort(reverse=True)
+        return [f for _, f in count_tuples]
 
 
-def release_dates_bandcamp(n: int):
-    """Search for release dates on Bandcamp for the top N most-played songs missing dates."""
+def release_dates_bandcamp(n: int, order_by_date: bool = False):
+    """Search for release dates on Bandcamp for songs missing dates.
+
+    Args:
+        n: Number of songs to process
+        order_by_date: If True, order by last played/added date instead of play count
+    """
     db_dict = aa.read_db_file()
-    missing_year_files = _get_missing_release_dates(db_dict)
-    top_n = missing_year_files[:n]
+    missing_files = _get_missing_release_dates(db_dict, order_by_date)[:n]
 
-    if not top_n:
+    if not missing_files:
         print("No files found missing release years")
         return
 
-    print(f"Searching Bandcamp for top {n} most-played songs missing dates:")
+    print(f"Searching Bandcamp for top {n} songs missing dates:")
     print("-" * 70)
 
-    for plays, filename in top_n:
+    for filename in missing_files:
         record = db_dict[filename]
-        discogs_year = record.get("release_year_discogs", "None")
-        print(f"\n{plays} plays: {filename}")
-        print(f"Discogs year: {discogs_year}")
 
         artist, track = _process_track_metadata(db_dict, filename, record, "bandcamp")
         if not artist:  # Skip if we couldn't process metadata
@@ -639,38 +648,19 @@ def summarize_release_years():
 
     for year in sorted(year_counts.keys()):
         count = year_counts[year]
-        print(f"{year}: {count}")
+        print(f"{year}: {count}")\
 
 
-def print_no_release_year_top(n: int):
-    """Print the top N most-played songs missing release years from either source."""
+def release_dates_manual(order_by_date: bool = False):
+    """Manually enter release dates for files that don't have one.
+
+    Args:
+        order_by_date: If True, order by last played/added date instead of play count
+    """
     db_dict = aa.read_db_file()
-    missing_year_files = _get_missing_release_dates(db_dict)
-    top_n = missing_year_files[:n]
+    missing_files = _get_missing_release_dates(db_dict, order_by_date)
 
-    if not top_n:
-        print("No files found missing release years")
-        return
-
-    print(f"Top {n} most-played songs missing release years:")
-    print("\nPlays | Discogs | Bandcamp | Filename")
-    print("-" * 70)
-    for plays, filename in top_n:
-        record = db_dict[filename]
-        discogs_year = record.get("release_year_discogs")
-        bandcamp_year = record.get("release_year_bandcamp")
-        # Convert years to strings, using "None" for missing values
-        discogs_str = str(discogs_year) if discogs_year is not None else "None"
-        bandcamp_str = str(bandcamp_year) if bandcamp_year is not None else "None"
-        print(f"{plays:5d} | {discogs_str:7} | {bandcamp_str:8} | {filename}")
-
-
-def release_dates_manual():
-    """Manually enter release dates for files that don't have one."""
-    db_dict = aa.read_db_file()
-    missing_year_files = _get_missing_release_dates(db_dict)
-
-    for _, filename in missing_year_files:
+    for filename in missing_files:
         record = db_dict[filename]
         print(f"\n{filename}")
 
@@ -678,7 +668,6 @@ def release_dates_manual():
         # Form a clickable google query for this
         # Make the query clickable
         print(f"Google query: https://www.google.com/search?q={quote_plus(query)}")
-
 
         year = aa.get_int("Enter release year (or leave blank to skip): ")
         if year is not None:
@@ -716,7 +705,6 @@ if __name__ == "__main__":
             release_dates_bandcamp,
             clear_release_date_none_values,
             summarize_release_years,
-            print_no_release_year_top,
             release_dates_manual,
         ]
     )
