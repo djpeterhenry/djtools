@@ -477,8 +477,6 @@ def export_rekordbox_xml(rekordbox_filename):
 
         et_track = ET.SubElement(et_collection, "TRACK")
         artist, track = aa.get_artist_and_track(f)
-        artist = unidecode(artist)
-        track = unidecode(track)
 
         # Accumulate suffixes for tags and keys
         suffixes = []

@@ -14,6 +14,7 @@ from collections import defaultdict
 import json
 import io
 from timing import timing
+from unidecode import unidecode
 
 from tag import Tag
 
@@ -712,15 +713,25 @@ def update_db_clips_safe():
 
 
 def get_artist_and_track(filename):
-    """Extract artist and track name from a filename."""
+    """
+    Extract artist and track name from a filename.
+    Apply unidecode to the result so rekordbox search works better and so you can later use this funciton to match back from rekordbox to the filename.
+    """
+    artist = ""
+    track = ""
+
     delimiter = " - "
     split = os.path.splitext(filename)[0].split(delimiter)
     if len(split) == 1:
-        return "", split[0]
-    elif len(split) == 2:
-        return split[0], split[1]
+        track = split[0]
     else:
-        return split[0], delimiter.join(split[1:])
+        artist = split[0]
+        # Join the rest as track name.  Needing to join here will be rare.
+        if len(split) > 2:
+            track = delimiter.join(split[1:])
+        else:
+            track = split[1]
+    return (unidecode(artist.strip()), unidecode(track.strip()))
 
 
 def get_sample_unicode(record):
@@ -757,6 +768,7 @@ def get_list_name_to_file(path):
     return name_to_file
 
 
+# TODO: This function predates unidecode and shouldn't be used for new code.
 def get_song_in_db(s, db_dict):
     alc_filename = s + ".alc"
     als_filename = s + ".als"
@@ -769,6 +781,20 @@ def get_song_in_db(s, db_dict):
     else:
         t = (s, None)
     return t
+
+
+def get_filename_unidecode_matching(artist, track, db_dict):
+    """
+    Get matching filename from artist and track, including unidecode.
+    This is a linear search through the database so should be avoided if possible.
+    """
+    artist = unidecode(artist.strip())
+    track = unidecode(track.strip())
+    for filename, _ in db_dict.items():
+        db_artist, db_track = get_artist_and_track(filename)
+        if artist == db_artist and track == db_track:
+            return filename
+    return None
 
 
 def get_list_from_file(filename, db_dict):
@@ -812,18 +838,19 @@ def update_with_rekordbox_history(db_dict, history_filename):
         for index, line in enumerate(h.readlines()[1:]):
             m = p_line.match(line)
             if m:
-                stamp_song(db_dict, date_ts, index, m.group(1), m.group(2))
+                artist = m.group(1).strip()
+                title = m.group(2).strip()
+                stamp_song(db_dict, date_ts, index, artist, title)
             else:
                 print("{}: failed to match: {}".format(history_filename, line))
 
 
 def stamp_song(db_dict, date_ts, index, artist, title):
-    alc_filename = "{} - {}".format(artist.strip(), title.strip())
-    _, f = get_song_in_db(alc_filename, db_dict)
-    if f is None:
-        print("Failure to stamp: {}".format(alc_filename))
+    filename = get_filename_unidecode_matching(artist, title, db_dict)
+    if filename is None:
+        print("Failure to stamp: {} - {}".format(artist, title))
         return
-    record = db_dict[f]
+    record = db_dict[filename]
     ts_to_write = date_ts + index
     add_ts(record, ts_to_write)
 
