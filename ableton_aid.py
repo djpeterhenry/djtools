@@ -294,7 +294,30 @@ def get_audioclips_from_als(als_filename):
 
 
 def get_key_from_keyfinder_cli(sample_fullpath):
-    result = subprocess.check_output(["keyfinder-cli", sample_fullpath])
+    try:
+        result = subprocess.check_output(["keyfinder-cli", sample_fullpath])
+    except subprocess.CalledProcessError as e:
+        print("Error running keyfinder-cli:", e)
+        # Assume this failure was because it wasn't 16-bit PCM.
+        # Create a temporary conversion of sample_fullpath and run the process again.
+        if e.returncode == 1:
+            print("Converting to 16-bit PCM for keyfinder-cli...")
+            # Convert to 16-bit PCM
+            temp_sample = sample_fullpath + ".temp.wav"
+            command = [
+                "ffmpeg",
+                "-i",
+                sample_fullpath,
+                "-c:a",
+                "pcm_s16le",
+                temp_sample,
+            ]
+            subprocess.check_call(command)
+            # Now try again with the temporary file
+            result = subprocess.check_output(["keyfinder-cli", temp_sample])
+            # Clean up the temporary file
+            os.remove(temp_sample)
+
     return result.decode("utf8").strip()
 
 
