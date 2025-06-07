@@ -523,9 +523,6 @@ def export_rekordbox_xml(rekordbox_filename):
         if year:
             year_two_digits = year % 100
             suffixes.append("[#y{:02}]".format(year_two_digits))
-            # Also add the decade
-            decade = year_two_digits // 10 * 10
-            suffixes.append("[#d{:02}]".format(decade))
 
         if suffixes:
             spaces = " " * (100 - len(track))
