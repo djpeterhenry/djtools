@@ -15,7 +15,7 @@ import discogs_client
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
-import time
+import typing as T
 
 
 def add_bpms():
@@ -489,7 +489,9 @@ def release_dates_discogs(n: int = None, retry: bool = False):
 
 def _get_missing_release_dates(db_dict, order_by_date=False):
     # Get a list of files with no release year
-    files_list = [f for f, record in db_dict.items() if aa.get_release_year(record) is None]
+    files_list = [
+        f for f, record in db_dict.items() if aa.get_release_year(record) is None
+    ]
 
     if order_by_date:
         return aa.generate_date_plus_alc(files_list, db_dict)
@@ -650,16 +652,28 @@ def summarize_release_years():
         print(f"{year}: {count}")
 
 
-def release_dates_manual(order_by_date: bool = True):
+def release_dates_manual(
+    order_by_date: bool = True, search_terms: T.Optional[T.List[str]] = None
+):
     """Manually enter release dates for files that don't have one.
 
     Args:
         order_by_date: If True, order by last played/added date instead of play count
     """
-    db_dict = aa.read_db_file()
-    missing_files = _get_missing_release_dates(db_dict, order_by_date)
+    print("search_terms:", search_terms)
 
-    for filename in missing_files:
+    db_dict = aa.read_db_file()
+    if search_terms:
+        # Filter files based on search terms
+        files_to_edit = [
+            f
+            for f in db_dict
+            if all(term.lower() in f.lower() for term in search_terms)
+        ]
+    else:
+        files_to_edit = _get_missing_release_dates(db_dict, order_by_date)
+
+    for filename in files_to_edit:
         record = db_dict[filename]
         print(f"\n{filename}")
 
