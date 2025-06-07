@@ -14,9 +14,9 @@ VERSION = 1
 
 LISTS_PLAYLISTS = False
 
-REKORDBOX_SAMPLE_PATH = u"/Volumes/music/rekordbox_samples"
-REKORDBOX_LOCAL_SAMPLE_PATH = u"/Users/peter/Music/PioneerDJ/LocalSamples"
-REKORDBOX_HISTORY_PATH = u"/Users/peter/Documents/rekordbox_history"
+REKORDBOX_SAMPLE_PATH = "/Volumes/music/rekordbox_samples"
+REKORDBOX_LOCAL_SAMPLE_PATH = "/Users/peter/Music/PioneerDJ/LocalSamples"
+REKORDBOX_HISTORY_PATH = "/Users/peter/Documents/rekordbox_history"
 
 NEW_OLD_YEARS = 20
 
@@ -455,7 +455,7 @@ def export_rekordbox_xml(rekordbox_filename):
     db_dict = aa.read_db_file()
     files = aa.get_rekordbox_files(db_dict)
     files = aa.generate_date_plus_alc(files, db_dict)
-    
+
     # testing filter
     # files = [f for f in files if 'Everything But The Girl - Lullaby Of Clubland.als' in f]
     # print (files)
@@ -518,9 +518,18 @@ def export_rekordbox_xml(rekordbox_filename):
                 )
             )
 
+        # Suffixes for release year matching
+        year = aa.get_release_year(record)
+        if year:
+            year_two_digits = year % 100
+            suffixes.append("[#y{:02}]".format(year_two_digits))
+            # Also add the decade
+            decade = year_two_digits // 10 * 10
+            suffixes.append("[#d{:02}]".format(decade))
+
         if suffixes:
-            spaces = u" " * (100 - len(track))
-            track = u"{}{}{}".format(track, spaces, u" ".join(suffixes))
+            spaces = " " * (100 - len(track))
+            track = "{}{}{}".format(track, spaces, " ".join(suffixes))
 
         et_track.set("Name", track)
         et_track.set("Artist", artist)
@@ -542,7 +551,7 @@ def export_rekordbox_xml(rekordbox_filename):
         et_track.set("DateAdded", aa.get_date_from_ts(aa.get_alc_ts(record)))
 
         # abuse album for random
-        et_track.set("Album", str(random.randint(0, 2 ** 31)))
+        et_track.set("Album", str(random.randint(0, 2**31)))
 
         # Go back to just setting 20:00 for all tracks because it wants full
         # sample length
