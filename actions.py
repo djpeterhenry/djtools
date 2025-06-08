@@ -675,7 +675,13 @@ def release_dates_manual(
 
     for filename in files_to_edit:
         record = db_dict[filename]
-        print(f"\n{filename}")
+
+        last_ts = aa.get_alc_or_last_ts(record)
+        last_ts_date = aa.get_date_from_ts(last_ts)
+        add_ts = aa.get_alc_ts(record)
+        add_ts_date = aa.get_date_from_ts(add_ts)
+
+        print(f"\n{last_ts_date} ({add_ts_date}): {filename}")
 
         query = f"{os.path.splitext(filename)[0]} release date"
         # Form a clickable google query for this
