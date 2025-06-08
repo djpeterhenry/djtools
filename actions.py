@@ -488,9 +488,9 @@ def release_dates_discogs(n: int = None, retry: bool = False):
 
 
 def _get_missing_release_dates(db_dict, order_by_date=False):
-    # Get a list of files with no release year
+    # Get a list of files with no release year or 0 release year.
     files_list = [
-        f for f, record in db_dict.items() if aa.get_release_year(record) is None
+        f for f, record in db_dict.items() if not aa.get_release_year(record)
     ]
 
     if order_by_date:
