@@ -475,17 +475,13 @@ def get_valid_alc_files(db_dict):
     return valid_alc_files
 
 
+def filter_recordbox_files(files, db_dict):
+    return [f for f in files if f in db_dict and use_for_rekordbox(db_dict[f])]
+
+
 def get_rekordbox_files(db_dict):
     alc_files = get_ableton_files()
-    result = []
-    for f in alc_files:
-        try:
-            record = db_dict[f]
-        except:
-            continue
-        if not use_for_rekordbox(record):
-            continue
-        result.append(f)
+    result = filter_recordbox_files(alc_files, db_dict)
     result.sort(key=lambda s: s.lower())
     return result
 

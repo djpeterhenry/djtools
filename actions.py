@@ -492,6 +492,8 @@ def _get_missing_release_dates(db_dict, order_by_date=False):
     files_list = [
         f for f, record in db_dict.items() if not aa.get_release_year(record)
     ]
+    # Only care about rekordbox files
+    files_list = aa.filter_recordbox_files(files_list, db_dict)
 
     if order_by_date:
         return aa.generate_date_plus_alc(files_list, db_dict)
@@ -631,11 +633,13 @@ def summarize_release_years():
     """Print summary statistics about Discogs release years in the database."""
     db_dict = aa.read_db_file()
 
-    total_files = len(db_dict)
+    rekrodbox_files = aa.get_rekordbox_files(db_dict)
+    total_files = len(rekrodbox_files)
     files_with_year = 0
     year_counts = defaultdict(int)
 
-    for filename, record in db_dict.items():
+    for filename in rekrodbox_files:
+        record = db_dict[filename]
         year = aa.get_release_year(record)
         if year is not None:
             files_with_year += 1
@@ -643,6 +647,7 @@ def summarize_release_years():
 
     files_without_year = total_files - files_with_year
 
+    print(f"Total Rekordbox files: {total_files}")
     print(f"Files with release year: {files_with_year}")
     print(f"Files without release year: {files_without_year}")
     print("\nRelease year distribution:")
