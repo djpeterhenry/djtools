@@ -23,7 +23,6 @@ import argparse
 import random
 import subprocess
 import time
-import atexit
 
 import ableton_aid as aa
 from tag import Tag
@@ -283,11 +282,10 @@ class App:
         # initial update
         self.update_listbox()
 
-        atexit.register(self.quit_handler)
-
     def quit_handler(self):
         os.remove(LOCK_FILEPATH)
         self.save_dialog()
+        sys.exit(0)
 
     def listbox_select(self, ignore):
         self.listbox_target_string = self.get_selected_string()
@@ -863,6 +861,9 @@ def main(args):
     app = App(master, args.include_extra)
     on_top_str = "1" if args.always_on_top else "0"
     master.call("wm", "attributes", ".", "-topmost", on_top_str)
+    # Intercept mac quit "command-q" because previous atexit no longer triggers for this on my new mac.
+    # This does not catch "command-w" but I'm not going to worry about that for now.
+    master.createcommand("tk::mac::Quit", app.quit_handler)
     master.mainloop()
 
 
