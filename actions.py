@@ -686,7 +686,13 @@ def release_dates_manual(
         add_ts = aa.get_alc_ts(record)
         add_ts_date = aa.get_date_from_ts(add_ts)
 
-        print(f"\n{last_ts_date} ({add_ts_date}): {filename}")
+        # If you used search_terms there may be an existing release year
+        existing_year = aa.get_release_year(record)
+        existing_year_str = (
+            f" ({existing_year})" if existing_year is not None else ""
+        )
+
+        print(f"\n{last_ts_date} ({add_ts_date}){existing_year_str}: {filename}")
 
         query = f"{os.path.splitext(filename)[0]} release date"
         # Form a clickable google query for this
