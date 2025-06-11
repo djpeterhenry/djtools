@@ -862,8 +862,9 @@ def main(args):
     on_top_str = "1" if args.always_on_top else "0"
     master.call("wm", "attributes", ".", "-topmost", on_top_str)
     # Intercept mac quit "command-q" because previous atexit no longer triggers for this on my new mac.
-    # This does not catch "command-w" but I'm not going to worry about that for now.
     master.createcommand("tk::mac::Quit", app.quit_handler)
+    # Capture "command-w" as well
+    master.protocol("WM_DELETE_WINDOW", app.quit_handler)
     master.mainloop()
 
 
