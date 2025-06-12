@@ -477,25 +477,29 @@ def export_rekordbox_xml(rekordbox_filename):
 
         et_track = ET.SubElement(et_collection, "TRACK")
         artist, track = aa.get_artist_and_track(f)
+        play_count = aa.get_ts_date_count(record)
+        year = aa.get_release_year(record)
 
         # Accumulate suffixes for tags and keys
         suffixes = []
-
+        
         for tag in [Tag.VOCAL_TAG, Tag.GOOD_TAG, Tag.JAZZ]:
             if tag.value in record["tags"]:
                 suffixes.append("[#{}]".format(tag.value.lower()))
 
         # timestamp filtering
-        for old_index, old_days in enumerate((90, 180, 365, 365 * 2, 365 * 4, 365 * 6)):
+        for old_index, old_days in enumerate(
+            [90, 365, 365 * 2, 365 * 3, 365 * 4, 365 * 5]
+        ):
             active_ts = aa.get_alc_or_last_ts(record)
             new_ts = aa.get_alc_ts(record)
             old_ts = aa.get_past_ts(aa.get_span_days(old_days))
             if active_ts > old_ts:
-                suffixes.append("[#a{}]".format(old_index + 1))
+                suffixes.append("[#a{}]".format(old_index))
             else:
-                suffixes.append("[#o{}]".format(old_index + 1))
+                suffixes.append("[#o{}]".format(old_index))
             if new_ts > old_ts:
-                suffixes.append("[#n{}]".format(old_index + 1))
+                suffixes.append("[#n{}]".format(old_index))
 
         # Put camelot key (7A) in the tag
         cam_key = aa.get_camelot_key(record["key"])
@@ -518,14 +522,23 @@ def export_rekordbox_xml(rekordbox_filename):
                 )
             )
 
+        # Play count suffix
+        # Assume the interesting filtering is to have 0, 1, or 2+ plays.  Easily revisable.
+        if play_count == 0:
+            suffixes.append("[#p0]")
+        elif play_count == 1:
+            suffixes.append("[#p1]")
+        else:
+            suffixes.append("[#p2]")
+
         # Suffixes for release year matching
-        year = aa.get_release_year(record)
         if year:
             year_two_digits = year % 100
             suffixes.append("[#y{:02}]".format(year_two_digits))
 
+        # Add all the suffixes to the track name far to the right
         if suffixes:
-            spaces = " " * (100 - len(track))
+            spaces = " " * (120 - len(track))
             track = "{}{}{}".format(track, spaces, " ".join(suffixes))
 
         et_track.set("Name", track)
@@ -535,12 +548,10 @@ def export_rekordbox_xml(rekordbox_filename):
         sample_uri = "file://localhost" + sample_abspath
         et_track.set("Location", sample_uri)
 
-        # number of plays (now in Comments field)
-        play_count = aa.get_ts_date_count(record)
+        # number of plays
         et_track.set("Comments", "{:03}".format(play_count))
 
         # Add year if available
-        year = aa.get_release_year(record)
         if year:
             et_track.set("Year", str(year))
 
