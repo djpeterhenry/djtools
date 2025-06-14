@@ -222,7 +222,7 @@ def print_pretty(output_file):
             pprint.pprint(record, f)
 
 
-def print_key_frequency():
+def summarize_keys():
     """Print frequency of musical keys in the database."""
     db_dict = aa.read_db_file()
     alc_file_set = set(aa.get_ableton_files())
@@ -489,9 +489,7 @@ def release_dates_discogs(n: int = None, retry: bool = False):
 
 def _get_missing_release_dates(db_dict, order_by_date=False):
     # Get a list of files with no release year or 0 release year.
-    files_list = [
-        f for f, record in db_dict.items() if not aa.get_release_year(record)
-    ]
+    files_list = [f for f, record in db_dict.items() if not aa.get_release_year(record)]
     # Only care about rekordbox files
     files_list = aa.filter_recordbox_files(files_list, db_dict)
 
@@ -629,7 +627,7 @@ def clear_release_date_none_values():
         print("No None values found in release date fields")
 
 
-def summarize_release_years():
+def summarize_years():
     """Print summary statistics about Discogs release years in the database."""
     db_dict = aa.read_db_file()
 
@@ -688,9 +686,7 @@ def release_dates_manual(
 
         # If you used search_terms there may be an existing release year
         existing_year = aa.get_release_year(record)
-        existing_year_str = (
-            f" ({existing_year})" if existing_year is not None else ""
-        )
+        existing_year_str = f" ({existing_year})" if existing_year is not None else ""
 
         print(f"\n{last_ts_date} ({add_ts_date}){existing_year_str}: {filename}")
 
@@ -723,7 +719,6 @@ if __name__ == "__main__":
             print_records,
             print_record,
             print_pretty,
-            print_key_frequency,
             print_xml,
             print_audioclip,
             print_audioclips,
@@ -734,7 +729,8 @@ if __name__ == "__main__":
             release_dates_discogs,
             release_dates_bandcamp,
             clear_release_date_none_values,
-            summarize_release_years,
+            summarize_years,
+            summarize_keys,
             release_dates_manual,
         ]
     )
