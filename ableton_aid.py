@@ -556,6 +556,13 @@ def get_ts_date_count(record, ts_after=None):
 
 
 def get_alc_ts(record):
+    # old_alc_ts is the one you want for ordering and display if it exists.
+    #
+    # There are alc files with a modified timestamp before old_alc_ts.
+    # But this is not consistent...these should not be trusted for ordering.
+    #
+    # So for ordering, use "get_alc_ts",
+    # but for checking whether clips need to be updated, check the "alc_ts" record value directly.
     try:
         alc_ts = record["alc_ts"]
         if alc_ts < OLD_ALC_TS_CUTOFF and "old_alc_ts" in record:
