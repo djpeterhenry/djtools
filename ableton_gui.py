@@ -321,7 +321,6 @@ class App:
                 if tag not in result:
                     others.add(tag)
         result.extend(sorted(others))
-        # remove hidden
 
         def exclude(tag):
             for pattern in self.hidden_tag_pattern_list:
