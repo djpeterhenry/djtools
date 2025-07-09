@@ -653,6 +653,22 @@ def release_dates_manual(
         else:
             print("Skipping this file.")
 
+def remove_recent_timestamps(minutes: int):
+    """Remove timestamps from the database that are within the last 'minutes' minutes."""
+    db_dict = aa.read_db_file()
+    past_ts = aa.get_past_ts(minutes * 60)
+
+    num_removed = 0
+
+    for filename, record in db_dict.items():
+        ts_list = record.get("ts_list", [])
+        # Filter out timestamps that are more recent than the cutoff
+        filtered_ts_list = [ts for ts in ts_list if ts < past_ts]
+        num_removed += len(ts_list) - len(filtered_ts_list)
+        record["ts_list"] = filtered_ts_list
+
+    aa.write_db_file(db_dict)
+    print(f"Removed {num_removed} timestamps within the last {minutes} minutes from the database.")
 
 if __name__ == "__main__":
     parser = argh.ArghParser()
@@ -682,6 +698,7 @@ if __name__ == "__main__":
             summarize_years,
             summarize_keys,
             release_dates_manual,
+            remove_recent_timestamps,
         ]
     )
     parser.dispatch()

@@ -700,7 +700,7 @@ class App:
         if not filename:
             return
         tag = self.tag_var.get()
-        self.add_tag_to_filename(filename, tag)
+        self.add_tag_to_filename(filename=filename, tag=tag, add_timestamp=False)
 
     def command_tag_remove(self):
         filename = self.get_selected_filename()
@@ -724,14 +724,14 @@ class App:
     def command_save(self):
         return self.save_dialog()
 
-    def add_tag_to_filename(self, filename, tag):
+    def add_tag_to_filename(self, filename, tag, add_timestamp):
         if not tag:
             return
         record = self.db_dict[filename]
         if tag not in record["tags"]:
             record["tags"].append(tag)
-        # timestamp every time we tag
-        self.ts_filename(filename)
+        if add_timestamp:
+            self.ts_filename(filename)
         # some old indexing code
         old_index = self.get_selected_index()
         self.update_listbox()
@@ -743,14 +743,14 @@ class App:
         if not filename:
             return
         tag = Tag.GOOD_TAG.value
-        self.add_tag_to_filename(filename, tag)
+        self.add_tag_to_filename(filename=filename, tag=tag, add_timestamp=True)
 
     def command_l(self):
         filename = self.get_selected_filename()
         if not filename:
             return
         tag = Tag.LOOK_TAG.value
-        self.add_tag_to_filename(filename, tag)
+        self.add_tag_to_filename(filename=filename, tag=tag, add_timestamp=True)
 
     def command_clear_min_max(self):
         print("clear min max")

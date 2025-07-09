@@ -13,12 +13,17 @@ class Tag(ListEnum):
     X = "x"
     X_REKORDBOX = "x_rekordbox"
     VOCAL_TAG = "vocal"
-    JAZZ = "jazz"
+
+    # Top level genre tag attempts
+    JAZZ = "jazz"  # need to keep lowercase until you fix the database
+    DISCO = "DISCO"
+    BIG_ROOM = "BIG_ROOM"
+
     # better uppercase
     SKIP_KEY = "ALL KEYS"
     SKIP_BPM = "ALL BPM"
     LOOK_TAG = "LOOK"
-    GOOD_TAG = "GOOD"
+    GOOD_TAG = "GOOD"  # This one can be applied with "g" so order doesn't matter
     SS_TAG = "SS"
     P_NASTY_TAG = "P_NASTY"
     SHANNON_TAG = "SHANNON"
