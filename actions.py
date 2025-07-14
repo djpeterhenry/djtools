@@ -722,7 +722,8 @@ def demucs(input_filename):
 
     # Now referencing get_xml_clip_info to replace in ableton file we would need to support both old and new format.
     # Some ideas:
-    # - only support the new format, check before we run this that it is the new format, force resave otherwise.
+    # - only support the new format, check before we run this that it is the new format, force resave otherwise.  This seems reaonable.
+    # - only support alc?  That will make it so there's only a single clip which will make rewriting easier.
 
 
 if __name__ == "__main__":
