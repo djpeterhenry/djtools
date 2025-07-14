@@ -16,6 +16,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
 import typing as T
+import demucs as demucs_py
 
 
 def add_bpms():
@@ -653,6 +654,7 @@ def release_dates_manual(
         else:
             print("Skipping this file.")
 
+
 def remove_recent_timestamps(minutes: int):
     """Remove timestamps from the database that are within the last 'minutes' minutes."""
     db_dict = aa.read_db_file()
@@ -668,7 +670,56 @@ def remove_recent_timestamps(minutes: int):
         record["ts_list"] = filtered_ts_list
 
     aa.write_db_file(db_dict)
-    print(f"Removed {num_removed} timestamps within the last {minutes} minutes from the database.")
+    print(
+        f"Removed {num_removed} timestamps within the last {minutes} minutes from the database."
+    )
+
+
+def demucs(input_filename):
+    """
+    Run demucs on the sample for the specifiec ableton file.
+
+    Produce a corresponding ableton file for the vocal track.
+    """
+    db_dict = aa.read_db_file()
+    record = db_dict.get(input_filename)
+    if not record:
+        print(f"File {input_filename} not found in the database.")
+        return
+
+    # Use the original sample from the ableton file.
+    # You could also use the existing rekordbox sample which might be easier for demucs to handle.
+    sample_filepath = os.path.abspath(record["clip"]["sample"])
+    if not os.path.isfile(sample_filepath):
+        print(f"Sample file {sample_filepath} does not exist.")
+        return
+
+    output_base_folder = "/tmp/demucs_output"
+    model_name = "htdemucs"
+    # Supposedly slightly better at 4x computational cost:
+    # model_name = "htdemucs_ft"
+
+    demucs_result = demucs_py.demucs(
+        sample_filepath, output_base_folder, model_name=model_name
+    )
+    if not demucs_result:
+        print(f"Demucs processing failed for {sample_filepath}.")
+        return
+
+    expected_output_folder = os.path.join(
+        output_base_folder,
+        f"{model_name}",
+        f"{os.path.splitext(os.path.basename(sample_filepath))[0]}",
+    )
+    output_vocal_filepath = os.path.join(expected_output_folder, "vocals.wav")
+    if not os.path.isfile(output_vocal_filepath):
+        print(f"Expected output file {output_vocal_filepath} does not exist.")
+        return
+
+    print(
+        f"Demucs processing completed for {sample_filepath}. Vocal track saved to {output_vocal_filepath}."
+    )
+
 
 if __name__ == "__main__":
     parser = argh.ArghParser()
@@ -699,6 +750,7 @@ if __name__ == "__main__":
             summarize_keys,
             release_dates_manual,
             remove_recent_timestamps,
+            demucs,
         ]
     )
     parser.dispatch()
