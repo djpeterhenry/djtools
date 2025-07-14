@@ -260,7 +260,7 @@ def get_xml_clip_info(xml_clip):
         # <RelativePath Value="Samples/Imported/Bob Sinclar - Cinderella (She said her name) (Meridian Remix).aiff" />
         # <Path Value="/Users/peter/Music/Ableton/djpeterhenry/Samples/Imported/Bob Sinclar - Cinderella (She said her name) (Meridian Remix).aiff" />
 
-        # I guess I'll keep the previous behavior of keepting this path relative to the .alc file
+        # I guess I'll keep the previous behavior of keeping this path relative to the .alc file
         # This means I have to go up one folder using ".." because the sample relative path is to the top level djpeterhenry project
         return os.path.join("..", xml_fileref.find("RelativePath").get("Value"))
 
