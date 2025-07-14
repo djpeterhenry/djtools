@@ -264,13 +264,16 @@ def get_xml_clip_info(xml_clip):
         # This means I have to go up one folder using ".." because the sample relative path is to the top level djpeterhenry project
         return os.path.join("..", xml_fileref.find("RelativePath").get("Value"))
 
+    sample_filepath_is_new_format = False
     sample_filepath = get_sample_filepath_old()
     if not sample_filepath:
+        sample_filepath_is_new_format = True
         sample_filepath = get_sample_filepath_new()
 
     if os.path.exists(sample_filepath):
         result["sample"] = sample_filepath
         result["sample_ts"] = os.path.getmtime(sample_filepath)
+        result["sample_filepath_is_new_format"] = sample_filepath_is_new_format
     else:
         return None
     return result

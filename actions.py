@@ -258,13 +258,13 @@ def print_xml(alc_filename):
 def print_audioclip(alc_filename):
     """Print audio clip information from an Ableton Live clip file."""
     assert os.path.isfile(alc_filename)
-    print(aa.get_audioclip_from_alc(alc_filename))
+    pprint.pprint(aa.get_audioclip_from_alc(alc_filename))
 
 
 def print_audioclips(als_filename):
     """Print all audio clip information from an Ableton Live set file."""
     assert os.path.isfile(als_filename)
-    print(aa.get_audioclips_from_als(als_filename))
+    pprint.pprint(aa.get_audioclips_from_als(als_filename))
 
 
 def rekordbox_xml(rekordbox_filename):
@@ -719,6 +719,10 @@ def demucs(input_filename):
     print(
         f"Demucs processing completed for {sample_filepath}. Vocal track saved to {output_vocal_filepath}."
     )
+
+    # Now referencing get_xml_clip_info to replace in ableton file we would need to support both old and new format.
+    # Some ideas:
+    # - only support the new format, check before we run this that it is the new format, force resave otherwise.
 
 
 if __name__ == "__main__":
