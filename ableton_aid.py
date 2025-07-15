@@ -54,6 +54,15 @@ COLLECTION_FOLDER = "/Users/peter/github/djpeterhenry.github.io/collection"
 
 ACTIVE_LIST = "/Users/peter/github/djtools/active_list.txt"
 
+# This is the folder to store demucs samples in.
+# This should be relative to "/Users/peter/Music/Ableton/djpeterhenry/"
+DEMUCS_SAMPLES = "Samples/Demucs"
+
+
+def project_path_from_alc_filename(alc_filename):
+    return os.path.dirname(os.path.dirname(os.path.abspath(alc_filename)))
+
+
 # Make input be raw_input on python2
 try:
     input = raw_input
@@ -213,6 +222,13 @@ def alc_to_xml(alc_filename):
     return ET.fromstring(alc_to_str(alc_filename))
 
 
+def write_xml_to_alc(xml_root, alc_filename):
+    xml_str = ET.tostring(xml_root, encoding="utf-8", xml_declaration=True)
+    with gzip.open(alc_filename, "wb") as f:
+        f.write(xml_str)
+    print("Wrote: " + alc_filename)
+
+
 def get_xml_clip_info(xml_clip):
     result = {}
     xml_warp_markers = xml_clip.find("WarpMarkers")
@@ -294,6 +310,51 @@ def get_audioclips_from_als(als_filename):
     for xml_clip in xml_root.findall(".//AudioClip"):
         result.append(get_xml_clip_info(xml_clip))
     return result
+
+
+def replace_audioclip_path(alc_filename, new_alc_filename, new_sample_path):
+    """
+    Replace the sample path in an Ableton Live .alc file with a new sample path.
+    """
+    if os.path.splitext(alc_filename)[1] != ".alc":
+        raise ValueError("alc_filename must have .alc extension")
+    if os.path.splitext(new_alc_filename)[1] != ".alc":
+        raise ValueError("new_alc_filename must have .alc extension")
+
+    xml_root = alc_to_xml(alc_filename)
+    xml_clip = xml_root.find(".//AudioClip")
+    if xml_clip is None:
+        return False
+
+    xml_fileref = xml_clip.find("SampleRef/FileRef")
+    if xml_fileref is None:
+        return False
+
+    # make sure we start with an absolute path
+    new_sample_path = os.path.abspath(new_sample_path)
+
+    # Get relative path to the project
+    project_path = project_path_from_alc_filename(alc_filename)
+
+    new_sample_path_project_relative = os.path.relpath(new_sample_path, project_path)
+
+    # Update the sample path
+    xml_fileref.find("RelativePath").set("Value", new_sample_path_project_relative)
+
+    # Update the absolute path
+    xml_fileref.find("Path").set("Value", new_sample_path)
+
+    # Update the name for the audioclip
+    xml_clip.find("Name").set(
+        "Value", os.path.splitext(os.path.basename(new_alc_filename))[0]
+    )
+
+    # Lots of other things are now wrong.  However I seem to be able to open this alc file without fixing these.
+    # <OriginalFileSize Value="17215488" />
+    # <OriginalCrc Value="46285" />
+
+    write_xml_to_alc(xml_root, new_alc_filename)
+    return True
 
 
 def get_key_from_keyfinder_cli(sample_fullpath):

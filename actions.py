@@ -17,6 +17,8 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
 import typing as T
 import demucs as demucs_py
+import shutil
+from tag import Tag
 
 
 def add_bpms():
@@ -121,6 +123,32 @@ def list_missing():
         print(f)
 
 
+def add_missing_tags(record, tags):
+    """Add tags to a record if they are not already present."""
+    if "tags" not in record:
+        record["tags"] = []
+    for tag in tags:
+        if tag not in record["tags"]:
+            record["tags"].append(tag)
+
+
+def transfer_shared_record_fields(source_record, target_record):
+    """Transfer shared fields from source record to target record."""
+    shared_fields = [
+        "bpm",
+        "key",
+        "release_year_discogs",
+        "release_year_bandcamp",
+        "release_year_manual",
+        "labels_discogs",
+    ]
+    for field in shared_fields:
+        if field in source_record and field not in target_record:
+            target_record[field] = source_record[field]
+
+    add_missing_tags(target_record, source_record["tags"])
+
+
 def transfer_missing():
     """Interactive tool to handle missing files by transferring their data to similar files or deleting them."""
     db_dict = aa.read_db_file()
@@ -147,7 +175,7 @@ def transfer_missing():
                     target = close[choice]
                 except KeyError:
                     continue
-                target_record = db_dict[target]
+                target_record = db_dict.get(target, {})
                 target_ts_list = aa.get_ts_list(target_record)
                 both_ts_list = sorted(list(set(target_ts_list + ts_list)))
                 target_record["ts_list"] = both_ts_list
@@ -159,22 +187,11 @@ def transfer_missing():
                     "both_ts_list:",
                     both_ts_list,
                 )
-                # Transfer tags
-                for old_tag in record["tags"]:
-                    if old_tag not in target_record["tags"]:
-                        target_record["tags"].append(old_tag)
 
                 # Transfer a bunch of metadata.
                 # It would be nice to organize this better in the record.
-                for field in [
-                    "key",
-                    "release_year_discogs",
-                    "release_year_bandcamp",
-                    "release_year_manual",
-                    "labels_discogs",
-                ]:
-                    if field in record and field not in target_record:
-                        target_record[field] = record[field]
+                transfer_shared_record_fields(record, target_record)
+                db_dict[target] = target_record
 
                 # Delete old record
                 del db_dict[f]
@@ -675,16 +692,29 @@ def remove_recent_timestamps(minutes: int):
     )
 
 
-def demucs(input_filename):
+def demucs(alc_filename):
     """
     Run demucs on the sample for the specifiec ableton file.
 
     Produce a corresponding ableton file for the vocal track.
     """
     db_dict = aa.read_db_file()
-    record = db_dict.get(input_filename)
+    record = db_dict.get(alc_filename)
     if not record:
-        print(f"File {input_filename} not found in the database.")
+        print(f"File {alc_filename} not found in the database.")
+        return
+
+    # The input ableton file must be an alc file
+    if not alc_filename.endswith(".alc"):
+        print(f"Input file {alc_filename} is not an .alc file.")
+        return
+
+    # The input ableton file must have the new format in order for us to write to a new ableton file.
+    audioclip = aa.get_audioclip_from_alc(alc_filename)
+    if not audioclip.get("sample_filepath_is_new_format"):
+        print(
+            f"Input ableton file {alc_filename} does not have sample_filepath_is_new_format."
+        )
         return
 
     # Use the original sample from the ableton file.
@@ -699,19 +729,23 @@ def demucs(input_filename):
     # Supposedly slightly better at 4x computational cost:
     # model_name = "htdemucs_ft"
 
-    demucs_result = demucs_py.demucs(
-        sample_filepath, output_base_folder, model_name=model_name
-    )
-    if not demucs_result:
-        print(f"Demucs processing failed for {sample_filepath}.")
-        return
-
+    # If the expected demuc output exists, assume it has already been run and skip this slow processing.
     expected_output_folder = os.path.join(
         output_base_folder,
         f"{model_name}",
         f"{os.path.splitext(os.path.basename(sample_filepath))[0]}",
     )
     output_vocal_filepath = os.path.join(expected_output_folder, "vocals.wav")
+
+    if not os.path.isfile(output_vocal_filepath):
+        demucs_result = demucs_py.demucs(
+            sample_filepath, output_base_folder, model_name=model_name
+        )
+        if not demucs_result:
+            print(f"Demucs processing failed for {sample_filepath}.")
+            return
+
+    # Now we definitely expect this output to exist.
     if not os.path.isfile(output_vocal_filepath):
         print(f"Expected output file {output_vocal_filepath} does not exist.")
         return
@@ -720,10 +754,35 @@ def demucs(input_filename):
         f"Demucs processing completed for {sample_filepath}. Vocal track saved to {output_vocal_filepath}."
     )
 
-    # Now referencing get_xml_clip_info to replace in ableton file we would need to support both old and new format.
-    # Some ideas:
-    # - only support the new format, check before we run this that it is the new format, force resave otherwise.  This seems reaonable.
-    # - only support alc?  That will make it so there's only a single clip which will make rewriting easier.
+    # Copy the output vocal file to the demucs samples folder
+    new_sample_path = demucs_vocal_sample_path(alc_filename)
+    # Could create os.path.join(project_path, aa.DEMUCS_SAMPLES) here but assume it exists
+    shutil.copy2(output_vocal_filepath, new_sample_path)
+    print(f"Copied {output_vocal_filepath} to {new_sample_path}.")
+
+    # Write a new alc file referencing the new sample
+    new_alc_filename = os.path.splitext(alc_filename)[0] + " (Demucs Vocal).alc"
+    aa.replace_audioclip_path(
+        alc_filename=alc_filename,
+        new_alc_filename=new_alc_filename,
+        new_sample_path=new_sample_path,
+    )
+
+    # Copy bpm, key, and release year info (at least) to the new record.
+    new_record = {}
+    transfer_shared_record_fields(record, new_record)
+    add_missing_tags(new_record, [Tag.VOCAL_TAG.value])
+    db_dict[new_alc_filename] = new_record
+
+    # Save the updated database
+    aa.write_db_file(db_dict)
+
+
+def demucs_vocal_sample_path(alc_filename):
+    project_path = aa.project_path_from_alc_filename(alc_filename)
+    demucs_samples_path = os.path.join(project_path, aa.DEMUCS_SAMPLES)
+    new_sample_filename = os.path.basename(alc_filename) + ".vocals.wav"
+    return os.path.join(demucs_samples_path, new_sample_filename)
 
 
 if __name__ == "__main__":
