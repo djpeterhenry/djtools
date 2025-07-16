@@ -179,7 +179,7 @@ def get_filtered_files(
 
         is_vocal = aa.is_vocal(record)
         if bpm is not None:
-            bpm_range_to_use = bpm_range + 10 if is_vocal else bpm_range
+            bpm_range_to_use = 30 if is_vocal else bpm_range
             if not aa.matches_bpm_filter(bpm, bpm_range_to_use, record["bpm"]):
                 continue
         cam_num = aa.get_camelot_num(record.get("key"))
