@@ -767,6 +767,7 @@ class App:
         if not filename:
             return
         self.remove_tag_from_filename(filename=filename, tag=Tag.GOOD_TAG.value)
+        self.update_listbox()
 
     def command_l(self):
         filename = self.get_selected_filename()
