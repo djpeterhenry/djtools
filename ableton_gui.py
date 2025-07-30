@@ -526,10 +526,12 @@ class App:
                 # key_display = '%3s:%3s' % (key, cam_song)
                 # check this with edit
                 key_display = "%3s" % (cam_song)
-            cool_filename = " %03d|%s|%02d| %s" % (
+            good_str = " (g) " if aa.has_tag(record, Tag.GOOD_TAG.value) else " "
+            cool_filename = " %03d|%s|%02d|%s%s" % (
                 bpm,
                 key_display,
                 min(99, play_count),
+                good_str,
                 file,
             )
             filename_pairs_list.append((cool_filename, filename))

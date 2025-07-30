@@ -22,6 +22,7 @@ class Tag(ListEnum):
     JAZZ = "jazz"  # need to keep lowercase until you fix the database
     DISCO = "DISCO"
     BIG_ROOM = "BIG_ROOM"
+    AFRO = "AFRO"
 
     # better uppercase
     SKIP_KEY = "ALL KEYS"
