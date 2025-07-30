@@ -483,7 +483,7 @@ def export_rekordbox_xml(rekordbox_filename):
         # Accumulate suffixes for tags and keys
         suffixes = []
         
-        for tag in [Tag.VOCAL_TAG, Tag.GOOD_TAG, Tag.JAZZ, Tag.DISCO, Tag.BIG_ROOM]:
+        for tag in [Tag.VOCAL_TAG, Tag.GOOD_TAG, Tag.JAZZ, Tag.DISCO, Tag.BIG_ROOM, Tag.AFRO]:
             if tag.value in record["tags"]:
                 suffixes.append("[#{}]".format(tag.value.lower()))
 
@@ -695,6 +695,7 @@ def export_rekordbox_xml(rekordbox_filename):
         add_playlist_for_tag(parent, Tag.JAZZ)
         add_playlist_for_tag(parent, Tag.DISCO)
         add_playlist_for_tag(parent, Tag.BIG_ROOM)
+        add_playlist_for_tag(parent, Tag.AFRO)
         add_playlist_for_tag(parent, Tag.CASTRO)
         add_playlist_for_tag(parent, Tag.CRISPY_TACOS)
         add_playlist_for_tag(parent, Tag.ACTUAL_HOUSE)

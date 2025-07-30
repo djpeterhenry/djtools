@@ -268,6 +268,7 @@ class App:
         self.listbox.bind("p", lambda _: self.command_play_filename())
         self.listbox.bind("e", lambda _: self.command_export_list())
         self.listbox.bind("g", lambda _: self.command_g())
+        self.listbox.bind("b", lambda _: self.command_b())
         self.listbox.bind("l", lambda _: self.command_l())
         self.listbox.bind("n", lambda _: self.command_n())
         self.listbox.bind("j", lambda _: self.command_order_down())
@@ -631,7 +632,6 @@ class App:
         ts = time.time()
         aa.add_ts(record, ts)
 
-    # deprecated:
     def command_copy(self):
         filename = self.get_selected_filename()
         if not filename:
@@ -761,6 +761,12 @@ class App:
             return
         tag = Tag.GOOD_TAG.value
         self.add_tag_to_filename(filename=filename, tag=tag, add_timestamp=True)
+
+    def command_b(self):
+        filename = self.get_selected_filename()
+        if not filename:
+            return
+        self.remove_tag_from_filename(filename=filename, tag=Tag.GOOD_TAG.value)
 
     def command_l(self):
         filename = self.get_selected_filename()
