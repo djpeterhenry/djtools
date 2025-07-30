@@ -203,6 +203,7 @@ class App:
 
         self.tag_invert = Checkbox(frame_edit, "Invert", just_update)
         self.tag_vocal = Checkbox(frame_edit, "[Vocal]", just_update)
+        self.tag_needs_lyrics = Checkbox(frame_edit, "Needs Lyrics", just_update)
         self.tag_ss = Checkbox(frame_edit, "[SS]", just_update)
 
         self.reveal_var = tk.IntVar(master)
@@ -268,6 +269,7 @@ class App:
         self.listbox.bind("e", lambda _: self.command_export_list())
         self.listbox.bind("g", lambda _: self.command_g())
         self.listbox.bind("l", lambda _: self.command_l())
+        self.listbox.bind("n", lambda _: self.command_n())
         self.listbox.bind("j", lambda _: self.command_order_down())
         self.listbox.bind("k", lambda _: self.command_order_up())
         self.listbox.bind("1", lambda _: self.key_1.toggle())
@@ -346,6 +348,7 @@ class App:
         tag = self.tag_var.get()
         tag_invert = bool(self.tag_invert.get())
         vocal_selected = bool(self.tag_vocal.get())
+        needs_lyric_selected = bool(self.tag_needs_lyrics.get())
         ss_selected = bool(self.tag_ss.get())
 
         # prepare min / max filters
@@ -451,6 +454,12 @@ class App:
             is_vocal = aa.is_vocal(record)
             if do_vocal_check:
                 if is_vocal != vocal_selected:
+                    keep = False
+
+            if needs_lyric_selected:
+                if aa.has_tag(record, Tag.LYRICS.value) or aa.has_tag(
+                    record, Tag.NO_LYRICS.value
+                ):
                     keep = False
 
             if filter_string:
@@ -700,7 +709,7 @@ class App:
         if not filename:
             return
         tag = self.tag_var.get()
-        self.add_tag_to_filename(filename=filename, tag=tag, add_timestamp=False)
+        self.add_tag_to_filename(filename=filename, tag=tag)
 
     def command_tag_remove(self):
         filename = self.get_selected_filename()
@@ -724,12 +733,11 @@ class App:
     def command_save(self):
         return self.save_dialog()
 
-    def add_tag_to_filename(self, filename, tag, add_timestamp):
+    def add_tag_to_filename(self, filename, tag, add_timestamp=False):
         if not tag:
             return
         record = self.db_dict[filename]
-        if tag not in record["tags"]:
-            record["tags"].append(tag)
+        aa.add_tag(record, tag)
         if add_timestamp:
             self.ts_filename(filename)
         # some old indexing code
@@ -737,6 +745,13 @@ class App:
         self.update_listbox()
         self.listbox.activate(old_index)
         self.listbox.see(old_index)
+        self.listbox.selection_set(old_index)
+
+    def remove_tag_from_filename(self, filename, tag):
+        if not tag:
+            return
+        record = self.db_dict[filename]
+        aa.remove_tag(record, tag)
 
     def command_g(self):
         filename = self.get_selected_filename()
@@ -749,8 +764,15 @@ class App:
         filename = self.get_selected_filename()
         if not filename:
             return
-        tag = Tag.LOOK_TAG.value
-        self.add_tag_to_filename(filename=filename, tag=tag, add_timestamp=True)
+        self.remove_tag_from_filename(filename=filename, tag=Tag.NO_LYRICS.value)
+        self.add_tag_to_filename(filename=filename, tag=Tag.LYRICS.value)
+
+    def command_n(self):
+        filename = self.get_selected_filename()
+        if not filename:
+            return
+        self.remove_tag_from_filename(filename=filename, tag=Tag.LYRICS.value)
+        self.add_tag_to_filename(filename=filename, tag=Tag.NO_LYRICS.value)
 
     def command_clear_min_max(self):
         print("clear min max")

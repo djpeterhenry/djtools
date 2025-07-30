@@ -181,21 +181,32 @@ def write_db_file(db_dict):
     write_db_json(db_dict)
 
 
-def use_for_rekordbox(record):
-    if "x" in record["tags"]:
-        return False
-    if "x_rekordbox" in record["tags"]:
-        return False
-    if Tag.SS_TAG.value in record["tags"]:
-        return False
-    return True
+def has_tag(record, tag):
+    return tag in record.get("tags", [])
+
+
+def add_tag(record, tag):
+    if not has_tag(record, tag):
+        record["tags"].append(tag)
+
+
+def remove_tag(record, tag):
+    if has_tag(record, tag):
+        record["tags"].remove(tag)
 
 
 def is_vocal(record):
-    """
-    Common enough to keep I guess?
-    """
-    return Tag.VOCAL_TAG.value in record["tags"]
+    return has_tag(record, Tag.VOCAL_TAG.value)
+
+
+def use_for_rekordbox(record):
+    if has_tag(record, "x"):
+        return False
+    if has_tag(record, "x_rekordbox"):
+        return False
+    if has_tag(record, Tag.SS_TAG.value):
+        return False
+    return True
 
 
 def has_extension(f, extension):

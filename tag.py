@@ -14,6 +14,10 @@ class Tag(ListEnum):
     X_REKORDBOX = "x_rekordbox"
     VOCAL_TAG = "vocal"
 
+    # Try to categorize lots of recent and good songs with one of these:
+    LYRICS = "lyrics"
+    NO_LYRICS = "no_lyrics"
+
     # Top level genre tag attempts
     JAZZ = "jazz"  # need to keep lowercase until you fix the database
     DISCO = "DISCO"
