@@ -172,7 +172,7 @@ def get_filtered_files(
         if tags:
             found_any = False
             for tag in tags:
-                if tag in record["tags"]:
+                if aa.has_tag(record, tag):
                     found_any = True
             if not found_any:
                 continue
@@ -483,8 +483,8 @@ def export_rekordbox_xml(rekordbox_filename):
         # Accumulate suffixes for tags and keys
         suffixes = []
         
-        for tag in [Tag.VOCAL_TAG, Tag.GOOD_TAG, Tag.JAZZ, Tag.DISCO, Tag.BIG_ROOM, Tag.AFRO]:
-            if tag.value in record["tags"]:
+        for tag in [Tag.VOCAL_TAG, Tag.GOOD_TAG, Tag.LYRICS, Tag.NO_LYRICS, Tag.JAZZ, Tag.DISCO, Tag.BIG_ROOM, Tag.AFRO]:
+            if aa.has_tag(record, tag.value):
                 suffixes.append("[#{}]".format(tag.value.lower()))
 
         # timestamp filtering

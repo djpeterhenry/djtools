@@ -202,8 +202,8 @@ class App:
         self.tag_list_menu.pack(side=tk.LEFT)
 
         self.tag_invert = Checkbox(frame_edit, "Invert", just_update)
-        self.tag_vocal = Checkbox(frame_edit, "[Vocal]", just_update)
         self.tag_needs_lyrics = Checkbox(frame_edit, "Needs Lyrics", just_update)
+        self.tag_vocal = Checkbox(frame_edit, "[Vocal]", just_update)
         self.tag_ss = Checkbox(frame_edit, "[SS]", just_update)
 
         self.reveal_var = tk.IntVar(master)
@@ -348,8 +348,8 @@ class App:
 
         tag = self.tag_var.get()
         tag_invert = bool(self.tag_invert.get())
-        vocal_selected = bool(self.tag_vocal.get())
         needs_lyric_selected = bool(self.tag_needs_lyrics.get())
+        vocal_selected = bool(self.tag_vocal.get())
         ss_selected = bool(self.tag_ss.get())
 
         # prepare min / max filters
