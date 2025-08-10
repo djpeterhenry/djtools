@@ -102,6 +102,15 @@ def rename_tag(tag_old, tag_new):
     aa.write_db_file(db_dict)
 
 
+def remove_tag(tag_name):
+    """Remove a tag from all records in the database."""
+    db_dict = aa.read_db_file()
+    tag_name = tag_name.strip()
+    for _, record in sorted(db_dict.items()):
+        aa.remove_tag(record, tag_name)
+    aa.write_db_file(db_dict)
+
+
 def list_tags():
     """List all tags and their frequencies used in the database."""
     db_dict = aa.read_db_file()
@@ -793,6 +802,7 @@ if __name__ == "__main__":
             add_keys,
             edit_bpm,
             rename_tag,
+            remove_tag,
             list_tags,
             list_missing,
             transfer_missing,
