@@ -9,7 +9,15 @@ class ListEnum(Enum):
 
 
 class Tag(ListEnum):
-    # legacy lowercase
+    # Top level genre tags
+    JAZZ = "JAZZ"
+    DISCO = "DISCO"
+    BIG_ROOM = "BIG_ROOM"
+    TECH_HOUSE = "TECH_HOUSE"
+    AFRO = "AFRO"
+    ACTUAL_HOUSE = "ACTUAL_HOUSE"
+
+    # some legacy lowercase tags.  Could updated.
     X = "x"
     X_REKORDBOX = "x_rekordbox"
     VOCAL_TAG = "vocal"
@@ -17,13 +25,6 @@ class Tag(ListEnum):
     # Try to categorize lots of recent and good songs with one of these:
     LYRICS = "lyrics"
     NO_LYRICS = "no_lyrics"
-
-    # Top level genre tag attempts
-    JAZZ = "JAZZ"
-    DISCO = "DISCO"
-    BIG_ROOM = "BIG_ROOM"
-    TECH_HOUSE = "TECH_HOUSE"
-    AFRO = "AFRO"
 
     # better uppercase
     SKIP_KEY = "ALL KEYS"
@@ -35,5 +36,4 @@ class Tag(ListEnum):
     DAN_TAG = "DAN"
     CRISPY_TACOS = "CRISPY_TACOS"
     DRUM_LOOPS = "DRUM_LOOPS"
-    ACTUAL_HOUSE = "ACTUAL_HOUSE"
     CASTRO = "CASTRO"
