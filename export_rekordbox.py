@@ -17,6 +17,7 @@ LISTS_PLAYLISTS = False
 REKORDBOX_SAMPLE_PATH = "/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = "/Users/peter/Music/PioneerDJ/LocalSamples"
 REKORDBOX_HISTORY_PATH = "/Users/peter/Documents/rekordbox_history"
+REKORDBOX_TAGS_PATH = "/Users/peter/Documents/rekordbox_tags"
 
 NEW_OLD_YEARS = 20
 
@@ -42,7 +43,7 @@ def get_bpm_and_range_list():
 
 def stamp_from_all_recordbox_history_files():
     if not os.path.isdir(REKORDBOX_HISTORY_PATH):
-        print("REKORDBOX_HISTORY_PATH not found: {}".format(REKORDBOX_HISTORY_PATH))
+        print(f"REKORDBOX_HISTORY_PATH not found: {REKORDBOX_HISTORY_PATH}")
         return
 
     db_dict = aa.read_db_file()
@@ -50,6 +51,20 @@ def stamp_from_all_recordbox_history_files():
     for fn in os.listdir(REKORDBOX_HISTORY_PATH):
         history_filepath = os.path.join(REKORDBOX_HISTORY_PATH, fn)
         aa.update_with_rekordbox_history(db_dict, history_filepath)
+
+    aa.write_db_file(db_dict)
+
+
+def update_rekordbox_tags():
+    if not os.path.isdir(REKORDBOX_TAGS_PATH):
+        print(f"REKORDBOX_TAGS_PATH not found: {REKORDBOX_TAGS_PATH}")
+        return
+
+    db_dict = aa.read_db_file()
+
+    for fn in os.listdir(REKORDBOX_TAGS_PATH):
+        tags_filepath = os.path.join(REKORDBOX_TAGS_PATH, fn)
+        aa.update_with_rekordbox_tags(db_dict, tags_filepath)
 
     aa.write_db_file(db_dict)
 
@@ -482,8 +497,18 @@ def export_rekordbox_xml(rekordbox_filename):
 
         # Accumulate suffixes for tags and keys
         suffixes = []
-        
-        for tag in [Tag.VOCAL_TAG, Tag.GOOD_TAG, Tag.LYRICS, Tag.NO_LYRICS, Tag.JAZZ, Tag.DISCO, Tag.BIG_ROOM, Tag.AFRO]:
+
+        for tag in [
+            Tag.VOCAL_TAG,
+            Tag.GOOD_TAG,
+            Tag.LYRICS,
+            Tag.NO_LYRICS,
+            Tag.JAZZ,
+            Tag.DISCO,
+            Tag.BIG_ROOM,
+            Tag.TECH_HOUSE,
+            Tag.AFRO,
+        ]:
             if aa.has_tag(record, tag.value):
                 suffixes.append("[#{}]".format(tag.value.lower()))
 
@@ -695,6 +720,7 @@ def export_rekordbox_xml(rekordbox_filename):
         add_playlist_for_tag(parent, Tag.JAZZ)
         add_playlist_for_tag(parent, Tag.DISCO)
         add_playlist_for_tag(parent, Tag.BIG_ROOM)
+        add_playlist_for_tag(parent, Tag.TECH_HOUSE)
         add_playlist_for_tag(parent, Tag.AFRO)
         add_playlist_for_tag(parent, Tag.CASTRO)
         add_playlist_for_tag(parent, Tag.CRISPY_TACOS)

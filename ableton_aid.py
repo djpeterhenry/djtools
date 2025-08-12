@@ -29,7 +29,6 @@ except NameError:
 DB_FILENAME = "aadb_unicode.txt"
 DATABASE_JSON = "database.json"
 
-YOUTUBE_API_KEY = "AIzaSyDAnMhITl7CeycHuOeTqYxY0T2vLgZWzwk"
 DISCOGS_API_KEY = "HmnXmNploYjFjezfQWhqzrsJxgnSMioqaqNwHvMo"
 
 ABLETON_EXTENSIONS = [".alc", ".als"]
@@ -954,6 +953,33 @@ def stamp_song(db_dict, date_ts, index, artist, title):
     record = db_dict[filename]
     ts_to_write = date_ts + index
     add_ts(record, ts_to_write)
+
+
+def update_with_rekordbox_tags(db_dict, tags_filepath):
+    tag_str = os.path.splitext(os.path.basename(tags_filepath))[0].upper()
+    # The tag must match a known Tag value
+    if tag_str not in Tag.__members__:
+        print(f"Unknown tag: {tag_str}")
+        return
+    tag = Tag[tag_str]
+
+    with io.open(tags_filepath, encoding="utf-16le") as f:
+        # Obtain the track and artist column indices
+        header = f.readline().strip().split("\t")
+        artist_col = header.index("Artist")
+        title_col = header.index("Track Title")
+
+        for line in f.readlines():
+            columns = line.strip().split("\t")
+            artist = columns[artist_col]
+            title = columns[title_col]
+            title = title.split("[")[0].strip()
+            filename = get_filename_unidecode_matching(artist, title, db_dict)
+            if filename is None:
+                print(f"Failure to tag: {artist} - {title}")
+                continue
+            record = db_dict[filename]
+            add_tag(record, tag.value)
 
 
 def get_release_year(record):

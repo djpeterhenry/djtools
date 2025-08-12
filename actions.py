@@ -794,6 +794,10 @@ def demucs_vocal_sample_path(alc_filename):
     return os.path.join(demucs_samples_path, new_sample_filename)
 
 
+def update_rekordbox_tags():
+    export_rekordbox.update_rekordbox_tags()
+
+
 if __name__ == "__main__":
     parser = argh.ArghParser()
     parser.add_commands(
@@ -825,6 +829,7 @@ if __name__ == "__main__":
             release_dates_manual,
             remove_recent_timestamps,
             demucs,
+            update_rekordbox_tags,
         ]
     )
     parser.dispatch()
