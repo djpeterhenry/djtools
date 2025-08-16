@@ -8,7 +8,7 @@ import random
 from unidecode import unidecode
 
 import ableton_aid as aa
-from tag import Tag
+from tag import Tag, REKORDBOX_FILENAME_TAGS, REKORDBOX_PLAYLIST_TAGS
 
 VERSION = 1
 
@@ -459,6 +459,7 @@ class PlaylistAdder(object):
 
 def export_rekordbox_xml(rekordbox_filename):
     stamp_from_all_recordbox_history_files()
+    update_rekordbox_tags()
 
     export_rekordbox_samples(
         sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
@@ -498,17 +499,7 @@ def export_rekordbox_xml(rekordbox_filename):
         # Accumulate suffixes for tags and keys
         suffixes = []
 
-        for tag in [
-            Tag.VOCAL_TAG,
-            Tag.GOOD_TAG,
-            Tag.LYRICS,
-            Tag.NO_LYRICS,
-            Tag.JAZZ,
-            Tag.DISCO,
-            Tag.BIG_ROOM,
-            Tag.TECH_HOUSE,
-            Tag.AFRO,
-        ]:
+        for tag in REKORDBOX_FILENAME_TAGS:
             if aa.has_tag(record, tag.value):
                 suffixes.append("[#{}]".format(tag.value.lower()))
 
@@ -715,17 +706,8 @@ def export_rekordbox_xml(rekordbox_filename):
         )
 
     def add_tag(parent):
-        add_playlist_for_tag(parent, Tag.GOOD_TAG)
-        add_playlist_for_tag(parent, Tag.P_NASTY_TAG)
-        add_playlist_for_tag(parent, Tag.JAZZ)
-        add_playlist_for_tag(parent, Tag.DISCO)
-        add_playlist_for_tag(parent, Tag.BIG_ROOM)
-        add_playlist_for_tag(parent, Tag.TECH_HOUSE)
-        add_playlist_for_tag(parent, Tag.AFRO)
-        add_playlist_for_tag(parent, Tag.CASTRO)
-        add_playlist_for_tag(parent, Tag.CRISPY_TACOS)
-        add_playlist_for_tag(parent, Tag.ACTUAL_HOUSE)
-        add_playlist_for_tag(parent, Tag.DRUM_LOOPS)
+        for tag in REKORDBOX_PLAYLIST_TAGS:
+            add_playlist_for_tag(parent, tag)
 
     # Make sure all in lists are included in new_files regardless of age
     list_name_to_file = sorted(aa.get_list_name_to_file(aa.LISTS_FOLDER).items())

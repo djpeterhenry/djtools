@@ -16,6 +16,7 @@ class Tag(ListEnum):
     TECH_HOUSE = "TECH_HOUSE"
     AFRO = "AFRO"
     ACTUAL_HOUSE = "ACTUAL_HOUSE"
+    PROGRESSIVE = "PROGRESSIVE"
 
     # some legacy lowercase tags.  Could updated.
     X = "x"
@@ -37,3 +38,28 @@ class Tag(ListEnum):
     CRISPY_TACOS = "CRISPY_TACOS"
     DRUM_LOOPS = "DRUM_LOOPS"
     CASTRO = "CASTRO"
+
+
+REKORDBOX_COMMON_TAGS = [
+    Tag.GOOD_TAG,
+    Tag.JAZZ,
+    Tag.DISCO,
+    Tag.BIG_ROOM,
+    Tag.TECH_HOUSE,
+    Tag.AFRO,
+    Tag.ACTUAL_HOUSE,
+    Tag.PROGRESSIVE,
+]
+
+REKORDBOX_FILENAME_TAGS = REKORDBOX_COMMON_TAGS + [
+    Tag.VOCAL_TAG,
+    Tag.LYRICS,
+    Tag.NO_LYRICS,
+]
+
+REKORDBOX_PLAYLIST_TAGS = REKORDBOX_COMMON_TAGS + [
+    Tag.P_NASTY_TAG,
+    Tag.CASTRO,
+    Tag.CRISPY_TACOS,
+    Tag.DRUM_LOOPS,
+]

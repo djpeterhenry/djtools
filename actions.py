@@ -829,7 +829,7 @@ if __name__ == "__main__":
             release_dates_manual,
             remove_recent_timestamps,
             demucs,
-            update_rekordbox_tags,
+            update_rekordbox_tags,  # also done as part of rekordbox_xml
         ]
     )
     parser.dispatch()
