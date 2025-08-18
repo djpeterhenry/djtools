@@ -25,7 +25,7 @@ import subprocess
 import time
 
 import ableton_aid as aa
-from tag import Tag
+from tag import Tag, REKORDBOX_GENRE_TAGS
 from timing import timing
 
 
@@ -528,12 +528,20 @@ class App:
                 # check this with edit
                 key_display = "%3s" % (cam_song)
             good_str = " (g) " if aa.has_tag(record, Tag.GOOD_TAG.value) else " "
-            cool_filename = " %03d|%s|%02d|%s%s" % (
+
+            suffixes = []
+            for suffix_tag in REKORDBOX_GENRE_TAGS:
+                if aa.has_tag(record, suffix_tag.value):
+                    suffixes.append("[#{}]".format(suffix_tag.value.upper()))
+            suffixes_str = " " * 8 + " ".join(suffixes)
+
+            cool_filename = " %03d|%s|%02d|%s%s%s" % (
                 bpm,
                 key_display,
                 min(99, play_count),
                 good_str,
                 file,
+                suffixes_str,
             )
             filename_pairs_list.append((cool_filename, filename))
         # done looping over all filenames
