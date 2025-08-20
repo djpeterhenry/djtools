@@ -17,6 +17,7 @@ class Tag(ListEnum):
     AFRO = "AFRO"
     ACTUAL_HOUSE = "ACTUAL_HOUSE"
     PROGRESSIVE = "PROGRESSIVE"
+    ACID = "ACID"
 
     # some legacy lowercase tags.  Could updated.
     X = "x"
@@ -48,6 +49,7 @@ REKORDBOX_GENRE_TAGS = [
     Tag.AFRO,
     Tag.ACTUAL_HOUSE,
     Tag.PROGRESSIVE,
+    Tag.ACID
 ]
 
 REKORDBOX_COMMON_TAGS = REKORDBOX_GENRE_TAGS + [
