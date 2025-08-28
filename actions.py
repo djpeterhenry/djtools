@@ -19,6 +19,7 @@ import typing as T
 import demucs as demucs_py
 import shutil
 from tag import Tag
+import datetime
 
 
 def add_bpms():
@@ -798,6 +799,19 @@ def update_rekordbox_tags():
     export_rekordbox.update_rekordbox_tags()
 
 
+def print_plays_per_year(alc_filename):
+    db_dict = aa.read_db_file()
+    record = db_dict[alc_filename]
+    timestamps = aa.get_ts_list_date_limited(record)
+    year_counts = defaultdict(int)
+    for ts in timestamps:
+        date = datetime.date.fromtimestamp(ts)
+        year_counts[date.year] += 1
+
+    for year in sorted(year_counts.keys()):
+        print(f"{year}: {year_counts[year]}")
+
+
 if __name__ == "__main__":
     parser = argh.ArghParser()
     parser.add_commands(
@@ -830,6 +844,7 @@ if __name__ == "__main__":
             remove_recent_timestamps,
             demucs,
             update_rekordbox_tags,  # also done as part of rekordbox_xml
+            print_plays_per_year,
         ]
     )
     parser.dispatch()
