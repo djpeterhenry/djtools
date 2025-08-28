@@ -226,6 +226,22 @@ def transfer_other(other_db_filename):
     aa.write_db_file(db_dict)
 
 
+def transfer_timestamps(source_filename, target_filename):
+    """
+    Transfer timestamps from one specific file to another in the database.
+    I used this to fix Disclosure - You And Me (Westend) because brackets had broken stamping.
+    """
+    db_dict = aa.read_db_file()
+    source_record = db_dict[source_filename]
+    target_record = db_dict[target_filename]
+    source_ts_list = aa.get_ts_list(source_record)
+    target_ts_list = aa.get_ts_list(target_record)
+    both_ts_list = sorted(list(set(source_ts_list + target_ts_list)))
+    target_record["ts_list"] = both_ts_list
+    db_dict[target_filename] = target_record
+    aa.write_db_file(db_dict)
+
+
 def print_records():
     """Print all records in the database."""
     db_dict = aa.read_db_file()
@@ -825,6 +841,7 @@ if __name__ == "__main__":
             list_missing,
             transfer_missing,
             transfer_other,
+            transfer_timestamps,
             print_records,
             print_record,
             print_pretty,
