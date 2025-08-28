@@ -21,6 +21,8 @@ class Tag(ListEnum):
     TROPICAL = "TROPICAL"
     FILTER_HOUSE = "FILTER_HOUSE"
     ROCK_HOUSE = "ROCK_HOUSE"
+    DUBSTEP = "DUBSTEP"
+    GARAGE = "GARAGE"
 
     # some legacy lowercase tags.  Could updated.
     X = "x"
@@ -56,6 +58,8 @@ REKORDBOX_GENRE_TAGS = [
     Tag.TROPICAL,
     Tag.FILTER_HOUSE,
     Tag.ROCK_HOUSE,
+    Tag.DUBSTEP,
+    Tag.GARAGE,
     Tag.CASTRO,
 ]
 
