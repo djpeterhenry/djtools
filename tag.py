@@ -22,7 +22,8 @@ class Tag(ListEnum):
     FILTER_HOUSE = "FILTER_HOUSE"
     ROCK_HOUSE = "ROCK_HOUSE"
     DUBSTEP = "DUBSTEP"
-    GARAGE = "GARAGE"
+    UK_GARAGE = "UK_GARAGE"
+    HIDE_GENRE = "HIDE_GENRE"
 
     # some legacy lowercase tags.  Could updated.
     X = "x"
@@ -59,9 +60,12 @@ REKORDBOX_GENRE_TAGS = [
     Tag.FILTER_HOUSE,
     Tag.ROCK_HOUSE,
     Tag.DUBSTEP,
-    Tag.GARAGE,
+    Tag.UK_GARAGE,
+    Tag.HIDE_GENRE,
     Tag.CASTRO,
 ]
+
+REKORDBOX_GENRE_TAG_VALUE_SET = set(genre.value for genre in REKORDBOX_GENRE_TAGS)
 
 REKORDBOX_COMMON_TAGS = REKORDBOX_GENRE_TAGS + [
     Tag.GOOD_TAG,

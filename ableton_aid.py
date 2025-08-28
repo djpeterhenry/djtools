@@ -180,8 +180,12 @@ def write_db_file(db_dict):
     write_db_json(db_dict)
 
 
+def get_tags(record):
+    return record.get("tags", [])
+
+
 def has_tag(record, tag):
-    return tag in record.get("tags", [])
+    return tag in get_tags(record)
 
 
 def add_tag(record, tag):

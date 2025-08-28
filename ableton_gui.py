@@ -25,7 +25,7 @@ import subprocess
 import time
 
 import ableton_aid as aa
-from tag import Tag, REKORDBOX_GENRE_TAGS
+from tag import Tag, REKORDBOX_GENRE_TAGS, REKORDBOX_GENRE_TAG_VALUE_SET
 from timing import timing
 
 
@@ -203,6 +203,7 @@ class App:
 
         self.tag_invert = Checkbox(frame_edit, "Invert", just_update)
         self.tag_needs_lyrics = Checkbox(frame_edit, "Needs Lyrics", just_update)
+        self.tag_needs_genre = Checkbox(frame_edit, "Needs Genre", just_update)
         self.tag_vocal = Checkbox(frame_edit, "[Vocal]", just_update)
         self.tag_ss = Checkbox(frame_edit, "[SS]", just_update)
 
@@ -269,6 +270,7 @@ class App:
         self.listbox.bind("e", lambda _: self.command_export_list())
         self.listbox.bind("g", lambda _: self.command_g())
         self.listbox.bind("b", lambda _: self.command_b())
+        self.listbox.bind("h", lambda _: self.command_h())
         self.listbox.bind("l", lambda _: self.command_l())
         self.listbox.bind("n", lambda _: self.command_n())
         self.listbox.bind("j", lambda _: self.command_order_down())
@@ -349,6 +351,7 @@ class App:
         tag = self.tag_var.get()
         tag_invert = bool(self.tag_invert.get())
         needs_lyric_selected = bool(self.tag_needs_lyrics.get())
+        needs_genre_selected = bool(self.tag_needs_genre.get())
         vocal_selected = bool(self.tag_vocal.get())
         ss_selected = bool(self.tag_ss.get())
 
@@ -461,6 +464,16 @@ class App:
                 if aa.has_tag(record, Tag.LYRICS.value) or aa.has_tag(
                     record, Tag.NO_LYRICS.value
                 ):
+                    keep = False
+
+            if needs_genre_selected:
+                record_tags = aa.get_tags(record)
+                has_genre = False
+                for t in record_tags:
+                    if t in REKORDBOX_GENRE_TAG_VALUE_SET:
+                        has_genre = True
+                        break
+                if has_genre:
                     keep = False
 
             if filter_string:
@@ -776,6 +789,13 @@ class App:
             return
         self.remove_tag_from_filename(filename=filename, tag=Tag.GOOD_TAG.value)
         self.update_listbox()
+
+    def command_h(self):
+        filename = self.get_selected_filename()
+        if not filename:
+            return
+        tag = Tag.HIDE_GENRE.value
+        self.add_tag_to_filename(filename=filename, tag=tag)
 
     def command_l(self):
         filename = self.get_selected_filename()
