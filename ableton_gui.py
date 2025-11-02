@@ -265,7 +265,7 @@ class App:
         self.listbox.bind("r", lambda _: self.command_tag_remove())
         self.listbox.bind("s", lambda _: self.command_save())
         self.listbox.bind("v", lambda _: self.tag_vocal.toggle())
-        self.listbox.bind("f", lambda _: self.command_copy_filename())
+        self.listbox.bind("f", lambda _: self.command_f())
         self.listbox.bind("p", lambda _: self.command_play_filename())
         self.listbox.bind("e", lambda _: self.command_export_list())
         self.listbox.bind("g", lambda _: self.command_g())
@@ -694,27 +694,10 @@ class App:
         aa.reveal_file(sample)
         self.add_ts_from_copy(filename)
 
-    def file_action_copy_filename(self, filename):
-        self.set_clipboard_data(filename)
-
     def file_action_play_vlc(self, filename):
         sample = aa.get_sample(self.db_dict[filename])
         command = ["open", sample]
         subprocess.call(command)
-
-    # should be classmethod
-    def set_clipboard_data(self, data):
-        p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
-        p.stdin.write(data)
-        p.stdin.close()
-        retcode = p.wait()
-
-    # for use with f shortcut key
-    def command_copy_filename(self):
-        filename = self.get_selected_filename()
-        if not filename:
-            return
-        self.file_action_copy_filename(filename)
 
     # for use with p shortcut key
     def command_play_filename(self):
@@ -775,6 +758,13 @@ class App:
             return
         record = self.db_dict[filename]
         aa.remove_tag(record, tag)
+
+    def command_f(self):
+        filename = self.get_selected_filename()
+        if not filename:
+            return
+        tag = Tag.FORGET_TAG.value
+        self.add_tag_to_filename(filename=filename, tag=tag)
 
     def command_g(self):
         filename = self.get_selected_filename()

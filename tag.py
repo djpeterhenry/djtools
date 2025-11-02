@@ -38,6 +38,7 @@ class Tag(ListEnum):
     SKIP_KEY = "ALL KEYS"
     SKIP_BPM = "ALL BPM"
     GOOD_TAG = "GOOD"  # This one can be applied with "g" so order doesn't matter
+    FORGET_TAG = "FORGET" # Apply with "f" and look to forget
     SS_TAG = "SS"
     P_NASTY_TAG = "P_NASTY"
     SHANNON_TAG = "SHANNON"
