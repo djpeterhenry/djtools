@@ -13,6 +13,8 @@ POLL_INTERVAL = 1  # seconds
 NOW_WIDTH = 1920
 NOW_HEIGHT = 1080
 NOW_FONT_SIZE = "48px"
+NOW_LEFT_PAD = 20
+NOW_BOTTOM_PAD = 20
 
 
 def get_latest_history_songs():
@@ -133,7 +135,7 @@ NOW_PLAYING_HTML = """\
     font-size: %(now_font_size)s; overflow: hidden;
   }
   #now {
-    position: absolute; bottom: 40px; left: 40px;
+    position: absolute; bottom: %(now_bottom_pad)dpx; left: %(now_left_pad)dpx;
   }
   #now { max-width: %(now_width)dpx; }
   #artist { font-size: 1.5em; font-weight: bold; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -195,6 +197,8 @@ class Handler(BaseHTTPRequestHandler):
                 "now_height": NOW_HEIGHT,
                 "now_font_size": NOW_FONT_SIZE,
                 "now_bg": "black" if self.path == "/now-debug" else "transparent",
+                "now_left_pad": NOW_LEFT_PAD,
+                "now_bottom_pad": NOW_BOTTOM_PAD,
             }).encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html")
