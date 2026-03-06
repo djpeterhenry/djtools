@@ -194,7 +194,8 @@ def get_filtered_files(
 
         is_vocal = aa.is_vocal(record)
         if bpm is not None:
-            bpm_range_to_use = 30 if is_vocal else bpm_range
+            # Setting bpm_range to 100 for vocals is a quick way to include all vocals regardless of bpm. 
+            bpm_range_to_use = 100 if is_vocal else bpm_range
             if not aa.matches_bpm_filter(bpm, bpm_range_to_use, record["bpm"]):
                 continue
         cam_num = aa.get_camelot_num(record.get("key"))
@@ -746,7 +747,7 @@ def export_rekordbox_xml(rekordbox_filename):
     add_bpm_playlists(et_filter_folder, new_files)
 
     # Key (only for CDJ)
-    if False:
+    if True:
         et_filter_folder = add_folder(et_version_node, "Key Filter")
         add_key_playlists(et_filter_folder)
 
