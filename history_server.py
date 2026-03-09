@@ -2,9 +2,13 @@
 """Serves the most recent Rekordbox history as a live-updating web page."""
 
 import json
+import logging
 import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pyrekordbox import Rekordbox6Database
+
+# We know Rekordbox is running; we only read, never commit, so this is safe.
+logging.getLogger("pyrekordbox.db6.database").setLevel(logging.ERROR)
 
 PORT = 8888
 POLL_INTERVAL = 1  # seconds
@@ -13,6 +17,9 @@ POLL_INTERVAL = 1  # seconds
 NOW_WIDTH = 1920
 NOW_HEIGHT = 1080
 NOW_FONT_SIZE = "48px"
+NOW_ARTIST_SIZE = "1.2em"
+NOW_TITLE_SIZE = "1.1em"
+NOW_YEAR_SIZE = "0.9em"
 NOW_LEFT_PAD = 20
 NOW_BOTTOM_PAD = 20
 
@@ -138,9 +145,9 @@ NOW_PLAYING_HTML = """\
     position: absolute; bottom: %(now_bottom_pad)dpx; left: %(now_left_pad)dpx;
   }
   #now { max-width: %(now_width)dpx; }
-  #artist { font-size: 1.5em; font-weight: bold; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #title { font-size: 1.1em; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #year { font-size: 0.9em; margin: 4px 0; }
+  #artist { font-size: %(now_artist_size)s; font-weight: bold; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #title { font-size: %(now_title_size)s; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #year { font-size: %(now_year_size)s; margin: 4px 0; }
   .fade { animation: fadein 0.5s ease-in; }
   @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 </style>
@@ -197,6 +204,9 @@ class Handler(BaseHTTPRequestHandler):
                 "now_height": NOW_HEIGHT,
                 "now_font_size": NOW_FONT_SIZE,
                 "now_bg": "black" if self.path == "/now-debug" else "transparent",
+                "now_artist_size": NOW_ARTIST_SIZE,
+                "now_title_size": NOW_TITLE_SIZE,
+                "now_year_size": NOW_YEAR_SIZE,
                 "now_left_pad": NOW_LEFT_PAD,
                 "now_bottom_pad": NOW_BOTTOM_PAD,
             }).encode()
