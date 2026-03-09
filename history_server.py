@@ -3,6 +3,9 @@
 
 import json
 import logging
+import os
+import signal
+import subprocess
 import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pyrekordbox import Rekordbox6Database
@@ -215,12 +218,14 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.write(page)
             return
-        else:
+        elif self.path == "/":
             page = (HTML % {"poll_ms": POLL_INTERVAL * 1000}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html")
             self.end_headers()
             self.write(page)
+        else:
+            self.send_error(404, f"Unknown endpoint: {self.path}")
 
     def write(self, data):
         self.wfile.write(data)
@@ -229,10 +234,35 @@ class Handler(BaseHTTPRequestHandler):
         pass  # quiet
 
 
+def kill_existing_server():
+    """Kill any existing process on our port."""
+    result = subprocess.run(
+        ["lsof", "-ti", f":{PORT}"], capture_output=True, text=True
+    )
+    for pid in result.stdout.split():
+        print(f"Stopping previous server (PID {pid})...")
+        os.kill(int(pid), signal.SIGTERM)
+    if result.stdout.strip():
+        time.sleep(1)
+
+
 if __name__ == "__main__":
+    kill_existing_server()
     server = HTTPServer(("", PORT), Handler)
-    print(f"Serving Rekordbox history at http://localhost:{PORT}")
+    base = f"http://localhost:{PORT}"
+    print(f"Serving Rekordbox history at {base}")
     print(f"Polling every {POLL_INTERVAL}s. Ctrl+C to stop.")
+    print()
+    endpoints = [
+        ("/",            "History page"),
+        ("/now",         "Now-playing overlay (transparent bg)"),
+        ("/now-debug",   "Now-playing overlay (black bg)"),
+        ("/api/history", "JSON API"),
+    ]
+    print("Endpoints:")
+    for path, desc in endpoints:
+        url = f"{base}{path}"
+        print(f"  {url:<40} {desc}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

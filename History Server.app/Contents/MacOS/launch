@@ -1,3 +1,3 @@
 #!/bin/bash
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
-open -a Terminal "$DIR/History Server.command"
+open -a Terminal "$DIR/history_server.py"
