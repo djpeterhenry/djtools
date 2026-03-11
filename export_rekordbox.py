@@ -12,7 +12,7 @@ from tag import Tag, REKORDBOX_FILENAME_TAGS, REKORDBOX_PLAYLIST_TAGS
 
 VERSION = 1
 
-LISTS_PLAYLISTS = False
+LISTS_PLAYLISTS = True
 
 REKORDBOX_SAMPLE_PATH = "/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = "/Users/peter/Music/PioneerDJ/LocalSamples"
@@ -694,12 +694,13 @@ def export_rekordbox_xml(rekordbox_filename):
             aa.generate_num(files, db_dict, aa.get_ts_for(2015, 7, 1)),
         )
 
-        # All ordered by plays for the last 4 years
-        adder.add_playlist_for_files(
-            parent,
-            "Top (Last 4 Years)",
-            aa.generate_num(files, db_dict, aa.get_past_ts(aa.get_span_years(4))),
-        )
+        # All ordered by plays for the last N years
+        for years in [2, 4, 6]:
+            adder.add_playlist_for_files(
+                parent,
+                f"Top (Last {years} Years)",
+                aa.generate_num(files, db_dict, aa.get_past_ts(aa.get_span_years(years))),
+            )
 
         # Active list
         adder.add_playlist_for_files(
