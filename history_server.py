@@ -260,6 +260,23 @@ setInterval(poll, %(poll_ms)d);
 """
 
 
+def render_now_playing(now_bg, api_url):
+    return (NOW_PLAYING_HTML % {
+        "poll_ms": POLL_INTERVAL * 1000,
+        "now_width": NOW_WIDTH,
+        "now_height": NOW_HEIGHT,
+        "now_font_size": NOW_FONT_SIZE,
+        "now_bg": now_bg,
+        "now_artist_size": NOW_ARTIST_SIZE,
+        "now_title_size": NOW_TITLE_SIZE,
+        "now_year_size": NOW_YEAR_SIZE,
+        "now_left_pad": NOW_LEFT_PAD,
+        "now_bottom_pad": NOW_BOTTOM_PAD,
+        "now_stale_minutes": NOW_STALE_MINUTES,
+        "api_url": api_url,
+    }).encode()
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in ("/api/history", "/api/history-test"):
@@ -275,20 +292,7 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path in ("/now", "/now-debug", "/now-debug-test"):
             api_url = "/api/history-test" if self.path == "/now-debug-test" else "/api/history"
             now_bg = "transparent" if self.path == "/now" else "black"
-            page = (NOW_PLAYING_HTML % {
-                "poll_ms": POLL_INTERVAL * 1000,
-                "now_width": NOW_WIDTH,
-                "now_height": NOW_HEIGHT,
-                "now_font_size": NOW_FONT_SIZE,
-                "now_bg": now_bg,
-                "now_artist_size": NOW_ARTIST_SIZE,
-                "now_title_size": NOW_TITLE_SIZE,
-                "now_year_size": NOW_YEAR_SIZE,
-                "now_left_pad": NOW_LEFT_PAD,
-                "now_bottom_pad": NOW_BOTTOM_PAD,
-                "now_stale_minutes": NOW_STALE_MINUTES,
-                "api_url": api_url,
-            }).encode()
+            page = render_now_playing(now_bg, api_url)
             self.send_response(200)
             self.send_header("Content-Type", "text/html")
             self.end_headers()
