@@ -44,6 +44,7 @@ def get_latest_history_songs():
         c = s.Content
         # Strip the tag suffixes from title (everything after many spaces)
         title = c.Title
+        is_vocal = "[#vocal]" in title
         if "   " in title:
             title = title[: title.index("   ")].strip()
         artist = c.Artist.Name if c.Artist else ""
@@ -54,6 +55,7 @@ def get_latest_history_songs():
                 "artist": artist,
                 "played_at": str(s.created_at),
                 "year": c.ReleaseYear,
+                "is_vocal": is_vocal,
             }
         )
     db.close()
@@ -170,7 +172,9 @@ async function poll() {
     const resp = await fetch("/api/history");
     const data = await resp.json();
     if (!data.songs || !data.songs.length) return;
-    const s = data.songs[data.songs.length - 1];
+    const nonVocals = data.songs.filter(s => !s.is_vocal);
+    if (!nonVocals.length) return;
+    const s = nonVocals[nonVocals.length - 1];
     const age = Date.now() - new Date(s.played_at).getTime();
     const stale = age > STALE_MS;
     const display = stale ? "" : s.title;
