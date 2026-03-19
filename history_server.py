@@ -4,6 +4,7 @@
 import json
 import logging
 import os
+import re
 import signal
 import subprocess
 import time
@@ -37,6 +38,10 @@ def process_title(raw_title):
     title = raw_title
     if TAG_SEPARATOR in title:
         title = title[: title.index(TAG_SEPARATOR)].strip()
+    # Remove parenthesised blocks containing "original" or "extended"
+    title = re.sub(r"\s*\([^)]*(?:original|extended)[^)]*\)", "", title, flags=re.IGNORECASE).strip()
+    # Remove trailing "fixed" or trailing number (e.g. "2", "03")
+    title = re.sub(r"\s+(?:fixed|\d+)$", "", title, flags=re.IGNORECASE).strip()
     vocal_title = (title.split("(")[0].strip() or title) + " (Vocal)" if is_vocal else ""
     return title, is_vocal, vocal_title
 
@@ -77,24 +82,45 @@ def get_test_history_songs():
     raw_songs = [
         {
             "track_no": 1,
-            "raw_title": "Dreaming Of Better Days   [Deep] [House]",
+            "raw_title": "Dreaming Of Better Days   [#deep] [#actual_house]",
             "artist": "Deep House Collective",
             "played_at": str(now - timedelta(seconds=30)),
             "year": 2023,
         },
         {
             "track_no": 2,
-            "raw_title": "Midnight Runner (Extended Mix)   [Techno]",
+            "raw_title": "Midnight Runner (Extended Mix)   [#tech_house]",
             "artist": "Groove Assembly",
             "played_at": str(now - timedelta(seconds=20)),
             "year": 2024,
         },
         {
             "track_no": 3,
-            "raw_title": "Say My Name (Original Mix)   [House] [#vocal]",
+            "raw_title": "Say My Name (Original Mix)   [#actual_house] [#vocal]",
             "artist": "Luna Vox",
             "played_at": str(now - timedelta(seconds=10)),
             "year": 2022,
+        },
+        {
+            "track_no": 4,
+            "raw_title": "Neon Lights (DJ Tool Mix)   [#progressive]",
+            "artist": "Pulse Unit",
+            "played_at": str(now - timedelta(seconds=8)),
+            "year": 2024,
+        },
+        {
+            "track_no": 5,
+            "raw_title": "Lost Signal fixed   [#acid]",
+            "artist": "Static Echo",
+            "played_at": str(now - timedelta(seconds=6)),
+            "year": 2023,
+        },
+        {
+            "track_no": 6,
+            "raw_title": "Warehouse Dub 2   [#disco]",
+            "artist": "Depth Charge",
+            "played_at": str(now - timedelta(seconds=4)),
+            "year": 2025,
         },
     ]
     songs = []
