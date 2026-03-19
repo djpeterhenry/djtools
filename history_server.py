@@ -236,7 +236,7 @@ async function poll() {
     const vocalEl = document.getElementById("vocal");
     if (latest.is_vocal && !stale) {
       document.getElementById("vocal-artist").textContent = latest.artist;
-      document.getElementById("vocal-title").textContent = latest.title + " (Vocal)";
+      document.getElementById("vocal-title").textContent = (latest.title.split("(")[0].trim() || latest.title) + " (Vocal)";
       if (latest.title !== lastVocalTitle) {
         vocalEl.style.display = "block";
         vocalEl.classList.remove("fade");
