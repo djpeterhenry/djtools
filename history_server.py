@@ -38,8 +38,8 @@ def process_title(raw_title):
     title = raw_title
     if TAG_SEPARATOR in title:
         title = title[: title.index(TAG_SEPARATOR)].strip()
-    # Remove parenthesised blocks containing "original" or "extended"
-    title = re.sub(r"\s*\([^)]*(?:original|extended)[^)]*\)", "", title, flags=re.IGNORECASE).strip()
+    # Remove parenthesised blocks starting with "original" or "extended"
+    title = re.sub(r"\s*\((?:original|extended)\b[^)]*\)", "", title, flags=re.IGNORECASE).strip()
     # Remove trailing "fixed" or trailing number (e.g. "2", "03")
     title = re.sub(r"\s+(?:fixed|\d+)$", "", title, flags=re.IGNORECASE).strip()
     vocal_title = (title.split("(")[0].strip() or title) + " (Vocal)" if is_vocal else ""
@@ -110,13 +110,20 @@ def get_test_history_songs():
         },
         {
             "track_no": 5,
+            "raw_title": "Sunset (The Original)   [#afro]",
+            "artist": "Sol Rivera",
+            "played_at": str(now - timedelta(seconds=7)),
+            "year": 2021,
+        },
+        {
+            "track_no": 6,
             "raw_title": "Lost Signal fixed   [#acid]",
             "artist": "Static Echo",
             "played_at": str(now - timedelta(seconds=6)),
             "year": 2023,
         },
         {
-            "track_no": 6,
+            "track_no": 7,
             "raw_title": "Warehouse Dub 2   [#disco]",
             "artist": "Depth Charge",
             "played_at": str(now - timedelta(seconds=4)),
