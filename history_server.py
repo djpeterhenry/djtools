@@ -16,6 +16,7 @@ logging.getLogger("pyrekordbox.db6.database").setLevel(logging.ERROR)
 
 PORT = 8888
 POLL_INTERVAL = 1  # seconds
+TAG_SEPARATOR = "   "  # triple-space delimiter before tag suffixes like [Techno]
 
 # Now Playing page settings
 NOW_WIDTH = 1920
@@ -33,8 +34,8 @@ def process_title(raw_title):
     """Strip tag suffixes and extract vocal info from a raw title."""
     is_vocal = "[#vocal]" in raw_title
     title = raw_title
-    if "   " in title:
-        title = title[: title.index("   ")].strip()
+    if TAG_SEPARATOR in title:
+        title = title[: title.index(TAG_SEPARATOR)].strip()
     vocal_title = (title.split("(")[0].strip() or title) + " (Vocal)" if is_vocal else ""
     return title, is_vocal, vocal_title
 
