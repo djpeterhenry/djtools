@@ -27,6 +27,7 @@ NOW_TITLE_SIZE = "1.1em"
 NOW_YEAR_SIZE = "0.9em"
 NOW_LEFT_PAD = 20
 NOW_BOTTOM_PAD = 20
+NOW_VOCAL_GAP = 48  # px between vocal and main track
 NOW_STALE_MINUTES = 10  # show "Waiting for update" if last track is older than this
 
 
@@ -208,7 +209,7 @@ NOW_PLAYING_HTML = """\
   #artist { font-size: %(now_artist_size)s; font-weight: bold; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #title { font-size: %(now_title_size)s; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #year { font-size: %(now_year_size)s; margin: 4px 0; }
-  #vocal { margin-left: 40px; margin-bottom: 12px; display: none; }
+  #vocal { margin-left: 40px; margin-bottom: %(now_vocal_gap)dpx; display: none; }
   #vocal p { margin: 2px 0; }
   #vocal-artist { font-size: %(now_artist_size)s; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #vocal-title { font-size: %(now_title_size)s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -292,6 +293,7 @@ def render_now_playing(now_bg, api_url):
         "now_year_size": NOW_YEAR_SIZE,
         "now_left_pad": NOW_LEFT_PAD,
         "now_bottom_pad": NOW_BOTTOM_PAD,
+        "now_vocal_gap": NOW_VOCAL_GAP,
         "now_stale_minutes": NOW_STALE_MINUTES,
         "api_url": api_url,
     }).encode()
