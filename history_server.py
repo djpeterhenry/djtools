@@ -25,6 +25,7 @@ NOW_TITLE_SIZE = "1.1em"
 NOW_YEAR_SIZE = "0.9em"
 NOW_LEFT_PAD = 20
 NOW_BOTTOM_PAD = 20
+NOW_STALE_MINUTES = 10  # show "Waiting for update" if last track is older than this
 
 
 def get_latest_history_songs():
@@ -163,21 +164,25 @@ NOW_PLAYING_HTML = """\
 </div>
 <script>
 let lastTitle = "";
+const STALE_MS = %(now_stale_minutes)d * 60 * 1000;
 async function poll() {
   try {
     const resp = await fetch("/api/history");
     const data = await resp.json();
     if (!data.songs || !data.songs.length) return;
     const s = data.songs[data.songs.length - 1];
-    if (s.title !== lastTitle) {
+    const age = Date.now() - new Date(s.played_at).getTime();
+    const stale = age > STALE_MS;
+    const display = stale ? "" : s.title;
+    if (display !== lastTitle) {
       const el = document.getElementById("now");
       el.classList.remove("fade");
       void el.offsetWidth;
       el.classList.add("fade");
-      document.getElementById("artist").textContent = s.artist;
-      document.getElementById("title").textContent = s.title;
-      document.getElementById("year").textContent = s.year || "";
-      lastTitle = s.title;
+      document.getElementById("artist").textContent = stale ? "" : s.artist;
+      document.getElementById("title").textContent = stale ? "" : s.title;
+      document.getElementById("year").textContent = stale ? "" : (s.year || "");
+      lastTitle = display;
     }
   } catch (e) {
     console.error(e);
@@ -212,6 +217,7 @@ class Handler(BaseHTTPRequestHandler):
                 "now_year_size": NOW_YEAR_SIZE,
                 "now_left_pad": NOW_LEFT_PAD,
                 "now_bottom_pad": NOW_BOTTOM_PAD,
+                "now_stale_minutes": NOW_STALE_MINUTES,
             }).encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html")
