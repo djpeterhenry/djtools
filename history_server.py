@@ -287,6 +287,7 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.dumps(data).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
+            self.send_no_cache()
             self.end_headers()
             self.write(payload)
         elif self.path in ("/now", "/now-debug", "/now-debug-test"):
@@ -295,6 +296,7 @@ class Handler(BaseHTTPRequestHandler):
             page = render_now_playing(now_bg, api_url)
             self.send_response(200)
             self.send_header("Content-Type", "text/html")
+            self.send_no_cache()
             self.end_headers()
             self.write(page)
             return
@@ -302,10 +304,16 @@ class Handler(BaseHTTPRequestHandler):
             page = (HTML % {"poll_ms": POLL_INTERVAL * 1000}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html")
+            self.send_no_cache()
             self.end_headers()
             self.write(page)
         else:
             self.send_error(404, f"Unknown endpoint: {self.path}")
+
+    def send_no_cache(self):
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
 
     def write(self, data):
         self.wfile.write(data)
