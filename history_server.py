@@ -7,6 +7,7 @@ import os
 import signal
 import subprocess
 import time
+from datetime import datetime, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pyrekordbox import Rekordbox6Database
 
@@ -60,6 +61,39 @@ def get_latest_history_songs():
         )
     db.close()
     return result
+
+
+def get_test_history_songs():
+    now = datetime.now()
+    return {
+        "name": "Test Session",
+        "songs": [
+            {
+                "track_no": 1,
+                "title": "Dreaming Of Better Days",
+                "artist": "Deep House Collective",
+                "played_at": str(now - timedelta(seconds=30)),
+                "year": 2023,
+                "is_vocal": False,
+            },
+            {
+                "track_no": 2,
+                "title": "Midnight Runner",
+                "artist": "Groove Assembly",
+                "played_at": str(now - timedelta(seconds=20)),
+                "year": 2024,
+                "is_vocal": False,
+            },
+            {
+                "track_no": 3,
+                "title": "Say My Name",
+                "artist": "Luna Vox",
+                "played_at": str(now - timedelta(seconds=10)),
+                "year": 2022,
+                "is_vocal": True,
+            },
+        ],
+    }
 
 
 HTML = """\
@@ -154,22 +188,31 @@ NOW_PLAYING_HTML = """\
   #artist { font-size: %(now_artist_size)s; font-weight: bold; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #title { font-size: %(now_title_size)s; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #year { font-size: %(now_year_size)s; margin: 4px 0; }
+  #vocal { margin-left: 40px; margin-bottom: 12px; display: none; }
+  #vocal p { margin: 2px 0; }
+  #vocal-artist { font-size: %(now_artist_size)s; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #vocal-title { font-size: %(now_title_size)s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fade { animation: fadein 0.5s ease-in; }
   @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 </style>
 </head>
 <body>
 <div id="now">
+  <div id="vocal">
+    <p id="vocal-artist"></p>
+    <p id="vocal-title"></p>
+  </div>
   <p id="artist"></p>
   <p id="title"></p>
   <p id="year"></p>
 </div>
 <script>
 let lastTitle = "";
+let lastVocalTitle = "";
 const STALE_MS = %(now_stale_minutes)d * 60 * 1000;
 async function poll() {
   try {
-    const resp = await fetch("/api/history");
+    const resp = await fetch("%(api_url)s");
     const data = await resp.json();
     if (!data.songs || !data.songs.length) return;
     const nonVocals = data.songs.filter(s => !s.is_vocal);
@@ -188,6 +231,23 @@ async function poll() {
       document.getElementById("year").textContent = stale ? "" : (s.year || "");
       lastTitle = display;
     }
+    // Show vocal info if the most recent song overall is a vocal
+    const latest = data.songs[data.songs.length - 1];
+    const vocalEl = document.getElementById("vocal");
+    if (latest.is_vocal && !stale) {
+      document.getElementById("vocal-artist").textContent = latest.artist;
+      document.getElementById("vocal-title").textContent = latest.title + " (Vocal)";
+      if (latest.title !== lastVocalTitle) {
+        vocalEl.style.display = "block";
+        vocalEl.classList.remove("fade");
+        void vocalEl.offsetWidth;
+        vocalEl.classList.add("fade");
+        lastVocalTitle = latest.title;
+      }
+    } else {
+      vocalEl.style.display = "none";
+      lastVocalTitle = "";
+    }
   } catch (e) {
     console.error(e);
   }
@@ -202,26 +262,32 @@ setInterval(poll, %(poll_ms)d);
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == "/api/history":
-            data = get_latest_history_songs()
+        if self.path in ("/api/history", "/api/history-test"):
+            if self.path == "/api/history-test":
+                data = get_test_history_songs()
+            else:
+                data = get_latest_history_songs()
             payload = json.dumps(data).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.write(payload)
-        elif self.path in ("/now", "/now-debug"):
+        elif self.path in ("/now", "/now-debug", "/now-debug-test"):
+            api_url = "/api/history-test" if self.path == "/now-debug-test" else "/api/history"
+            now_bg = "transparent" if self.path == "/now" else "black"
             page = (NOW_PLAYING_HTML % {
                 "poll_ms": POLL_INTERVAL * 1000,
                 "now_width": NOW_WIDTH,
                 "now_height": NOW_HEIGHT,
                 "now_font_size": NOW_FONT_SIZE,
-                "now_bg": "black" if self.path == "/now-debug" else "transparent",
+                "now_bg": now_bg,
                 "now_artist_size": NOW_ARTIST_SIZE,
                 "now_title_size": NOW_TITLE_SIZE,
                 "now_year_size": NOW_YEAR_SIZE,
                 "now_left_pad": NOW_LEFT_PAD,
                 "now_bottom_pad": NOW_BOTTOM_PAD,
                 "now_stale_minutes": NOW_STALE_MINUTES,
+                "api_url": api_url,
             }).encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html")
@@ -264,10 +330,12 @@ if __name__ == "__main__":
     print(f"Polling every {POLL_INTERVAL}s. Ctrl+C to stop.")
     print()
     endpoints = [
-        ("/",            "History page"),
-        ("/now",         "Now-playing overlay (transparent bg)"),
-        ("/now-debug",   "Now-playing overlay (black bg)"),
-        ("/api/history", "JSON API"),
+        ("/",                 "History page"),
+        ("/now",              "Now-playing overlay (transparent bg)"),
+        ("/now-debug",        "Now-playing overlay (black bg)"),
+        ("/now-debug-test",   "Now-playing overlay (black bg, test data)"),
+        ("/api/history",      "JSON API"),
+        ("/api/history-test", "JSON API (test data)"),
     ]
     print("Endpoints:")
     for path, desc in endpoints:
