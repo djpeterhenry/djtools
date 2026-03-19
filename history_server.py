@@ -29,6 +29,16 @@ NOW_BOTTOM_PAD = 20
 NOW_STALE_MINUTES = 10  # show "Waiting for update" if last track is older than this
 
 
+def process_title(raw_title):
+    """Strip tag suffixes and extract vocal info from a raw title."""
+    is_vocal = "[#vocal]" in raw_title
+    title = raw_title
+    if "   " in title:
+        title = title[: title.index("   ")].strip()
+    vocal_title = (title.split("(")[0].strip() or title) + " (Vocal)" if is_vocal else ""
+    return title, is_vocal, vocal_title
+
+
 def get_latest_history_songs():
     db = Rekordbox6Database()
     histories = list(db.get_history())
@@ -43,11 +53,7 @@ def get_latest_history_songs():
     }
     for s in songs:
         c = s.Content
-        # Strip the tag suffixes from title (everything after many spaces)
-        title = c.Title
-        is_vocal = "[#vocal]" in title
-        if "   " in title:
-            title = title[: title.index("   ")].strip()
+        title, is_vocal, vocal_title = process_title(c.Title)
         artist = c.Artist.Name if c.Artist else ""
         result["songs"].append(
             {
@@ -57,6 +63,7 @@ def get_latest_history_songs():
                 "played_at": str(s.created_at),
                 "year": c.ReleaseYear,
                 "is_vocal": is_vocal,
+                "vocal_title": vocal_title,
             }
         )
     db.close()
@@ -65,34 +72,46 @@ def get_latest_history_songs():
 
 def get_test_history_songs():
     now = datetime.now()
+    raw_songs = [
+        {
+            "track_no": 1,
+            "raw_title": "Dreaming Of Better Days   [Deep] [House]",
+            "artist": "Deep House Collective",
+            "played_at": str(now - timedelta(seconds=30)),
+            "year": 2023,
+        },
+        {
+            "track_no": 2,
+            "raw_title": "Midnight Runner (Extended Mix)   [Techno]",
+            "artist": "Groove Assembly",
+            "played_at": str(now - timedelta(seconds=20)),
+            "year": 2024,
+        },
+        {
+            "track_no": 3,
+            "raw_title": "Say My Name (Original Mix)   [House] [#vocal]",
+            "artist": "Luna Vox",
+            "played_at": str(now - timedelta(seconds=10)),
+            "year": 2022,
+        },
+    ]
+    songs = []
+    for s in raw_songs:
+        title, is_vocal, vocal_title = process_title(s["raw_title"])
+        songs.append(
+            {
+                "track_no": s["track_no"],
+                "title": title,
+                "artist": s["artist"],
+                "played_at": s["played_at"],
+                "year": s["year"],
+                "is_vocal": is_vocal,
+                "vocal_title": vocal_title,
+            }
+        )
     return {
         "name": "Test Session",
-        "songs": [
-            {
-                "track_no": 1,
-                "title": "Dreaming Of Better Days",
-                "artist": "Deep House Collective",
-                "played_at": str(now - timedelta(seconds=30)),
-                "year": 2023,
-                "is_vocal": False,
-            },
-            {
-                "track_no": 2,
-                "title": "Midnight Runner",
-                "artist": "Groove Assembly",
-                "played_at": str(now - timedelta(seconds=20)),
-                "year": 2024,
-                "is_vocal": False,
-            },
-            {
-                "track_no": 3,
-                "title": "Say My Name",
-                "artist": "Luna Vox",
-                "played_at": str(now - timedelta(seconds=10)),
-                "year": 2022,
-                "is_vocal": True,
-            },
-        ],
+        "songs": songs,
     }
 
 
@@ -236,7 +255,7 @@ async function poll() {
     const vocalEl = document.getElementById("vocal");
     if (latest.is_vocal && !stale) {
       document.getElementById("vocal-artist").textContent = latest.artist;
-      document.getElementById("vocal-title").textContent = (latest.title.split("(")[0].trim() || latest.title) + " (Vocal)";
+      document.getElementById("vocal-title").textContent = latest.vocal_title;
       if (latest.title !== lastVocalTitle) {
         vocalEl.style.display = "block";
         vocalEl.classList.remove("fade");
