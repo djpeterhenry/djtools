@@ -35,9 +35,9 @@ NOW_STALE_MINUTES = 10  # show "Waiting for update" if last track is older than 
 MSG_FONT_MAX = 100       # px, font size for short messages
 MSG_FONT_MIN = 36        # px, minimum font size
 MSG_SCALE_CHARS = 20     # messages longer than this shrink the font
-MSG_DISPLAY_SECONDS = 30 # seconds to show message before fade-out begins
-MSG_FADE_SECONDS = 2     # fade-out duration in seconds
-MSG_VERTICAL_PCT = 35    # % from top of screen (35 = just above centre)
+MSG_DISPLAY_SECONDS = 60 # seconds to show message before fade-out begins
+MSG_FADE_SECONDS = 3     # fade-out duration in seconds
+MSG_VERTICAL_PCT = 30    # % from top of screen (35 = just above centre)
 MSG_COLOR = "white"
 MSG_MAX_WIDTH_PCT = 85   # max width as % of screen width
 
