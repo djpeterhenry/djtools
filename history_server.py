@@ -31,6 +31,19 @@ NOW_BOTTOM_PAD = 20
 NOW_VOCAL_GAP = 48  # px between vocal and main track
 NOW_STALE_MINUTES = 10  # show "Waiting for update" if last track is older than this
 
+# Message overlay settings
+MSG_FONT_MAX = 100       # px, font size for short messages
+MSG_FONT_MIN = 36        # px, minimum font size
+MSG_SCALE_CHARS = 20     # messages longer than this shrink the font
+MSG_DISPLAY_SECONDS = 30 # seconds to show message before fade-out begins
+MSG_FADE_SECONDS = 2     # fade-out duration in seconds
+MSG_VERTICAL_PCT = 35    # % from top of screen (35 = just above centre)
+MSG_COLOR = "white"
+MSG_MAX_WIDTH_PCT = 85   # max width as % of screen width
+
+
+_message_state = {"text": "", "set_at": None}
+
 
 def process_title(raw_title):
     """Strip tag suffixes and extract vocal info from a raw title."""
@@ -246,11 +259,25 @@ NOW_PLAYING_HTML = """\
   #vocal p { margin: 2px 0; }
   #vocal-artist { font-size: %(now_artist_size)s; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #vocal-title { font-size: %(now_title_size)s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #message {
+    position: absolute;
+    top: %(msg_vertical_pct)d%%;
+    left: 50%%;
+    transform: translateX(-50%%);
+    max-width: %(msg_max_width_pct)d%%;
+    text-align: center;
+    color: %(msg_color)s;
+    font-weight: bold;
+    opacity: 0;
+    pointer-events: none;
+    line-height: 1.2;
+  }
   .fade { animation: fadein 0.5s ease-in; }
   @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 </style>
 </head>
 <body>
+<div id="message"></div>
 <div id="now">
   <div id="vocal">
     <p id="vocal-artist"></p>
@@ -306,8 +333,120 @@ async function poll() {
     console.error(e);
   }
 }
+
+const MSG_FONT_MAX = %(msg_font_max)d;
+const MSG_FONT_MIN = %(msg_font_min)d;
+const MSG_SCALE_CHARS = %(msg_scale_chars)d;
+const MSG_DISPLAY_SECONDS = %(msg_display_seconds)d;
+const MSG_FADE_SECONDS = %(msg_fade_seconds)d;
+let lastMsgSetAt = null;
+let msgFadeTimer = null;
+
+async function pollMessage() {
+  try {
+    const resp = await fetch("/api/message");
+    const data = await resp.json();
+    if (data.set_at !== lastMsgSetAt) {
+      lastMsgSetAt = data.set_at;
+      if (!data.text) {
+        showMessage("");
+      } else {
+        const age = Date.now() - new Date(data.set_at).getTime();
+        const remaining = MSG_DISPLAY_SECONDS * 1000 - age;
+        if (remaining > 0) showMessage(data.text, remaining);
+      }
+    }
+  } catch(e) {}
+}
+
+function showMessage(text, displayMs) {
+  if (msgFadeTimer) { clearTimeout(msgFadeTimer); msgFadeTimer = null; }
+  const el = document.getElementById("message");
+  if (!text) { el.style.opacity = "0"; return; }
+  if (displayMs === undefined) displayMs = MSG_DISPLAY_SECONDS * 1000;
+  const size = Math.max(MSG_FONT_MIN, Math.round(MSG_FONT_MAX * Math.sqrt(MSG_SCALE_CHARS / Math.max(text.length, MSG_SCALE_CHARS))));
+  el.style.fontSize = size + "px";
+  el.textContent = text;
+  el.style.transition = "opacity 0.3s ease-in";
+  el.style.opacity = "1";
+  msgFadeTimer = setTimeout(() => {
+    el.style.transition = "opacity " + MSG_FADE_SECONDS + "s ease-out";
+    el.style.opacity = "0";
+  }, displayMs);
+}
+
 poll();
 setInterval(poll, %(poll_ms)d);
+pollMessage();
+setInterval(pollMessage, %(poll_ms)d);
+</script>
+</body>
+</html>
+"""
+
+MESSAGE_INPUT_HTML = """\
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Send Message</title>
+<style>
+  body {
+    background: #1a1a2e; color: #eee; font-family: -apple-system, sans-serif;
+    margin: 0; padding: 20px; max-width: 480px;
+  }
+  h1 { color: #e94560; font-size: 1.2em; margin-bottom: 16px; }
+  input[type=text] {
+    width: 100%; box-sizing: border-box;
+    background: #2a2a3e; color: #eee; border: 1px solid #444;
+    padding: 12px; font-size: 1.1em; border-radius: 4px; margin-bottom: 10px;
+  }
+  .buttons { display: flex; gap: 10px; }
+  button {
+    flex: 1; padding: 12px; font-size: 1em; border: none;
+    border-radius: 4px; cursor: pointer; font-weight: bold;
+  }
+  #send-btn { background: #e94560; color: white; }
+  #clear-btn { background: #444; color: #eee; }
+  #status { margin-top: 12px; font-size: 0.85em; color: #888; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<h1>Overlay message</h1>
+<input type="text" id="msg" placeholder="Type message..." autofocus>
+<div class="buttons">
+  <button id="send-btn" onclick="send()">Send</button>
+  <button id="clear-btn" onclick="clearMsg()">Clear</button>
+</div>
+<p id="status"></p>
+<script>
+document.getElementById("msg").addEventListener("keydown", e => {
+  if (e.key === "Enter") send();
+});
+async function send() {
+  const text = document.getElementById("msg").value.trim();
+  if (!text) return;
+  await post(text);
+  document.getElementById("msg").value = "";
+  setStatus("Sent: " + text);
+}
+async function clearMsg() {
+  await post("");
+  setStatus("Cleared.");
+}
+async function post(text) {
+  await fetch("/api/message", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({text}),
+  });
+}
+function setStatus(msg) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ""; }, 3000);
+}
 </script>
 </body>
 </html>
@@ -329,6 +468,14 @@ def render_now_playing(now_bg, api_url):
         "now_vocal_gap": NOW_VOCAL_GAP,
         "now_stale_minutes": NOW_STALE_MINUTES,
         "api_url": api_url,
+        "msg_font_max": MSG_FONT_MAX,
+        "msg_font_min": MSG_FONT_MIN,
+        "msg_scale_chars": MSG_SCALE_CHARS,
+        "msg_display_seconds": MSG_DISPLAY_SECONDS,
+        "msg_fade_seconds": MSG_FADE_SECONDS,
+        "msg_vertical_pct": MSG_VERTICAL_PCT,
+        "msg_color": MSG_COLOR,
+        "msg_max_width_pct": MSG_MAX_WIDTH_PCT,
     }).encode()
 
 
@@ -345,6 +492,13 @@ class Handler(BaseHTTPRequestHandler):
             self.send_no_cache()
             self.end_headers()
             self.write(payload)
+        elif self.path == "/api/message":
+            payload = json.dumps(_message_state).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_no_cache()
+            self.end_headers()
+            self.write(payload)
         elif self.path in ("/now", "/now-debug", "/now-debug-test"):
             api_url = "/api/history-test" if self.path == "/now-debug-test" else "/api/history"
             now_bg = "transparent" if self.path == "/now" else "black"
@@ -355,6 +509,12 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.write(page)
             return
+        elif self.path == "/message-input":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_no_cache()
+            self.end_headers()
+            self.write(MESSAGE_INPUT_HTML.encode())
         elif self.path == "/":
             page = (HTML % {"poll_ms": POLL_INTERVAL * 1000}).encode()
             self.send_response(200)
@@ -362,6 +522,25 @@ class Handler(BaseHTTPRequestHandler):
             self.send_no_cache()
             self.end_headers()
             self.write(page)
+        else:
+            self.send_error(404, f"Unknown endpoint: {self.path}")
+
+    def do_POST(self):
+        if self.path == "/api/message":
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length)
+            try:
+                data = json.loads(body)
+                text = data.get("text", "").strip()
+            except (json.JSONDecodeError, AttributeError):
+                self.send_error(400, "Invalid JSON")
+                return
+            _message_state["text"] = text
+            _message_state["set_at"] = datetime.now().isoformat() if text else None
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.write(json.dumps({"ok": True}).encode())
         else:
             self.send_error(404, f"Unknown endpoint: {self.path}")
 
@@ -398,11 +577,13 @@ if __name__ == "__main__":
     print()
     endpoints = [
         ("/",                 "History page"),
+        ("/message-input",    "Send overlay message"),
         ("/now",              "Now-playing overlay (transparent bg)"),
         ("/now-debug",        "Now-playing overlay (black bg)"),
         ("/now-debug-test",   "Now-playing overlay (black bg, test data)"),
         ("/api/history",      "JSON API"),
         ("/api/history-test", "JSON API (test data)"),
+        ("/api/message",      "Message API (GET/POST)"),
     ]
     print("Endpoints:")
     for path, desc in endpoints:
