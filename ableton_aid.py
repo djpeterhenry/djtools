@@ -1003,7 +1003,7 @@ def get_release_year(record):
     return min(years) if years else None
 
 
-def generate_lists(output_path=COLLECTION_FOLDER):
+def generate_lists(output_path=COLLECTION_FOLDER, push=True):
     db_dict = read_db_file()
     files = get_rekordbox_files(db_dict)
 
@@ -1020,3 +1020,9 @@ def generate_lists(output_path=COLLECTION_FOLDER):
     write_files("name.txt", files)
     write_files("num.txt", generate_num(files, db_dict))
     write_files("sets.txt", generate_sets(files, db_dict))
+
+    if push:
+        repo = os.path.dirname(output_path)
+        subprocess.run(["git", "-C", repo, "add", "collection/"], check=True)
+        subprocess.run(["git", "-C", repo, "commit", "-m", "update collections"], check=True)
+        subprocess.run(["git", "-C", repo, "push"], check=True)
