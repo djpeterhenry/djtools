@@ -815,6 +815,11 @@ def update_rekordbox_tags():
     export_rekordbox.update_rekordbox_tags()
 
 
+def stamp_from_rekordbox_db():
+    """Stamp play timestamps from the Rekordbox database directly, skipping already-processed sessions."""
+    export_rekordbox.stamp_from_rekordbox_db()
+
+
 def print_plays_per_year(alc_filename):
     db_dict = aa.read_db_file()
     record = db_dict[alc_filename]
@@ -861,6 +866,7 @@ if __name__ == "__main__":
             remove_recent_timestamps,
             demucs,
             update_rekordbox_tags,  # also done as part of rekordbox_xml
+            stamp_from_rekordbox_db,
             print_plays_per_year,
         ]
     )

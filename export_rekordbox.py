@@ -1,6 +1,9 @@
 from __future__ import print_function
 
+import json
+import logging
 import os
+import re
 import subprocess
 import shutil
 import xml.etree.ElementTree as ET
@@ -10,6 +13,8 @@ from unidecode import unidecode
 import ableton_aid as aa
 from tag import Tag, REKORDBOX_FILENAME_TAGS, REKORDBOX_PLAYLIST_TAGS
 
+logging.getLogger("pyrekordbox.db6.database").setLevel(logging.ERROR)
+
 VERSION = 1
 
 LISTS_PLAYLISTS = True
@@ -18,6 +23,7 @@ REKORDBOX_SAMPLE_PATH = "/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = "/Users/peter/Music/PioneerDJ/LocalSamples"
 REKORDBOX_HISTORY_PATH = "/Users/peter/Documents/rekordbox_history"
 REKORDBOX_TAGS_PATH = "/Users/peter/Documents/rekordbox_tags"
+REKORDBOX_PROCESSED_IDS_FILE = "rekordbox_processed_ids.json"
 
 NEW_OLD_YEARS = 20
 
@@ -39,6 +45,64 @@ def get_bpm_and_range_list():
         bpm_and_range.append((bpm, 10))
     bpm_and_range.sort()
     return bpm_and_range
+
+
+_p_history_name       = re.compile(r"HISTORY (\d+)-(\d+)-(\d+)$")
+_p_history_name_paren = re.compile(r"HISTORY (\d+)-(\d+)-(\d+) \((\d+)\)$")
+
+
+def _parse_history_date_ts(name):
+    """Return date_ts for a history name, or None if it doesn't match."""
+    m = _p_history_name_paren.match(name) or _p_history_name.match(name)
+    if not m:
+        return None
+    year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    paren_num = int(m.group(4)) if len(m.groups()) == 4 else None
+    date_ts = aa.get_ts_for(year, month, day)
+    if paren_num is not None:
+        date_ts += 1000.0 * paren_num
+    return date_ts
+
+
+def stamp_from_rekordbox_db():
+    from pyrekordbox import Rekordbox6Database
+
+    if os.path.isfile(REKORDBOX_PROCESSED_IDS_FILE):
+        with open(REKORDBOX_PROCESSED_IDS_FILE) as f:
+            processed_ids = set(json.load(f))
+    else:
+        processed_ids = set()
+
+    db_dict = aa.read_db_file()
+
+    db = Rekordbox6Database()
+    try:
+        histories = [h for h in db.get_history() if _parse_history_date_ts(h.Name) is not None]
+        most_recent_id = max(histories, key=lambda h: h.DateCreated).ID
+        new_histories = [h for h in histories if h.ID not in processed_ids or h.ID == most_recent_id]
+        if not new_histories:
+            print("No new history sessions to process.")
+            return
+        print(f"Processing {len(new_histories)} new session(s) ({len(processed_ids)} already done).")
+        for h in sorted(new_histories, key=lambda h: h.DateCreated):
+            date_ts = _parse_history_date_ts(h.Name)
+            songs = sorted(db.get_history_songs(HistoryID=h.ID), key=lambda s: s.TrackNo)
+            for s in songs:
+                artist = s.Content.Artist.Name if s.Content.Artist else ""
+                title = s.Content.Title or ""
+                bracket_idx = title.find("[")
+                if bracket_idx >= 0:
+                    title = title[:bracket_idx].strip()
+                aa.stamp_song(db_dict, date_ts, s.TrackNo - 1, artist, title)
+            if h.ID != most_recent_id:
+                processed_ids.add(h.ID)
+            print(f"  {h.Name}: {len(songs)} track(s)")
+    finally:
+        db.close()
+
+    with open(REKORDBOX_PROCESSED_IDS_FILE, "w") as f:
+        json.dump(list(processed_ids), f)
+    aa.write_db_file(db_dict)
 
 
 def stamp_from_all_recordbox_history_files():
@@ -459,7 +523,7 @@ class PlaylistAdder(object):
 
 
 def export_rekordbox_xml(rekordbox_filename):
-    stamp_from_all_recordbox_history_files()
+    stamp_from_rekordbox_db()
     update_rekordbox_tags()
 
     export_rekordbox_samples(
