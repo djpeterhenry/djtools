@@ -937,13 +937,15 @@ def update_with_rekordbox_history(db_dict, history_filename):
     if paren_num is not None:
         date_ts += 1000.0 * paren_num
 
-    p_line = re.compile(r"\d+\t(.*)\t([^\[]*) \[.*$")
     with io.open(history_filename, encoding="utf-16le") as h:
         for index, line in enumerate(h.readlines()[1:]):
-            m = p_line.match(line)
-            if m:
-                artist = m.group(1).strip()
-                title = m.group(2).strip()
+            parts = line.split("\t")
+            if len(parts) >= 3:
+                artist = parts[1].strip()
+                title = parts[2].strip()
+                bracket_idx = title.find("[")
+                if bracket_idx >= 0:
+                    title = title[:bracket_idx].strip()
                 stamp_song(db_dict, date_ts, index, artist, title)
             else:
                 print("{}: failed to match: {}".format(history_filename, line))
@@ -1024,5 +1026,8 @@ def generate_lists(output_path=COLLECTION_FOLDER, push=True):
     if push:
         repo = os.path.dirname(output_path)
         subprocess.run(["git", "-C", repo, "add", "collection/"], check=True)
-        subprocess.run(["git", "-C", repo, "commit", "-m", "update collections"], check=True)
-        subprocess.run(["git", "-C", repo, "push"], check=True)
+        result = subprocess.run(["git", "-C", repo, "commit", "-m", "update collections"])
+        if result.returncode not in (0, 1):
+            result.check_returncode()
+        if result.returncode == 0:
+            subprocess.run(["git", "-C", repo, "push"], check=True)
