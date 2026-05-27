@@ -43,6 +43,8 @@ MSG_MAX_WIDTH_PCT = 85   # max width as % of screen width
 
 
 _message_state = {"text": "", "set_at": None}
+_suppressed_tail = 0
+_last_history_count = 0
 
 
 def process_title(raw_title):
@@ -384,6 +386,111 @@ setInterval(pollMessage, %(poll_ms)d);
 </html>
 """
 
+SUPPRESS_INPUT_HTML = """\
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suppress History</title>
+<style>
+  body {
+    background: #1a1a2e; color: #eee; font-family: -apple-system, sans-serif;
+    margin: 0; padding: 20px; max-width: 480px;
+  }
+  h1 { color: #e94560; font-size: 1.2em; margin-bottom: 16px; }
+  .count { font-size: 2.5em; font-weight: bold; color: #e94560; margin: 4px 0; }
+  .count-label { color: #888; font-size: 0.85em; margin-bottom: 20px; }
+  .last-track {
+    background: #2a2a3e; border-radius: 4px; padding: 12px;
+    margin-bottom: 16px; min-height: 56px;
+  }
+  .track-label { font-size: 0.75em; color: #666; margin-bottom: 6px; text-transform: uppercase; }
+  .track-title { font-size: 1em; font-weight: bold; }
+  .track-artist { font-size: 0.9em; color: #aaa; margin-top: 3px; }
+  .buttons { display: flex; gap: 10px; }
+  button {
+    flex: 1; padding: 14px; font-size: 1em; border: none;
+    border-radius: 4px; cursor: pointer; font-weight: bold;
+  }
+  #suppress-btn { background: #e94560; color: white; }
+  #restore-btn { background: #444; color: #eee; }
+  #restore-btn:disabled { opacity: 0.35; cursor: default; }
+  #status { margin-top: 12px; font-size: 0.85em; color: #888; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<h1>History Suppression</h1>
+<div class="count" id="count">0</div>
+<div class="count-label">tracks suppressed from end</div>
+<div class="last-track">
+  <div class="track-label">Currently showing</div>
+  <div class="track-title" id="last-title">—</div>
+  <div class="track-artist" id="last-artist"></div>
+</div>
+<div class="last-track" id="vocal-block" style="display:none; margin-top: 8px;">
+  <div class="track-label">+ Vocal</div>
+  <div class="track-title" id="vocal-title"></div>
+  <div class="track-artist" id="vocal-artist"></div>
+</div>
+<div class="buttons">
+  <button id="suppress-btn" onclick="act('suppress')">Suppress Last</button>
+  <button id="restore-btn" onclick="act('unsuppress')" disabled>Restore</button>
+</div>
+<p id="status"></p>
+<script>
+async function refresh() {
+  try {
+    const [histResp, suppResp] = await Promise.all([
+      fetch("/api/history"),
+      fetch("/api/suppress"),
+    ]);
+    const hist = await histResp.json();
+    const supp = await suppResp.json();
+    document.getElementById("count").textContent = supp.count;
+    document.getElementById("restore-btn").disabled = supp.count === 0;
+    const songs = hist.songs || [];
+    const nonVocals = songs.filter(s => !s.is_vocal);
+    const last = nonVocals[nonVocals.length - 1];
+    const latest = songs[songs.length - 1];
+    const stale = last && (Date.now() - new Date(last.played_at).getTime()) > %(stale_minutes)d * 60 * 1000;
+    if (last && !stale) {
+      document.getElementById("last-title").textContent = last.title;
+      document.getElementById("last-artist").textContent = last.artist;
+    } else if (stale) {
+      document.getElementById("last-title").textContent = "(nothing — too old to show)";
+      document.getElementById("last-artist").textContent = "";
+    } else {
+      document.getElementById("last-title").textContent = supp.count > 0 ? "(all suppressed)" : "(no tracks)";
+      document.getElementById("last-artist").textContent = "";
+    }
+    const vocalBlock = document.getElementById("vocal-block");
+    if (latest && latest.is_vocal && !stale) {
+      document.getElementById("vocal-title").textContent = latest.vocal_title || latest.title;
+      document.getElementById("vocal-artist").textContent = latest.artist;
+      vocalBlock.style.display = "block";
+    } else {
+      vocalBlock.style.display = "none";
+    }
+  } catch(e) { console.error(e); }
+}
+async function act(endpoint) {
+  await fetch("/api/" + endpoint, { method: "POST" });
+  setStatus(endpoint === "suppress" ? "Suppressed." : "Restored.");
+  refresh();
+}
+function setStatus(msg) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ""; }, 2000);
+}
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>
+"""
+
 MESSAGE_INPUT_HTML = """\
 <!DOCTYPE html>
 <html>
@@ -485,8 +592,23 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/api/history-test":
                 data = get_test_history_songs()
             else:
+                global _suppressed_tail, _last_history_count
                 data = get_latest_history_songs()
+                raw_count = len(data.get("songs", []))
+                if raw_count > _last_history_count:
+                    _suppressed_tail = 0
+                _last_history_count = raw_count
+                if _suppressed_tail > 0 and data.get("songs"):
+                    data = dict(data)
+                    data["songs"] = data["songs"][:-_suppressed_tail]
             payload = json.dumps(data).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_no_cache()
+            self.end_headers()
+            self.write(payload)
+        elif self.path == "/api/suppress":
+            payload = json.dumps({"count": _suppressed_tail}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_no_cache()
@@ -509,6 +631,12 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.write(page)
             return
+        elif self.path == "/suppress-input":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_no_cache()
+            self.end_headers()
+            self.write((SUPPRESS_INPUT_HTML % {"stale_minutes": NOW_STALE_MINUTES}).encode())
         elif self.path == "/message-input":
             self.send_response(200)
             self.send_header("Content-Type", "text/html")
@@ -526,7 +654,20 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404, f"Unknown endpoint: {self.path}")
 
     def do_POST(self):
-        if self.path == "/api/message":
+        global _suppressed_tail
+        if self.path == "/api/suppress":
+            _suppressed_tail += 1
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.write(json.dumps({"count": _suppressed_tail}).encode())
+        elif self.path == "/api/unsuppress":
+            _suppressed_tail = max(0, _suppressed_tail - 1)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.write(json.dumps({"count": _suppressed_tail}).encode())
+        elif self.path == "/api/message":
             length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(length)
             try:
@@ -577,6 +718,7 @@ if __name__ == "__main__":
     print()
     endpoints = [
         ("/",                 "History page"),
+        ("/suppress-input",   "Suppress history tail"),
         ("/message-input",    "Send overlay message"),
         ("/now",              "Now-playing overlay (transparent bg)"),
         ("/now-debug",        "Now-playing overlay (black bg)"),
