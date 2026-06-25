@@ -133,32 +133,6 @@ def list_missing():
         print(f)
 
 
-def add_missing_tags(record, tags):
-    """Add tags to a record if they are not already present."""
-    if "tags" not in record:
-        record["tags"] = []
-    for tag in tags:
-        if tag not in record["tags"]:
-            record["tags"].append(tag)
-
-
-def transfer_shared_record_fields(source_record, target_record):
-    """Transfer shared fields from source record to target record."""
-    shared_fields = [
-        "bpm",
-        "key",
-        "release_year_discogs",
-        "release_year_bandcamp",
-        "release_year_manual",
-        "labels_discogs",
-    ]
-    for field in shared_fields:
-        if field in source_record and field not in target_record:
-            target_record[field] = source_record[field]
-
-    add_missing_tags(target_record, source_record["tags"])
-
-
 def transfer_missing():
     """Interactive tool to handle missing files by transferring their data to similar files or deleting them."""
     db_dict = aa.read_db_file()
@@ -200,7 +174,7 @@ def transfer_missing():
 
                 # Transfer a bunch of metadata.
                 # It would be nice to organize this better in the record.
-                transfer_shared_record_fields(record, target_record)
+                aa.transfer_shared_record_fields(record, target_record)
                 db_dict[target] = target_record
 
                 # Delete old record
@@ -796,8 +770,8 @@ def demucs(alc_filename):
 
     # Copy bpm, key, and release year info (at least) to the new record.
     new_record = {}
-    transfer_shared_record_fields(record, new_record)
-    add_missing_tags(new_record, [Tag.VOCAL_TAG.value])
+    aa.transfer_shared_record_fields(record, new_record)
+    aa.add_missing_tags(new_record, [Tag.VOCAL_TAG.value])
     db_dict[new_alc_filename] = new_record
 
     # Save the updated database

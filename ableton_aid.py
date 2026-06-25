@@ -37,6 +37,35 @@ ALL_EXTENSIONS = ABLETON_EXTENSIONS + SAMPLE_EXTENSIONS
 
 REKORDBOX_LOCAL_SAMPLE_KEY = "rekordbox_local_sample"
 
+# Record fields worth carrying over when deriving one song's record from another
+# (e.g. demucs vocal or silenced copies).
+SHARED_RECORD_FIELDS = [
+    "bpm",
+    "key",
+    "release_year_discogs",
+    "release_year_bandcamp",
+    "release_year_manual",
+    "labels_discogs",
+]
+
+
+def add_missing_tags(record, tags):
+    """Add tags to a record if they are not already present."""
+    if "tags" not in record:
+        record["tags"] = []
+    for tag in tags:
+        if tag not in record["tags"]:
+            record["tags"].append(tag)
+
+
+def transfer_shared_record_fields(source_record, target_record):
+    """Transfer shared fields (and tags) from source record to target record."""
+    for field in SHARED_RECORD_FIELDS:
+        if field in source_record and field not in target_record:
+            target_record[field] = source_record[field]
+
+    add_missing_tags(target_record, source_record.get("tags", []))
+
 
 def get_ts_for(year, month, day):
     return time.mktime(datetime.date(year, month, day).timetuple())
@@ -366,6 +395,69 @@ def replace_audioclip_path(alc_filename, new_alc_filename, new_sample_path):
     # Lots of other things are now wrong.  However I seem to be able to open this alc file without fixing these.
     # <OriginalFileSize Value="17215488" />
     # <OriginalCrc Value="46285" />
+
+    write_xml_to_alc(xml_root, new_alc_filename)
+    return True
+
+
+def write_silenced_alc(alc_filename, new_alc_filename, new_sample_path, sec_offset):
+    """
+    Like replace_audioclip_path, but also shifts every warp marker forward by
+    sec_offset seconds.  Use this when sec_offset seconds of silence have been
+    prepended to new_sample_path: shifting the warp markers keeps the beat grid
+    aligned while pushing a previously-negative start time positive (which is
+    what Rekordbox needs).
+
+    Only SecTime (position within the audio file) changes.  BeatTime and all the
+    beat-domain loop values are untouched, so bpm and beat alignment are preserved.
+    """
+    if os.path.splitext(alc_filename)[1] != ".alc":
+        raise ValueError("alc_filename must have .alc extension")
+    if os.path.splitext(new_alc_filename)[1] != ".alc":
+        raise ValueError("new_alc_filename must have .alc extension")
+
+    xml_root = alc_to_xml(alc_filename)
+    xml_clip = xml_root.find(".//AudioClip")
+    if xml_clip is None:
+        return False
+
+    xml_fileref = xml_clip.find("SampleRef/FileRef")
+    if xml_fileref is None:
+        return False
+
+    # make sure we start with an absolute path
+    new_sample_path = os.path.abspath(new_sample_path)
+
+    # Get relative path to the project
+    project_path = project_path_from_alc_filename(alc_filename)
+    new_sample_path_project_relative = os.path.relpath(new_sample_path, project_path)
+
+    # Update the sample paths
+    xml_fileref.find("RelativePath").set("Value", new_sample_path_project_relative)
+    xml_fileref.find("Path").set("Value", new_sample_path)
+
+    # Update the name for the audioclip
+    xml_clip.find("Name").set(
+        "Value", os.path.splitext(os.path.basename(new_alc_filename))[0]
+    )
+
+    # Shift every warp marker forward to compensate for the prepended silence.
+    xml_warp_markers = xml_clip.find("WarpMarkers")
+    for marker in xml_warp_markers:
+        new_sec_time = float(marker.get("SecTime")) + sec_offset
+        marker.set("SecTime", repr(new_sec_time))
+
+    # Best-effort: keep DefaultDuration (in samples) consistent with the longer
+    # file.  Rekordbox ignores this and Ableton tolerates a mismatch, but it's
+    # cheap to keep honest.
+    xml_sample_ref = xml_clip.find("SampleRef")
+    xml_default_duration = xml_sample_ref.find("DefaultDuration")
+    xml_default_sample_rate = xml_sample_ref.find("DefaultSampleRate")
+    if xml_default_duration is not None and xml_default_sample_rate is not None:
+        sample_rate = float(xml_default_sample_rate.get("Value"))
+        duration = float(xml_default_duration.get("Value"))
+        new_duration = int(round(duration + sec_offset * sample_rate))
+        xml_default_duration.set("Value", str(new_duration))
 
     write_xml_to_alc(xml_root, new_alc_filename)
     return True
