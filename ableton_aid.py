@@ -410,11 +410,14 @@ def write_silenced_alc(alc_filename, new_alc_filename, new_sample_path, sec_offs
 
     Only SecTime (position within the audio file) changes.  BeatTime and all the
     beat-domain loop values are untouched, so bpm and beat alignment are preserved.
+
+    Accepts .alc clips and .als sets.  For an .als with multiple audio clips, only
+    the first AudioClip is repathed and re-warped.
     """
-    if os.path.splitext(alc_filename)[1] != ".alc":
-        raise ValueError("alc_filename must have .alc extension")
-    if os.path.splitext(new_alc_filename)[1] != ".alc":
-        raise ValueError("new_alc_filename must have .alc extension")
+    if os.path.splitext(alc_filename)[1] not in (".alc", ".als"):
+        raise ValueError("alc_filename must have .alc or .als extension")
+    if os.path.splitext(new_alc_filename)[1] not in (".alc", ".als"):
+        raise ValueError("new_alc_filename must have .alc or .als extension")
 
     xml_root = alc_to_xml(alc_filename)
     xml_clip = xml_root.find(".//AudioClip")

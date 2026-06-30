@@ -24,6 +24,9 @@ def silence(alc_filename, seconds: float = 5.0):
     file (a negative start time, which Rekordbox can't represent).  The silence
     pushes the start positive while staying aligned to your existing warp markers.
 
+    Works on .alc clips and .als sets.  An .als can contain multiple audio clips,
+    but only the first clip is handled (a warning is printed in that case).
+
     Run this from the same folder you run actions.py from (next to database.json).
     """
     if seconds <= 0:
@@ -36,9 +39,16 @@ def silence(alc_filename, seconds: float = 5.0):
         print(f"File {alc_filename} not found in the database.")
         return
 
-    if not alc_filename.endswith(".alc"):
-        print(f"Input file {alc_filename} is not an .alc file.")
+    ext = os.path.splitext(alc_filename)[1]
+    if ext not in (".alc", ".als"):
+        print(f"Input file {alc_filename} is not an .alc or .als file.")
         return
+
+    if ext == ".als":
+        print(
+            f"Warning: {alc_filename} is an .als set; only its first audio clip "
+            f"will be silenced and re-warped."
+        )
 
     # We need the new sample-path format to be able to write a new .alc file.
     audioclip = aa.get_audioclip_from_alc(alc_filename)
@@ -77,8 +87,8 @@ def silence(alc_filename, seconds: float = 5.0):
     assert os.path.isfile(new_sample_path)
     print(f"Wrote silenced sample: {new_sample_path}")
 
-    # New .alc next to the original, with warp markers shifted forward.
-    new_alc_filename = os.path.splitext(alc_filename)[0] + f" ({label} silence).alc"
+    # New .alc/.als next to the original, with warp markers shifted forward.
+    new_alc_filename = os.path.splitext(alc_filename)[0] + f" ({label} silence){ext}"
     ok = aa.write_silenced_alc(
         alc_filename=alc_filename,
         new_alc_filename=new_alc_filename,
