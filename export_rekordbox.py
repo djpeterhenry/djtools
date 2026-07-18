@@ -269,6 +269,15 @@ def get_filtered_files(
     return matching_files
 
 
+def matches_active_window(record, min_days, max_days):
+    # True if last edit/play is older than min_days but within max_days.
+    # min_days=365, max_days=365*5 reproduces the "o1 and a5" filename tags.
+    active_ts = aa.get_alc_or_last_ts(record)
+    return active_ts <= aa.get_past_ts(aa.get_span_days(min_days)) and active_ts > aa.get_past_ts(
+        aa.get_span_days(max_days)
+    )
+
+
 class BeatGridMarker(object):
     def __init__(self, sec_time, bpm, beat_time, memory_note=None):
         self.sec_time = sec_time
@@ -720,6 +729,22 @@ def export_rekordbox_xml(rekordbox_filename):
                 et_filter_folder, playlist_name, matching_files
             )
 
+    def add_rediscover_playlists(parent):
+        # Tracks last played/edited between 1 and 10 years ago,
+        # centered on 120/125/130 BPM +/- 5.
+        for bpm in [120, 125, 130, 140]:
+            matching_files = get_filtered_files(
+                db_dict=db_dict, files=files_with_id, bpm=bpm, bpm_range=5
+            )
+            matching_files = [
+                f
+                for f in matching_files
+                if matches_active_window(db_dict[f], 365, 365 * 10)
+            ]
+            adder.add_playlist_for_files(
+                parent, get_bpm_name(bpm, 5), matching_files
+            )
+
     def get_matching_files_from_list(list_file):
         l = aa.get_list_from_file(list_file, db_dict)
         return [f for _, f in l if f is not None and f in files_with_id]
@@ -810,6 +835,10 @@ def export_rekordbox_xml(rekordbox_filename):
     # BPM
     et_filter_folder = add_folder(et_version_node, "BPM Filter")
     add_bpm_playlists(et_filter_folder, new_files)
+
+    # Rediscover (last played/edited 1-5 years ago)
+    et_rediscover_folder = add_folder(et_version_node, "Rediscover")
+    add_rediscover_playlists(et_rediscover_folder)
 
     # Key (only for CDJ)
     if True:
