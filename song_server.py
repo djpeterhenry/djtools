@@ -37,16 +37,6 @@ WEB_DIR = os.path.join(HERE, "song_web")
 # is still written atomically on every single edit.
 BACKUP_MIN_INTERVAL_SEC = 5 * 60
 
-RELEASE_YEAR_KEYS = [
-    "release_year_manual",
-    "release_year_discogs",
-    "release_year_beatport",
-    "release_year_bandcamp",
-    "release_year_soundcloud",
-    "release_year_youtube",
-]
-
-
 class State:
     db_dict = {}
     order = []  # filenames, in a stable base order (alpha)
@@ -54,14 +44,6 @@ class State:
 
 
 state = State()
-
-
-def best_year(record):
-    for k in RELEASE_YEAR_KEYS:
-        v = record.get(k)
-        if v:
-            return v
-    return None
 
 
 def song_view(filename):
@@ -83,7 +65,7 @@ def song_view(filename):
         "camelot_num": cam_num,
         "plays": aa.get_ts_date_count(record),
         "tags": list(record.get("tags", [])),
-        "year": best_year(record),
+        "year": aa.get_release_year(record),
         "vocal": aa.is_vocal(record),
         "good": aa.has_tag(record, Tag.GOOD_TAG.value),
         # sort keys

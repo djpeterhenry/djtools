@@ -12,8 +12,6 @@ import difflib
 import re
 import pprint
 import discogs_client
-import requests
-from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
 import typing as T
 import demucs as demucs_py
@@ -357,6 +355,72 @@ def _simplify_track(track):
     return simplified
 
 
+def _record_first_year(record):
+    """The year a song first shows up in your own history, or None."""
+    stamps = [
+        ts for ts in (aa.get_alc_or_last_ts(record), aa.get_alc_ts(record)) if ts
+    ]
+    if not stamps:
+        return None
+    return datetime.date.fromtimestamp(min(stamps)).year
+
+
+def _as_year(value):
+    """Coerce a discogs year to an int, or None.
+
+    The master search payload hands years back as strings while release
+    objects use ints, and both sometimes carry 0 for "unknown".
+    """
+    try:
+        year = int(value)
+    except (TypeError, ValueError):
+        return None
+    return year or None
+
+
+def _discogs_earliest_year(d, artist, track, not_after=None):
+    """Search discogs for a track and return (year, labels).
+
+    A release is one specific pressing, often a reissue; the master groups
+    every version and carries the original year. Searching masters answers in
+    a single request (their search payload includes the year), so try that
+    first and only pay for the release search when it comes back empty or
+    implausible.
+
+    not_after: a year the answer must not exceed, normally the first time the
+    song appears in your own history -- you can't have played it before it
+    came out. A master year later than that means the search matched the wrong
+    thing, so we spend the extra request and keep whichever year is earlier.
+
+    Labels live on releases, so master hits return None for them and callers
+    keep whatever labels they already had.
+    """
+    master_year = None
+    masters = d.search(track, artist=artist, type="master")
+    if masters:
+        master_year = _as_year(masters[0].year)
+    if master_year and (not_after is None or master_year <= not_after):
+        return master_year, None
+
+    results = d.search(track, artist=artist, type="release")
+    if not results:
+        simplified = _simplify_track(track)
+        if simplified:
+            results = d.search(simplified, artist=artist, type="release")
+    if not results:
+        return master_year, None
+
+    release = results[0]
+    labels = [label.name for label in release.labels]
+    year = _as_year(release.year)
+    master = release.master
+    if master is not None and _as_year(master.year):
+        year = _as_year(master.year)
+    if master_year and year:
+        year = min(year, master_year)
+    return (year or master_year), labels
+
+
 def _process_track_metadata(db_dict, filename, record, source_name, retry=False):
     """Common helper for processing track metadata from different sources.
 
@@ -364,7 +428,7 @@ def _process_track_metadata(db_dict, filename, record, source_name, retry=False)
         db_dict: Database dictionary
         filename: Name of file to process
         record: Record from database
-        source_name: Source name (e.g. "discogs", "bandcamp")
+        source_name: Source name (e.g. "discogs")
         retry: If True, process even if source already has data (unless it has a valid year)
     """
     year_key = f"release_year_{source_name}"
@@ -421,38 +485,115 @@ def release_dates_discogs(n: int = None, retry: bool = False):
             continue
 
         try:
-            results = d.search(track, artist=artist, type="release")
+            year, labels = _discogs_earliest_year(
+                d, artist, track, not_after=_record_first_year(record)
+            )
 
-            # If no results, try with simplified track name
-            if not results:
-                simplified = _simplify_track(track)
-                if simplified:
-                    results = d.search(simplified, artist=artist, type="release")
+            record["release_year_discogs"] = year
+            if labels:  # Only store labels if we found some
+                record["labels_discogs"] = labels
 
-            if results:
-                release = results[0]
-                labels = [label.name for label in release.labels]
-
-                record["release_year_discogs"] = release.year
-                if labels:  # Only store labels if we found some
-                    record["labels_discogs"] = labels
-
-                if release.year:
-                    print(f"Found release date for {filename}: {release.year}")
-                    print(f"Label(s): {', '.join(labels) if labels else 'Unknown'}")
-                    aa.write_db_file(db_dict)
-                else:
-                    print(f"No release date found for {filename}.")
-                    print(f"Label(s): {', '.join(labels) if labels else 'Unknown'}")
-                    record["release_year_discogs"] = None
-                    aa.write_db_file(db_dict)
+            if year:
+                print(f"Found release date for {filename}: {year}")
             else:
-                print(f"No results found for {filename}.")
-                record["release_year_discogs"] = None
-                aa.write_db_file(db_dict)
+                print(f"No release date found for {filename}.")
+            print(f"Label(s): {', '.join(labels) if labels else 'Unknown'}")
+            aa.write_db_file(db_dict)
 
         except Exception as e:
             print(f"Error searching for {filename}: {e}")
+
+
+def _get_suspicious_discogs_years(db_dict):
+    """Files whose stored discogs year postdates the song's own history.
+
+    You can't have played a song before it was released, so these are reissue
+    or remaster dates rather than the original. Worst gap first. Manual years
+    win over discogs anyway, so records that have one are left alone.
+    """
+    scored = []
+    for filename, record in db_dict.items():
+        year = record.get("release_year_discogs")
+        if year is None or record.get("release_year_manual") is not None:
+            continue
+        first_year = _record_first_year(record)
+        if first_year is None:
+            continue
+        if year > first_year:
+            scored.append((year - first_year, first_year, filename))
+    scored.sort(reverse=True)
+    return [(gap, first_year, f) for gap, first_year, f in scored]
+
+
+def recheck_release_dates_discogs(n: int = 50, write: bool = False):
+    """Re-query discogs for songs whose stored year postdates their own history.
+
+    Args:
+        n: Number of songs to check, worst gap first
+        write: If True save the new years, otherwise only print what would change
+    """
+    db_dict = aa.read_db_file()
+    suspicious = _get_suspicious_discogs_years(db_dict)
+    print(f"{len(suspicious)} suspicious records; checking {min(n, len(suspicious))}")
+    if not write:
+        print("DRY RUN -- nothing will be written")
+    print("-" * 70)
+
+    d = discogs_client.Client("DJTools/1.0", user_token=aa.DISCOGS_API_KEY)
+    changed = same = failed = rejected = 0
+
+    for _gap, first_year, filename in suspicious[:n]:
+        record = db_dict[filename]
+        stored = record["release_year_discogs"]
+        artist, track = aa.get_artist_and_track(filename)
+        if not artist or not track:
+            print(f"?  {filename}: unable to parse artist and track")
+            failed += 1
+            continue
+
+        try:
+            year, labels = _discogs_earliest_year(
+                d, artist, track, not_after=first_year
+            )
+        except Exception as e:
+            print(f"!  {filename}: {e}")
+            failed += 1
+            continue
+
+        if year is None:
+            print(f"?  {stored} -> nothing found   {filename}")
+            failed += 1
+            continue
+
+        # Still later than we know the song existed, so the search matched the
+        # wrong thing. Never write one of these -- leave the old value for the
+        # manual pass rather than swapping in a different wrong answer.
+        suspect = year > first_year
+
+        if year == stored:
+            same += 1
+            flag = "="
+        elif suspect:
+            rejected += 1
+            flag = "*"
+        else:
+            changed += 1
+            flag = "+"
+        print(f"{flag}  {stored} -> {year}   (yours since {first_year})   {filename}")
+
+        if write and year != stored and not suspect:
+            record["release_year_discogs"] = year
+            if labels:
+                record["labels_discogs"] = labels
+            aa.write_db_file(db_dict)
+
+    print("-" * 70)
+    print(
+        f"changed: {changed}   unchanged: {same}   "
+        f"rejected (still too late): {rejected}   no answer: {failed}"
+    )
+    if not write:
+        print("Dry run -- rerun with --write to save these.")
 
 
 def _get_missing_release_dates(db_dict, order_by_date=False):
@@ -470,110 +611,6 @@ def _get_missing_release_dates(db_dict, order_by_date=False):
         ]
         count_tuples.sort(reverse=True)
         return [f for _, f in count_tuples]
-
-
-def release_dates_bandcamp(n: int, order_by_date: bool = False):
-    """Search for release dates on Bandcamp for songs missing dates.
-
-    Args:
-        n: Number of songs to process
-        order_by_date: If True, order by last played/added date instead of play count
-    """
-    db_dict = aa.read_db_file()
-    missing_files = _get_missing_release_dates(db_dict, order_by_date)[:n]
-
-    if not missing_files:
-        print("No files found missing release years")
-        return
-
-    print(f"Searching Bandcamp for top {n} songs missing dates:")
-    print("-" * 70)
-
-    for filename in missing_files:
-        record = db_dict[filename]
-
-        artist, track = _process_track_metadata(db_dict, filename, record, "bandcamp")
-        if not artist:  # Skip if we couldn't process metadata
-            continue
-
-        try:
-            # Try with original track name first
-            url = _get_bandcamp_url(artist, track)
-            print(f"Searching URL: {url}")
-            response = requests.get(url)
-            soup = BeautifulSoup(response.text, "html.parser")
-
-            # Look for any search results using broader selectors
-            results = soup.select("li.searchresult")
-            if not results:
-                results = soup.select(
-                    ".result-items li"
-                )  # Another common Bandcamp selector
-
-            print(f"Found {len(results)} results")
-
-            if not results:
-                simplified = _simplify_track(track)
-                if simplified:
-                    url = _get_bandcamp_url(artist, simplified)
-                    print(f"Trying simplified URL: {url}")
-                    response = requests.get(url)
-                    soup = BeautifulSoup(response.text, "html.parser")
-                    results = soup.select("li.searchresult") or soup.select(
-                        ".result-items li"
-                    )
-                    print(f"Found {len(results)} results with simplified search")
-
-            if results:
-                result = results[0]
-                print("First result HTML:")
-                print(result.prettify()[:500])  # Print first 500 chars of the HTML
-
-                # Try multiple selectors for date
-                date_selectors = [
-                    ".released",
-                    ".release-date",
-                    'div[class*="release"]',  # Any class containing "release"
-                    ".subhead",  # Sometimes contains the date
-                ]
-
-                for selector in date_selectors:
-                    date_el = result.select_one(selector)
-                    if date_el:
-                        date_text = date_el.text.strip()
-                        print(f"Found date text with selector {selector}: {date_text}")
-                        try:
-                            # Look for a year in the text
-                            year_match = re.search(r"\b20\d{2}\b", date_text)
-                            if year_match:
-                                year = int(year_match.group(0))
-                                record["release_year_bandcamp"] = year
-                                print(f"Found release year: {year}")
-                                aa.write_db_file(db_dict)
-                                break
-                        except (ValueError, IndexError) as e:
-                            print(f"Failed to parse date text: {date_text}")
-                            print(f"Error: {e}")
-                else:
-                    print("No valid release date found in any selector")
-            else:
-                print("No results found in HTML")
-
-            if "release_year_bandcamp" not in record:
-                record["release_year_bandcamp"] = None
-                aa.write_db_file(db_dict)
-
-        except Exception as e:
-            print(f"Error searching: {e}")
-            import traceback
-
-            traceback.print_exc()
-
-
-def _get_bandcamp_url(artist, track):
-    """Helper to construct Bandcamp search URL."""
-    search_term = quote_plus(f"{artist} {track}")
-    return f"https://bandcamp.com/search?q={search_term}&item_type=t"
 
 
 def clear_release_date_none_values():
@@ -832,7 +869,7 @@ if __name__ == "__main__":
             cue_to_tracklist,
             generate_lists,
             release_dates_discogs,
-            release_dates_bandcamp,
+            recheck_release_dates_discogs,
             clear_release_date_none_values,
             summarize_years,
             summarize_keys,

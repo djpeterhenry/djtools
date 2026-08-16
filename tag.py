@@ -86,6 +86,7 @@ HIDDEN_TAG_VALUES = {
     "90",
     "classic",
     "hiphop",
+    "northfield",
 }
 
 # In both the filename suffixes and the playlist folder below.

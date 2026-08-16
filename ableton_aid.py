@@ -43,7 +43,6 @@ SHARED_RECORD_FIELDS = [
     "bpm",
     "key",
     "release_year_discogs",
-    "release_year_bandcamp",
     "release_year_manual",
     "labels_discogs",
 ]
@@ -1082,20 +1081,10 @@ def update_with_rekordbox_tags(db_dict, tags_filepath):
 
 
 def get_release_year(record):
-    """Get the earliest valid release year from available sources, prioritizing manual entries."""
-    # First check manual entry as it has highest priority
+    """Get the release year: a manual entry if there is one, else discogs."""
     if record.get("release_year_manual") is not None:
         return record["release_year_manual"]
-
-    years = []
-    # Add years from each source if they're valid (not None)
-    if record.get("release_year_discogs") is not None:
-        years.append(record["release_year_discogs"])
-    if record.get("release_year_bandcamp") is not None:
-        years.append(record["release_year_bandcamp"])
-
-    # Return the earliest year if we found any
-    return min(years) if years else None
+    return record.get("release_year_discogs")
 
 
 def generate_lists(output_path=COLLECTION_FOLDER, push=True):
