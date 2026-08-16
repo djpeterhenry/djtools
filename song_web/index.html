@@ -36,6 +36,7 @@
   #count { color: var(--dim); margin-left: auto; white-space: nowrap; }
   .group { display: inline-flex; gap: 4px; align-items: center;
            padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; }
+  [hidden] { display: none !important; }  /* beats the display rules above */
   .group > span.lbl { color: var(--dim); font-size: 12px; }
 
   table { border-collapse: collapse; width: 100%; }
@@ -53,6 +54,8 @@
   .num { text-align: right; color: var(--dim); }
   .name { font-weight: 500; }
   .name .g { color: var(--good); }
+  /* only rendered when two files share a name, to tell them apart */
+  .name .ext { color: var(--dim); font-size: 11px; font-weight: 400; margin-left: 5px; }
   .cam { color: var(--accent); }
   td.tags { width: 40%; }
   .chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
@@ -82,12 +85,15 @@
 <body>
 <div id="bar">
   <input id="search" placeholder="search name…  (space = AND)" autofocus>
-  <div class="group"><span class="lbl">bpm</span>
+  <!-- Parked, not deleted: drop the `hidden` attribute to bring either back
+       (e.g. onto a second row). Left empty/unchecked they filter nothing, so
+       the filtering code below still works untouched. -->
+  <div class="group" hidden><span class="lbl">bpm</span>
     <input id="bpm" class="w3" inputmode="numeric" placeholder="—">
     <span class="lbl">±</span><input id="bpmRange" class="w3" inputmode="numeric" value="3">
     <label class="tog"><input type="checkbox" id="bpmStar">*</label>
   </div>
-  <div class="group"><span class="lbl">key</span>
+  <div class="group" hidden><span class="lbl">key</span>
     <input id="key" class="w4" placeholder="8A / Am">
     <label class="tog" title="ignore key"><input type="checkbox" id="keyStar">*</label>
     <label class="tog"><input type="checkbox" id="k1">-1</label>
@@ -102,7 +108,7 @@
   <label class="tog" title="has no genre tag"><input type="checkbox" id="needsGenre">needs genre</label>
   <select id="sort">
     <option value="name">sort: name</option>
-    <option value="recency">sort: recent</option>
+    <option value="recency" selected>sort: recent</option>
     <option value="plays">sort: plays</option>
     <option value="bpm">sort: bpm</option>
     <option value="camelot_num">sort: key</option>
@@ -128,11 +134,15 @@
 
 <script>
 const $ = s => document.querySelector(s);
-let SONGS = [], KNOWN_TAGS = [], CAMELOT = {}, view = [];
+let SONGS = [], KNOWN_TAGS = [], CAMELOT = {}, view = [], AMBIG = new Set(), TOTAL = 0;
 const GENRE_TAGS = new Set(["JAZZ","DISCO","BIG_ROOM","TECH_HOUSE","AFRO","ACTUAL_HOUSE",
   "PROGRESSIVE","ACID","TROPICAL","FILTER_HOUSE","ROCK_HOUSE","DUBSTEP","UK_GARAGE",
   "HIDE_GENRE","CASTRO"]);
-let sortKey = "name", sortDir = 1;
+// Songs carrying these are retired: never listed. (Distinct from the server's
+// HIDDEN_TAG_VALUES, which is about which tags the menus offer.)
+const RETIRED_TAGS = ["x", "x_rekordbox"];
+const isRetired = s => s.tags.some(t => RETIRED_TAGS.includes(t));
+let sortKey = "recency", sortDir = -1;  // newest first
 
 async function api(path, body) {
   const r = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"},
@@ -180,7 +190,10 @@ function compute() {
   const vocal = $("#vocal").checked, good = $("#good").checked;
   const needsGenre = $("#needsGenre").checked;
 
+  TOTAL = SONGS.filter(s => !isRetired(s)).length;
+
   view = SONGS.filter(s => {
+    if (isRetired(s)) return false;
     for (const t of terms) if (!s.name.toLowerCase().includes(t)) return false;
     if (vocal && !s.vocal) return false;
     if (good && !s.good) return false;
@@ -212,6 +225,21 @@ function compute() {
   render();
 }
 
+// Ids whose name is shared by files of more than one type (.alc vs .als) --
+// the only rows where showing the extension tells you anything.
+function computeAmbiguous() {
+  const byName = new Map();
+  for (const s of SONGS) {
+    if (isRetired(s)) continue;  // retired: no twin to confuse
+    if (!byName.has(s.name)) byName.set(s.name, []);
+    byName.get(s.name).push(s);
+  }
+  AMBIG = new Set();
+  for (const group of byName.values())
+    if (new Set(group.map(s => s.ext)).size > 1)
+      for (const s of group) AMBIG.add(s.id);
+}
+
 function chip(s, t) {
   const genre = GENRE_TAGS.has(t);
   return `<span class="chip" style="${genre?'background:#3a3550':''}">`
@@ -220,7 +248,7 @@ function chip(s, t) {
 const enc = x => x.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 
 function render() {
-  $("#count").textContent = `${view.length} / ${SONGS.length}`;
+  $("#count").textContent = `${view.length} / ${TOTAL}`;
   $("#hint").style.display = view.length ? "none" : "block";
   if (!view.length) { $("#rows").innerHTML = ""; $("#hint").textContent = "no matches"; return; }
   const MAX = 600;
@@ -230,7 +258,8 @@ function render() {
       <td class="num mono">${s.bpm||""}</td>
       <td class="mono cam">${s.camelot || s.key || ""}</td>
       <td class="num mono">${s.plays||""}</td>
-      <td class="name">${s.good?'<span class="g">★</span> ':''}${enc(s.name)}</td>
+      <td class="name">${s.good?'<span class="g">★</span> ':''}${enc(s.name)}${
+        AMBIG.has(s.id) ? `<span class="ext">${enc(s.ext)}</span>` : ""}</td>
       <td class="num mono">${s.year||""}</td>
       <td class="tags"><div class="chips">
         ${s.tags.map(t => chip(s, t)).join("")}
@@ -308,8 +337,11 @@ $("#sort").addEventListener("change", () => {
 async function init() {
   const d = await (await fetch("/api/data")).json();
   SONGS = d.songs; KNOWN_TAGS = d.known_tags; CAMELOT = d.camelot_dict;
+  computeAmbiguous();
   refreshTagLists();
-  document.querySelector('thead th[data-k="name"]').classList.add("sorted");
+  $("#sort").value = sortKey;  // in case the browser restored a stale selection
+  document.querySelectorAll("thead th").forEach(h =>
+    h.classList.toggle("sorted", h.dataset.k === sortKey));
   compute();
 }
 init();

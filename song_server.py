@@ -26,7 +26,7 @@ from pydantic import BaseModel
 
 import ableton_aid as aa
 from server_util import kill_existing_server
-from tag import Tag
+from tag import Tag, HIDDEN_TAG_VALUES
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -70,9 +70,13 @@ def song_view(filename):
     key = record.get("key", "") or ""
     camelot = aa.get_camelot_key(key)
     cam_num = int(camelot[:-1]) if camelot else None
+    # Name and extension stay separate: the UI shows the extension only on the
+    # few names that two files share.
+    stem, ext = os.path.splitext(filename)
     return {
         "id": filename,
-        "name": aa.get_base_filename(filename, record),
+        "name": stem,
+        "ext": ext[1:].upper(),
         "bpm": record.get("bpm", 0),
         "key": key,
         "camelot": camelot or "",
@@ -90,12 +94,13 @@ def song_view(filename):
 
 
 def known_tags():
-    """Tags defined in code, plus any others found in the db, sorted."""
-    result = list(Tag.list())
+    """Tags offered in the ui: defined in code, plus any others found in the
+    db, sorted -- minus the hidden ones."""
+    result = [t for t in Tag.list() if t not in HIDDEN_TAG_VALUES]
     extra = set()
     for record in state.db_dict.values():
         for t in record.get("tags", []):
-            if t not in result:
+            if t not in result and t not in HIDDEN_TAG_VALUES:
                 extra.add(t)
     result.extend(sorted(extra))
     return result

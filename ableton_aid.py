@@ -123,10 +123,8 @@ def get_ableton_files():
     return sorted(result, key=lambda x: x.lower())
 
 
-def get_base_filename(filename, record):
+def get_display_name(filename, record):
     result, ext = os.path.splitext(filename)
-    if "pretty_name" in record:
-        result = record["pretty_name"]
     # add extension:
     if ext not in [".alc"]:
         result = "%s (%s)" % (result, ext[1:].upper())

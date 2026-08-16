@@ -265,7 +265,6 @@ class App:
         self.listbox.bind("r", lambda _: self.command_tag_remove())
         self.listbox.bind("s", lambda _: self.command_save())
         self.listbox.bind("v", lambda _: self.tag_vocal.toggle())
-        self.listbox.bind("f", lambda _: self.command_f())
         self.listbox.bind("p", lambda _: self.command_play_filename())
         self.listbox.bind("e", lambda _: self.command_export_list())
         self.listbox.bind("g", lambda _: self.command_g())
@@ -533,7 +532,7 @@ class App:
 
             last_filename = filename
 
-            file = aa.get_base_filename(filename, record)
+            file = aa.get_display_name(filename, record)
             key_display = key
             if cam_song is not None:
                 # key_display = key + ' : ' + cam_song
@@ -758,13 +757,6 @@ class App:
             return
         record = self.db_dict[filename]
         aa.remove_tag(record, tag)
-
-    def command_f(self):
-        filename = self.get_selected_filename()
-        if not filename:
-            return
-        tag = Tag.FORGET_TAG.value
-        self.add_tag_to_filename(filename=filename, tag=tag)
 
     def command_g(self):
         filename = self.get_selected_filename()

@@ -38,14 +38,17 @@ class Tag(ListEnum):
     SKIP_KEY = "ALL KEYS"
     SKIP_BPM = "ALL BPM"
     GOOD_TAG = "GOOD"  # This one can be applied with "g" so order doesn't matter
-    FORGET_TAG = "FORGET" # Apply with "f" and look to forget
     SS_TAG = "SS"
     P_NASTY_TAG = "P_NASTY"
-    SHANNON_TAG = "SHANNON"
-    DAN_TAG = "DAN"
     CRISPY_TACOS = "CRISPY_TACOS"
     DRUM_LOOPS = "DRUM_LOOPS"
     CASTRO = "CASTRO"
+
+    # Venue/slot tags, slot first: typing "d"/"n" in the web ui tag menus jumps
+    # straight to them. Rekordbox search is substring, so "cloverdale" still
+    # finds both there.
+    DAY_CLOVERDALE = "DAY_CLOVERDALE"
+    NIGHT_CLOVERDALE = "NIGHT_CLOVERDALE"
 
 
 REKORDBOX_GENRE_TAGS = [
@@ -68,8 +71,28 @@ REKORDBOX_GENRE_TAGS = [
 
 REKORDBOX_GENRE_TAG_VALUE_SET = set(genre.value for genre in REKORDBOX_GENRE_TAGS)
 
+# Kept out of the web ui's tag menus (both the filter dropdown and the "+ tag"
+# autocomplete). Records keep them and the rekordbox export still reads them --
+# they just aren't offered while browsing. Chips already on a song still show,
+# so nothing here becomes unremovable.
+HIDDEN_TAG_VALUES = {
+    # set by workflow, not chosen while browsing
+    Tag.X.value,
+    Tag.X_REKORDBOX.value,
+    Tag.HIDE_GENRE.value,
+    Tag.SKIP_KEY.value,
+    Tag.SKIP_BPM.value,
+    # free-form leftovers, never declared above
+    "90",
+    "classic",
+    "hiphop",
+}
+
+# In both the filename suffixes and the playlist folder below.
 REKORDBOX_COMMON_TAGS = REKORDBOX_GENRE_TAGS + [
     Tag.GOOD_TAG,
+    Tag.DAY_CLOVERDALE,
+    Tag.NIGHT_CLOVERDALE,
 ]
 
 REKORDBOX_FILENAME_TAGS = REKORDBOX_COMMON_TAGS + [
