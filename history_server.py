@@ -3,14 +3,12 @@
 
 import json
 import logging
-import os
 import re
-import signal
-import subprocess
-import time
 from datetime import datetime, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pyrekordbox import Rekordbox6Database
+
+from server_util import kill_existing_server
 
 # We know Rekordbox is running; we only read, never commit, so this is safe.
 logging.getLogger("pyrekordbox.db6.database").setLevel(logging.ERROR)
@@ -697,20 +695,8 @@ class Handler(BaseHTTPRequestHandler):
         pass  # quiet
 
 
-def kill_existing_server():
-    """Kill any existing process on our port."""
-    result = subprocess.run(
-        ["lsof", "-ti", f":{PORT}"], capture_output=True, text=True
-    )
-    for pid in result.stdout.split():
-        print(f"Stopping previous server (PID {pid})...")
-        os.kill(int(pid), signal.SIGTERM)
-    if result.stdout.strip():
-        time.sleep(1)
-
-
 if __name__ == "__main__":
-    kill_existing_server()
+    kill_existing_server(PORT)
     server = HTTPServer(("", PORT), Handler)
     base = f"http://localhost:{PORT}"
     print(f"Serving Rekordbox history at {base}")

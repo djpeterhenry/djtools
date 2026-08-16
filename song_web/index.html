@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Song DB</title>
+<style>
+  :root {
+    --bg: #16181d; --panel: #1e2128; --panel2: #262a33; --line: #333844;
+    --fg: #e6e8ec; --dim: #9aa0ab; --accent: #6ea8fe; --good: #f5c451;
+    --chip: #313745; --chip-hover: #3d4453; --danger: #e06c75;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  #bar {
+    position: sticky; top: 0; z-index: 5; background: var(--panel);
+    border-bottom: 1px solid var(--line); padding: 8px 12px;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  #bar input, #bar select {
+    background: var(--panel2); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 8px; font-size: 14px;
+  }
+  #search { flex: 1 1 220px; min-width: 160px; }
+  .w3 { width: 58px; } .w4 { width: 70px; }
+  label.tog {
+    display: inline-flex; align-items: center; gap: 3px; padding: 4px 7px;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 6px;
+    cursor: pointer; user-select: none; color: var(--dim);
+  }
+  label.tog input { margin: 0; }
+  label.tog:has(input:checked) { color: var(--fg); border-color: var(--accent); }
+  #count { color: var(--dim); margin-left: auto; white-space: nowrap; }
+  .group { display: inline-flex; gap: 4px; align-items: center;
+           padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; }
+  .group > span.lbl { color: var(--dim); font-size: 12px; }
+
+  table { border-collapse: collapse; width: 100%; }
+  thead th {
+    position: sticky; top: 49px; background: var(--panel); z-index: 4;
+    text-align: left; color: var(--dim); font-weight: 600; font-size: 12px;
+    padding: 6px 10px; border-bottom: 1px solid var(--line); cursor: pointer;
+    white-space: nowrap;
+  }
+  thead th.sorted { color: var(--accent); }
+  tbody td { padding: 5px 10px; border-bottom: 1px solid #23262e; vertical-align: middle; }
+  tbody tr:hover { background: var(--panel2); }
+  tbody tr.sel { background: #2b3550; }
+  .mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, monospace; }
+  .num { text-align: right; color: var(--dim); }
+  .name { font-weight: 500; }
+  .name .g { color: var(--good); }
+  .cam { color: var(--accent); }
+  td.tags { width: 40%; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; background: var(--chip);
+    border-radius: 10px; padding: 1px 4px 1px 8px; font-size: 12px; white-space: nowrap;
+  }
+  .chip b { font-weight: 600; }
+  .chip .x { cursor: pointer; color: var(--dim); border-radius: 8px;
+             width: 16px; height: 16px; display: inline-flex;
+             align-items: center; justify-content: center; }
+  .chip .x:hover { background: var(--danger); color: #fff; }
+  .addtag {
+    width: 90px; background: transparent; border: 1px dashed var(--line);
+    color: var(--dim); border-radius: 10px; padding: 2px 6px; font-size: 12px;
+  }
+  .addtag:focus { outline: none; border-color: var(--accent); color: var(--fg); }
+  .rowbtns button {
+    background: var(--panel2); color: var(--dim); border: 1px solid var(--line);
+    border-radius: 5px; padding: 3px 7px; cursor: pointer; font-size: 12px;
+  }
+  .rowbtns button:hover { color: var(--fg); border-color: var(--accent); }
+  datalist { color: #000; }
+  .hint { color: var(--dim); font-size: 12px; padding: 30px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <input id="search" placeholder="search name…  (space = AND)" autofocus>
+  <div class="group"><span class="lbl">bpm</span>
+    <input id="bpm" class="w3" inputmode="numeric" placeholder="—">
+    <span class="lbl">±</span><input id="bpmRange" class="w3" inputmode="numeric" value="3">
+    <label class="tog"><input type="checkbox" id="bpmStar">*</label>
+  </div>
+  <div class="group"><span class="lbl">key</span>
+    <input id="key" class="w4" placeholder="8A / Am">
+    <label class="tog" title="ignore key"><input type="checkbox" id="keyStar">*</label>
+    <label class="tog"><input type="checkbox" id="k1">-1</label>
+    <label class="tog"><input type="checkbox" id="k2">+1</label>
+    <label class="tog"><input type="checkbox" id="k3">+2</label>
+    <label class="tog"><input type="checkbox" id="k4">+4</label>
+  </div>
+  <select id="tag"><option value="">— tag —</option></select>
+  <label class="tog"><input type="checkbox" id="tagInvert">invert</label>
+  <label class="tog"><input type="checkbox" id="vocal">vocal</label>
+  <label class="tog"><input type="checkbox" id="good">good</label>
+  <label class="tog" title="has no genre tag"><input type="checkbox" id="needsGenre">needs genre</label>
+  <select id="sort">
+    <option value="name">sort: name</option>
+    <option value="recency">sort: recent</option>
+    <option value="plays">sort: plays</option>
+    <option value="bpm">sort: bpm</option>
+    <option value="camelot_num">sort: key</option>
+    <option value="random">sort: random</option>
+  </select>
+  <span id="count"></span>
+</div>
+
+<table>
+  <thead><tr>
+    <th data-k="bpm" class="num">BPM</th>
+    <th data-k="camelot_num">Key</th>
+    <th data-k="plays" class="num">▶</th>
+    <th data-k="name">Name</th>
+    <th data-k="year" class="num">Year</th>
+    <th>Tags</th>
+    <th></th>
+  </tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<div class="hint" id="hint">loading…</div>
+<datalist id="tagOptions"></datalist>
+
+<script>
+const $ = s => document.querySelector(s);
+let SONGS = [], KNOWN_TAGS = [], CAMELOT = {}, view = [];
+const GENRE_TAGS = new Set(["JAZZ","DISCO","BIG_ROOM","TECH_HOUSE","AFRO","ACTUAL_HOUSE",
+  "PROGRESSIVE","ACID","TROPICAL","FILTER_HOUSE","ROCK_HOUSE","DUBSTEP","UK_GARAGE",
+  "HIDE_GENRE","CASTRO"]);
+let sortKey = "name", sortDir = 1;
+
+async function api(path, body) {
+  const r = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"},
+                              body: JSON.stringify(body)});
+  if (!r.ok) throw new Error((await r.json().catch(()=>({}))).detail || r.statusText);
+  return r.json();
+}
+
+function relCamelot(n, off) { return ((n + off - 1) % 12 + 12) % 12 + 1; }
+
+// Parse a key filter input into a set of accepted camelot numbers (1-12).
+function keyFilterNums() {
+  if ($("#keyStar").checked) return null;
+  let raw = $("#key").value.trim();
+  if (!raw) return null;
+  let base = null;
+  let m = raw.match(/^(\d{1,2})\s*[abAB]?$/);          // "8" or "8A"
+  if (m) base = parseInt(m[1], 10);
+  if (base === null) {                                  // musical key like "Am" / "F#"
+    let c = CAMELOT[raw] || CAMELOT[raw[0].toUpperCase() + raw.slice(1)];
+    if (c) base = parseInt(c, 10);
+  }
+  if (base === null || base < 1 || base > 12) return null;
+  const nums = new Set([base]);
+  if ($("#k1").checked) nums.add(relCamelot(base, -1));
+  if ($("#k2").checked) nums.add(relCamelot(base, 1));
+  if ($("#k3").checked) nums.add(relCamelot(base, 2));
+  if ($("#k4").checked) nums.add(relCamelot(base, 4));
+  return nums;
+}
+
+function bpmMatch(filter, range, bpm) {
+  for (const sub of [Math.round(bpm/2), bpm, Math.round(bpm*2)])
+    if (sub >= filter - range && sub <= filter + range) return true;
+  return false;
+}
+
+function compute() {
+  const terms = $("#search").value.toLowerCase().split(/\s+/).filter(Boolean);
+  const bpm = parseInt($("#bpm").value, 10);
+  let bpmRange = parseInt($("#bpmRange").value, 10); if (isNaN(bpmRange)) bpmRange = 0;
+  const bpmStar = $("#bpmStar").checked;
+  const keyNums = keyFilterNums();
+  const tag = $("#tag").value, tagInvert = $("#tagInvert").checked;
+  const vocal = $("#vocal").checked, good = $("#good").checked;
+  const needsGenre = $("#needsGenre").checked;
+
+  view = SONGS.filter(s => {
+    for (const t of terms) if (!s.name.toLowerCase().includes(t)) return false;
+    if (vocal && !s.vocal) return false;
+    if (good && !s.good) return false;
+    if (!isNaN(bpm)) {
+      let r = bpmRange + (s.vocal ? 10 : 0) + (bpmStar ? 10 : 0);
+      if (!bpmMatch(bpm, r, s.bpm)) return false;
+    }
+    if (keyNums) { if (s.camelot_num === null || !keyNums.has(s.camelot_num)) return false; }
+    if (tag) {
+      const has = s.tags.includes(tag);
+      if (tagInvert ? has : !has) return false;
+    }
+    if (needsGenre && s.tags.some(t => GENRE_TAGS.has(t))) return false;
+    return true;
+  });
+
+  if (sortKey === "random") {
+    for (let i = view.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1)); [view[i],view[j]]=[view[j],view[i]];
+    }
+  } else {
+    view.sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (sortKey === "name") return sortDir * av.localeCompare(bv);
+      av = av === null ? -Infinity : av; bv = bv === null ? -Infinity : bv;
+      return sortDir * (av - bv);
+    });
+  }
+  render();
+}
+
+function chip(s, t) {
+  const genre = GENRE_TAGS.has(t);
+  return `<span class="chip" style="${genre?'background:#3a3550':''}">`
+    + `<b>${t}</b><span class="x" data-id="${enc(s.id)}" data-tag="${enc(t)}">×</span></span>`;
+}
+const enc = x => x.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+
+function render() {
+  $("#count").textContent = `${view.length} / ${SONGS.length}`;
+  $("#hint").style.display = view.length ? "none" : "block";
+  if (!view.length) { $("#rows").innerHTML = ""; $("#hint").textContent = "no matches"; return; }
+  const MAX = 600;
+  const shown = view.slice(0, MAX);
+  $("#rows").innerHTML = shown.map(s => `
+    <tr data-id="${enc(s.id)}">
+      <td class="num mono">${s.bpm||""}</td>
+      <td class="mono cam">${s.camelot || s.key || ""}</td>
+      <td class="num mono">${s.plays||""}</td>
+      <td class="name">${s.good?'<span class="g">★</span> ':''}${enc(s.name)}</td>
+      <td class="num mono">${s.year||""}</td>
+      <td class="tags"><div class="chips">
+        ${s.tags.map(t => chip(s, t)).join("")}
+        <input class="addtag" list="tagOptions" placeholder="+ tag" data-id="${enc(s.id)}">
+      </div></td>
+      <td class="rowbtns" style="white-space:nowrap">
+        <button data-act="reveal" data-id="${enc(s.id)}" title="reveal sample in Finder">◎</button>
+        <button data-act="copy" data-id="${enc(s.id)}" title="copy .alc for Ableton">⧉</button>
+        <button data-act="play" data-id="${enc(s.id)}" title="play sample">▶</button>
+      </td>
+    </tr>`).join("");
+  if (view.length > MAX) $("#rows").insertAdjacentHTML("beforeend",
+    `<tr><td colspan="7" class="hint">…and ${view.length - MAX} more (narrow your search)</td></tr>`);
+}
+
+function replaceSong(updated) {
+  const i = SONGS.findIndex(s => s.id === updated.id);
+  if (i >= 0) SONGS[i] = updated;
+  for (const t of updated.tags) if (!KNOWN_TAGS.includes(t)) {
+    KNOWN_TAGS.push(t); KNOWN_TAGS.sort(); refreshTagLists();
+  }
+  compute();
+}
+
+async function doTag(id, tag, action) {
+  try { replaceSong(await api("/api/tag", {id, tag, action})); }
+  catch (e) { alert("tag failed: " + e.message); }
+}
+
+// ---- events (delegated) ----
+$("#rows").addEventListener("click", async e => {
+  const x = e.target.closest(".x");
+  if (x) { doTag(x.dataset.id, x.dataset.tag, "remove"); return; }
+  const btn = e.target.closest("button[data-act]");
+  if (btn) {
+    try { await api("/api/" + btn.dataset.act, {id: btn.dataset.id}); }
+    catch (err) { alert(btn.dataset.act + " failed: " + err.message); }
+  }
+});
+$("#rows").addEventListener("keydown", e => {
+  const inp = e.target.closest(".addtag");
+  if (inp && e.key === "Enter") {
+    const v = inp.value.trim(); if (v) doTag(inp.dataset.id, v, "add"); inp.value = "";
+  }
+});
+
+function refreshTagLists() {
+  $("#tagOptions").innerHTML = KNOWN_TAGS.map(t => `<option value="${enc(t)}">`).join("");
+  const cur = $("#tag").value;
+  $("#tag").innerHTML = `<option value="">— tag —</option>` +
+    KNOWN_TAGS.map(t => `<option value="${enc(t)}">${enc(t)}</option>`).join("");
+  $("#tag").value = cur;
+}
+
+// header sort
+document.querySelectorAll("thead th[data-k]").forEach(th => th.addEventListener("click", () => {
+  const k = th.dataset.k;
+  if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k === "name") ? 1 : -1; }
+  $("#sort").value = ["name","recency","plays","bpm","camelot_num","random"].includes(k) ? k : "name";
+  document.querySelectorAll("thead th").forEach(h => h.classList.toggle("sorted", h === th));
+  compute();
+}));
+$("#sort").addEventListener("change", () => {
+  sortKey = $("#sort").value;
+  sortDir = (sortKey === "name") ? 1 : -1;
+  document.querySelectorAll("thead th").forEach(h =>
+    h.classList.toggle("sorted", h.dataset.k === sortKey));
+  compute();
+});
+
+["#search","#bpm","#bpmRange","#key"].forEach(s => $(s).addEventListener("input", compute));
+["#bpmStar","#keyStar","#k1","#k2","#k3","#k4","#tag","#tagInvert","#vocal","#good","#needsGenre"]
+  .forEach(s => $(s).addEventListener("change", compute));
+
+async function init() {
+  const d = await (await fetch("/api/data")).json();
+  SONGS = d.songs; KNOWN_TAGS = d.known_tags; CAMELOT = d.camelot_dict;
+  refreshTagLists();
+  document.querySelector('thead th[data-k="name"]').classList.add("sorted");
+  compute();
+}
+init();
+</script>
+</body>
+</html>
