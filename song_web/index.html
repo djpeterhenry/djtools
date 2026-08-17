@@ -72,14 +72,24 @@
     width: 90px; background: transparent; border: 1px dashed var(--line);
     color: var(--dim); border-radius: 10px; padding: 2px 6px; font-size: 12px;
   }
-  .addtag:focus { outline: none; border-color: var(--accent); color: var(--fg); }
+  .addtag:focus { outline: none; border-color: var(--accent); color: var(--fg); width: 150px; }
   .rowbtns button {
     background: var(--panel2); color: var(--dim); border: 1px solid var(--line);
     border-radius: 5px; padding: 3px 7px; cursor: pointer; font-size: 12px;
   }
   .rowbtns button:hover { color: var(--fg); border-color: var(--accent); }
-  datalist { color: #000; }
   .hint { color: var(--dim); font-size: 12px; padding: 30px; text-align: center; }
+  /* tag autocomplete popup: one shared box, moved under the focused .addtag */
+  #acbox {
+    position: absolute; z-index: 20; background: var(--panel2);
+    border: 1px solid var(--accent); border-radius: 8px; padding: 3px;
+    max-height: 240px; overflow-y: auto; box-shadow: 0 6px 20px #0009; font-size: 12px;
+  }
+  .acitem {
+    padding: 3px 8px; border-radius: 5px; white-space: nowrap;
+    cursor: pointer; color: var(--dim);
+  }
+  .acitem.on { background: var(--accent); color: #10131a; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -130,7 +140,6 @@
   <tbody id="rows"></tbody>
 </table>
 <div class="hint" id="hint">loading…</div>
-<datalist id="tagOptions"></datalist>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -248,6 +257,7 @@ function chip(s, t) {
 const enc = x => x.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 
 function render() {
+  closeAC();  // the .addtag inputs are about to be replaced out from under it
   $("#count").textContent = `${view.length} / ${TOTAL}`;
   $("#hint").style.display = view.length ? "none" : "block";
   if (!view.length) { $("#rows").innerHTML = ""; $("#hint").textContent = "no matches"; return; }
@@ -263,7 +273,7 @@ function render() {
       <td class="num mono">${s.year||""}</td>
       <td class="tags"><div class="chips">
         ${s.tags.map(t => chip(s, t)).join("")}
-        <input class="addtag" list="tagOptions" placeholder="+ tag" data-id="${enc(s.id)}">
+        <input class="addtag" placeholder="+ tag" data-id="${enc(s.id)}">
       </div></td>
       <td class="rowbtns" style="white-space:nowrap">
         <button data-act="reveal" data-id="${enc(s.id)}" title="reveal sample in Finder">◎</button>
@@ -299,15 +309,101 @@ $("#rows").addEventListener("click", async e => {
     catch (err) { alert(btn.dataset.act + " failed: " + err.message); }
   }
 });
-$("#rows").addEventListener("keydown", e => {
-  const inp = e.target.closest(".addtag");
-  if (inp && e.key === "Enter") {
-    const v = inp.value.trim(); if (v) doTag(inp.dataset.id, v, "add"); inp.value = "";
+// ---- tag autocomplete ----
+// One popup shared by every row, repositioned under whichever .addtag has focus.
+// Keys: type to filter, ↑/↓ to pick, Tab to fill the input, Enter to add,
+// Esc to dismiss (so Enter then adds the literal text as a brand-new tag).
+const acBox = document.createElement("div");
+acBox.id = "acbox"; acBox.hidden = true;
+document.body.appendChild(acBox);
+let ac = { inp: null, items: [], idx: -1 };
+const AC_MAX = 12;
+
+// Prefix matches first, then substring; tags the song already has are dropped.
+function tagMatches(q, have) {
+  const s = q.toLowerCase(), pre = [], sub = [];
+  for (const t of KNOWN_TAGS) {
+    if (have.has(t)) continue;
+    if (!s) { pre.push(t); continue; }
+    const i = t.toLowerCase().indexOf(s);
+    if (i === 0) pre.push(t); else if (i > 0) sub.push(t);
   }
+  return pre.concat(sub).slice(0, AC_MAX);
+}
+
+function closeAC() {
+  acBox.hidden = true; ac.inp = null; ac.items = []; ac.idx = -1;
+}
+const acOpen = inp => !acBox.hidden && ac.inp === inp;
+
+function openAC(inp) {
+  const song = SONGS.find(s => s.id === inp.dataset.id);
+  const items = tagMatches(inp.value.trim(), new Set(song ? song.tags : []));
+  if (!items.length) return closeAC();
+  ac.inp = inp; ac.items = items; ac.idx = 0;
+  acBox.innerHTML = items.map((t, i) =>
+    `<div class="acitem${i ? "" : " on"}" data-i="${i}">${enc(t)}</div>`).join("");
+  const r = inp.getBoundingClientRect();
+  acBox.style.left = (r.left + scrollX) + "px";
+  acBox.style.top = (r.bottom + scrollY + 2) + "px";
+  acBox.style.minWidth = r.width + "px";
+  acBox.hidden = false;
+  acBox.scrollTop = 0;
+}
+
+function acHighlight(i) {
+  ac.idx = (i + ac.items.length) % ac.items.length;
+  acBox.querySelectorAll(".acitem").forEach((el, n) => el.classList.toggle("on", n === ac.idx));
+  acBox.querySelector(".acitem.on").scrollIntoView({block: "nearest"});
+}
+
+// Add, then put the cursor back in that row so a second tag can be typed
+// straight away (the row is gone if the new tag filtered it out of view).
+async function acCommit(inp, tag) {
+  const id = inp.dataset.id;
+  closeAC(); inp.value = "";
+  await doTag(id, tag, "add");
+  const again = $(`#rows tr[data-id="${CSS.escape(id)}"] .addtag`);
+  if (again) again.focus();
+}
+
+$("#rows").addEventListener("input", e => {
+  const inp = e.target.closest(".addtag"); if (inp) openAC(inp);
+});
+$("#rows").addEventListener("focusout", e => {
+  if (e.target.closest(".addtag")) closeAC();
+});
+$("#rows").addEventListener("keydown", e => {
+  const inp = e.target.closest(".addtag"); if (!inp) return;
+  const open = acOpen(inp);
+  switch (e.key) {
+    case "ArrowDown":
+      e.preventDefault(); open ? acHighlight(ac.idx + 1) : openAC(inp); break;
+    case "ArrowUp":
+      if (open) { e.preventDefault(); acHighlight(ac.idx - 1); } break;
+    case "Escape":
+      if (open) { e.preventDefault(); closeAC(); } break;
+    case "Tab":  // fill the input but stay put; a second Tab moves focus on
+      if (open) { e.preventDefault(); inp.value = ac.items[ac.idx]; closeAC(); } break;
+    case "Enter": {
+      e.preventDefault();
+      const v = open ? ac.items[ac.idx] : inp.value.trim();
+      if (v) acCommit(inp, v);
+      break;
+    }
+  }
+});
+// mousedown default would blur the input (and close the popup) before the click
+acBox.addEventListener("mousedown", e => e.preventDefault());
+acBox.addEventListener("mouseover", e => {
+  const it = e.target.closest(".acitem"); if (it) acHighlight(+it.dataset.i);
+});
+acBox.addEventListener("click", e => {
+  const it = e.target.closest(".acitem");
+  if (it && ac.inp) acCommit(ac.inp, ac.items[+it.dataset.i]);
 });
 
 function refreshTagLists() {
-  $("#tagOptions").innerHTML = KNOWN_TAGS.map(t => `<option value="${enc(t)}">`).join("");
   const cur = $("#tag").value;
   $("#tag").innerHTML = `<option value="">— tag —</option>` +
     KNOWN_TAGS.map(t => `<option value="${enc(t)}">${enc(t)}</option>`).join("");
