@@ -116,10 +116,16 @@
   <label class="tog"><input type="checkbox" id="vocal">vocal</label>
   <label class="tog"><input type="checkbox" id="good">good</label>
   <label class="tog" title="has no genre tag"><input type="checkbox" id="needsGenre">needs genre</label>
+  <div class="group" title="window for the recent-play count column">
+    <span class="lbl">last</span>
+    <input id="years" class="w3" inputmode="decimal" value="1">
+    <span class="lbl">yr</span>
+  </div>
   <select id="sort">
     <option value="name">sort: name</option>
     <option value="recency" selected>sort: recent</option>
     <option value="plays">sort: plays</option>
+    <option value="plays_recent">sort: recent plays</option>
     <option value="bpm">sort: bpm</option>
     <option value="camelot_num">sort: key</option>
     <option value="random">sort: random</option>
@@ -131,7 +137,8 @@
   <thead><tr>
     <th data-k="bpm" class="num">BPM</th>
     <th data-k="camelot_num">Key</th>
-    <th data-k="plays" class="num">▶</th>
+    <th data-k="plays" class="num" title="plays, all time">▶</th>
+    <th data-k="plays_recent" class="num" title="plays in the window"><span id="yrsLbl">▶ 1y</span></th>
     <th data-k="name">Name</th>
     <th data-k="year" class="num">Year</th>
     <th>Tags</th>
@@ -183,6 +190,32 @@ function keyFilterNums() {
   return nums;
 }
 
+// Today as a local epoch day, matching the play_days the server sends.
+function todayDay() {
+  const d = new Date();
+  return Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000);
+}
+
+// Number of days in the sorted list that are >= cutoff (lower-bound scan).
+function countSince(days, cutoff) {
+  let lo = 0, hi = days.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (days[mid] < cutoff) lo = mid + 1; else hi = mid;
+  }
+  return days.length - lo;
+}
+
+// Recompute every song's play count inside the "last N years" window. Blank or
+// non-positive years means no window: the count is just the all-time count.
+function computeRecentPlays() {
+  const years = parseFloat($("#years").value);
+  const windowed = !isNaN(years) && years > 0;
+  const cutoff = windowed ? todayDay() - Math.round(years * 365.25) : -Infinity;
+  $("#yrsLbl").textContent = windowed ? `▶ ${years}y` : "▶ all";
+  for (const s of SONGS) s.plays_recent = countSince(s.play_days, cutoff);
+}
+
 function bpmMatch(filter, range, bpm) {
   for (const sub of [Math.round(bpm/2), bpm, Math.round(bpm*2)])
     if (sub >= filter - range && sub <= filter + range) return true;
@@ -190,6 +223,7 @@ function bpmMatch(filter, range, bpm) {
 }
 
 function compute() {
+  computeRecentPlays();
   const terms = $("#search").value.toLowerCase().split(/\s+/).filter(Boolean);
   const bpm = parseInt($("#bpm").value, 10);
   let bpmRange = parseInt($("#bpmRange").value, 10); if (isNaN(bpmRange)) bpmRange = 0;
@@ -268,6 +302,7 @@ function render() {
       <td class="num mono">${s.bpm||""}</td>
       <td class="mono cam">${s.camelot || s.key || ""}</td>
       <td class="num mono">${s.plays||""}</td>
+      <td class="num mono">${s.plays_recent||""}</td>
       <td class="name">${s.good?'<span class="g">★</span> ':''}${enc(s.name)}${
         AMBIG.has(s.id) ? `<span class="ext">${enc(s.ext)}</span>` : ""}</td>
       <td class="num mono">${s.year||""}</td>
@@ -282,7 +317,7 @@ function render() {
       </td>
     </tr>`).join("");
   if (view.length > MAX) $("#rows").insertAdjacentHTML("beforeend",
-    `<tr><td colspan="7" class="hint">…and ${view.length - MAX} more (narrow your search)</td></tr>`);
+    `<tr><td colspan="8" class="hint">…and ${view.length - MAX} more (narrow your search)</td></tr>`);
 }
 
 function replaceSong(updated) {
@@ -414,7 +449,7 @@ function refreshTagLists() {
 document.querySelectorAll("thead th[data-k]").forEach(th => th.addEventListener("click", () => {
   const k = th.dataset.k;
   if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k === "name") ? 1 : -1; }
-  $("#sort").value = ["name","recency","plays","bpm","camelot_num","random"].includes(k) ? k : "name";
+  $("#sort").value = ["name","recency","plays","plays_recent","bpm","camelot_num","random"].includes(k) ? k : "name";
   document.querySelectorAll("thead th").forEach(h => h.classList.toggle("sorted", h === th));
   compute();
 }));
@@ -426,7 +461,7 @@ $("#sort").addEventListener("change", () => {
   compute();
 });
 
-["#search","#bpm","#bpmRange","#key"].forEach(s => $(s).addEventListener("input", compute));
+["#search","#bpm","#bpmRange","#key","#years"].forEach(s => $(s).addEventListener("input", compute));
 ["#bpmStar","#keyStar","#k1","#k2","#k3","#k4","#tag","#tagInvert","#vocal","#good","#needsGenre"]
   .forEach(s => $(s).addEventListener("change", compute));
 

@@ -13,6 +13,7 @@ Then open http://localhost:8765
 """
 
 import argparse
+import datetime
 import io
 import json
 import os
@@ -36,6 +37,20 @@ WEB_DIR = os.path.join(HERE, "song_web")
 # edits doesn't churn the whole 50-deep backup history away. The current file
 # is still written atomically on every single edit.
 BACKUP_MIN_INTERVAL_SEC = 5 * 60
+
+# Play dates go to the browser as days since 1970-01-01 *local* time, so the ui
+# can count plays inside any "last N years" window itself (no round trip, and
+# a much smaller payload than raw timestamps).
+EPOCH_ORDINAL = datetime.date(1970, 1, 1).toordinal()
+
+
+def play_days(record):
+    """Sorted list of the days (local epoch days) this song was played on."""
+    return [
+        datetime.date.fromtimestamp(ts).toordinal() - EPOCH_ORDINAL
+        for ts in aa.get_ts_list_date_limited(record)
+    ]
+
 
 class State:
     db_dict = {}
@@ -64,6 +79,7 @@ def song_view(filename):
         "camelot": camelot or "",
         "camelot_num": cam_num,
         "plays": aa.get_ts_date_count(record),
+        "play_days": play_days(record),
         "tags": list(record.get("tags", [])),
         "year": aa.get_release_year(record),
         "vocal": aa.is_vocal(record),
