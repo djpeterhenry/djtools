@@ -27,6 +27,10 @@ REKORDBOX_PROCESSED_IDS_FILE = "rekordbox_processed_ids.json"
 
 NEW_OLD_YEARS = 20
 
+# [#t1] through [#t5]: most played within the last 1 through 5 years.
+TOP_PLAY_COUNT_YEARS = [1, 2, 3, 4, 5]
+TOP_PLAY_COUNT_NUM = 500
+
 
 def get_bpm_and_range_list():
     # create tuples of (bpm, bpm_range) and sort them
@@ -276,6 +280,25 @@ def matches_active_window(record, min_days, max_days):
     return active_ts <= aa.get_past_ts(aa.get_span_days(min_days)) and active_ts > aa.get_past_ts(
         aa.get_span_days(max_days)
     )
+
+
+def get_top_play_count_files(db_dict, files, years, top_num=TOP_PLAY_COUNT_NUM):
+    """The top_num most played files within the last `years` years.
+
+    Only plays inside the window count, so a song with none never qualifies and
+    a short window can return fewer than top_num files.
+    """
+    ts_after = aa.get_past_ts(aa.get_span_years(years))
+    counted = []
+    for f in files:
+        record = db_dict[f]
+        count = aa.get_ts_date_count(record, ts_after=ts_after)
+        if count > 0:
+            # tie break on recency so the cutoff is stable and favors songs
+            # still in rotation
+            counted.append((count, aa.get_alc_or_last_ts(record), f))
+    counted.sort(reverse=True)
+    return set(f for _, _, f in counted[:top_num])
 
 
 class BeatGridMarker(object):
@@ -550,6 +573,11 @@ def export_rekordbox_xml(rekordbox_filename):
     # files = [f for f in files if 'Everything But The Girl - Lullaby Of Clubland.als' in f]
     # print (files)
 
+    top_play_count_files = {
+        years: get_top_play_count_files(db_dict, files, years)
+        for years in TOP_PLAY_COUNT_YEARS
+    }
+
     num_added = 0
     et_dj_playlists = ET.Element("DJ_PLAYLISTS")
     et_collection = ET.SubElement(et_dj_playlists, "COLLECTION")
@@ -620,6 +648,11 @@ def export_rekordbox_xml(rekordbox_filename):
             suffixes.append("[#p1]")
         else:
             suffixes.append("[#p2]")
+
+        # Top played within each year span
+        for years in TOP_PLAY_COUNT_YEARS:
+            if f in top_play_count_files[years]:
+                suffixes.append("[#t{}]".format(years))
 
         # Suffixes for release year matching
         if year:
