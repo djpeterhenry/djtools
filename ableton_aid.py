@@ -790,7 +790,11 @@ def generate_num_alc_pairs(valid_alc_files, db_dict, ts_after):
         record = db_dict[file]
         num = get_ts_date_count(record, ts_after)
         num_file_tuples.append((num, file))
-    num_file_tuples.sort(reverse=True)
+    # Ties on play count break on recency, so equal counts read most recent
+    # first instead of by filename.
+    num_file_tuples.sort(
+        key=lambda pair: (pair[0], get_alc_or_last_ts(db_dict[pair[1]])), reverse=True
+    )
     return num_file_tuples
 
 

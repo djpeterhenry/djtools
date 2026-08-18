@@ -262,7 +262,13 @@ function compute() {
       let av = a[sortKey], bv = b[sortKey];
       if (sortKey === "name") return sortDir * av.localeCompare(bv);
       av = av === null ? -Infinity : av; bv = bv === null ? -Infinity : bv;
-      return sortDir * (av - bv);
+      if (av !== bv) return sortDir * (av - bv);
+      // Equal play counts read most recent first (and fully reverse when the
+      // header toggles direction).
+      if (sortKey === "plays" || sortKey === "plays_recent") {
+        return sortDir * (a.recency - b.recency);
+      }
+      return 0;
     });
   }
   render();

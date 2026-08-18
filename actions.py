@@ -467,8 +467,10 @@ def release_dates_discogs(n: int = None, retry: bool = False):
         if ts_count > 0:  # Only include songs that have been played
             process_files.append((ts_count, filename))
 
-    # Sort by play count (descending)
-    process_files.sort(reverse=True)
+    # Sort by play count (descending), ties broken on recency
+    process_files.sort(
+        key=lambda pair: (pair[0], aa.get_alc_or_last_ts(db_dict[pair[1]])), reverse=True
+    )
     if n is not None:
         process_files = process_files[:n]
 
