@@ -468,6 +468,11 @@ $("#sort").addEventListener("change", () => {
 });
 
 ["#search","#bpm","#bpmRange","#key","#years"].forEach(s => $(s).addEventListener("input", compute));
+$("#search").addEventListener("keydown", e => {
+  if (e.key === "Escape" && $("#search").value) {
+    e.preventDefault(); $("#search").value = ""; compute();
+  }
+});
 ["#bpmStar","#keyStar","#k1","#k2","#k3","#k4","#tag","#tagInvert","#vocal","#good","#needsGenre"]
   .forEach(s => $(s).addEventListener("change", compute));
 
