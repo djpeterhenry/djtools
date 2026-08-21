@@ -204,6 +204,17 @@ def play(ref: SongRef):
     return {"ok": True}
 
 
+@app.post("/api/touch")
+def touch(ref: SongRef):
+    """Stamp the song as played right now, so it sorts to the top of 'recent'."""
+    record = state.db_dict.get(ref.id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="unknown song")
+    aa.add_ts(record, time.time())
+    save_db()
+    return song_view(ref.id)
+
+
 def load(directory):
     if directory:
         os.chdir(directory)

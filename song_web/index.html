@@ -320,6 +320,7 @@ function render() {
         <button data-act="reveal" data-id="${enc(s.id)}" title="reveal sample in Finder">◎</button>
         <button data-act="copy" data-id="${enc(s.id)}" title="copy .alc for Ableton">⧉</button>
         <button data-act="play" data-id="${enc(s.id)}" title="play sample">▶</button>
+        <button data-act="touch" data-id="${enc(s.id)}" title="stamp played now (jumps to top of recent)">⏱</button>
       </td>
     </tr>`).join("");
   if (view.length > MAX) $("#rows").insertAdjacentHTML("beforeend",
@@ -346,7 +347,11 @@ $("#rows").addEventListener("click", async e => {
   if (x) { doTag(x.dataset.id, x.dataset.tag, "remove"); return; }
   const btn = e.target.closest("button[data-act]");
   if (btn) {
-    try { await api("/api/" + btn.dataset.act, {id: btn.dataset.id}); }
+    try {
+      const res = await api("/api/" + btn.dataset.act, {id: btn.dataset.id});
+      // touch returns the updated song (new ts): re-sort so it lands on top.
+      if (btn.dataset.act === "touch") replaceSong(res);
+    }
     catch (err) { alert(btn.dataset.act + " failed: " + err.message); }
   }
 });
