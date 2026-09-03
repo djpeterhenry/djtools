@@ -1042,19 +1042,20 @@ def update_with_rekordbox_history(db_dict, history_filename):
                 bracket_idx = title.find("[")
                 if bracket_idx >= 0:
                     title = title[:bracket_idx].strip()
-                stamp_song(db_dict, date_ts, index, artist, title)
+                # No real play time in the exported text: fall back to
+                # midnight-of-the-day plus track order.
+                stamp_song(db_dict, date_ts + index, artist, title)
             else:
                 print("{}: failed to match: {}".format(history_filename, line))
 
 
-def stamp_song(db_dict, date_ts, index, artist, title):
+def stamp_song(db_dict, ts, artist, title):
     filename = get_filename_unidecode_matching(artist, title, db_dict)
     if filename is None:
         print("Failure to stamp: {} - {}".format(artist, title))
         return
     record = db_dict[filename]
-    ts_to_write = date_ts + index
-    add_ts(record, ts_to_write)
+    add_ts(record, ts)
 
 
 def update_with_rekordbox_tags(db_dict, tags_filepath):

@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import datetime
 import json
 import logging
 import os
@@ -55,17 +56,43 @@ _p_history_name       = re.compile(r"HISTORY (\d+)-(\d+)-(\d+)$")
 _p_history_name_paren = re.compile(r"HISTORY (\d+)-(\d+)-(\d+) \((\d+)\)$")
 
 
+# A history row's created_at is only trusted as a real play time if it lands
+# inside this window after midnight of the session's date, so a bogus clock (or
+# a name/date mismatch) falls back to the old date-based stamp instead.
+HISTORY_CREATED_AT_MAX_AGE_SEC = 36 * 60 * 60
+
+
 def _parse_history_date_ts(name):
-    """Return date_ts for a history name, or None if it doesn't match."""
+    """Return (day_ts, date_ts) for a history name, or None if it doesn't match.
+
+    day_ts is midnight of the session's date; date_ts additionally carries the
+    "(N)" suffix offset that keeps same-day sessions apart.
+    """
     m = _p_history_name_paren.match(name) or _p_history_name.match(name)
     if not m:
         return None
     year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
     paren_num = int(m.group(4)) if len(m.groups()) == 4 else None
-    date_ts = aa.get_ts_for(year, month, day)
+    day_ts = aa.get_ts_for(year, month, day)
+    date_ts = day_ts
     if paren_num is not None:
         date_ts += 1000.0 * paren_num
-    return date_ts
+    return day_ts, date_ts
+
+
+def _history_song_ts(song, day_ts, date_ts, index):
+    """The real play time of a history row, else midnight-of-day plus track order.
+
+    Rekordbox records created_at (local time) on each history row as the track
+    is played, which is what we want: stamping the whole set at midnight makes
+    it sort *before* anything hand-stamped later the same day.
+    """
+    created_at = getattr(song, "created_at", None)
+    if isinstance(created_at, datetime.datetime):
+        ts = created_at.timestamp()
+        if day_ts <= ts < day_ts + HISTORY_CREATED_AT_MAX_AGE_SEC:
+            return ts
+    return date_ts + index
 
 
 def stamp_from_rekordbox_db():
@@ -89,7 +116,7 @@ def stamp_from_rekordbox_db():
             return
         print(f"Processing {len(new_histories)} new session(s) ({len(processed_ids)} already done).")
         for h in sorted(new_histories, key=lambda h: h.DateCreated):
-            date_ts = _parse_history_date_ts(h.Name)
+            day_ts, date_ts = _parse_history_date_ts(h.Name)
             songs = sorted(db.get_history_songs(HistoryID=h.ID), key=lambda s: s.TrackNo)
             for s in songs:
                 artist = s.Content.Artist.Name if s.Content.Artist else ""
@@ -97,7 +124,8 @@ def stamp_from_rekordbox_db():
                 bracket_idx = title.find("[")
                 if bracket_idx >= 0:
                     title = title[:bracket_idx].strip()
-                aa.stamp_song(db_dict, date_ts, s.TrackNo - 1, artist, title)
+                ts = _history_song_ts(s, day_ts, date_ts, s.TrackNo - 1)
+                aa.stamp_song(db_dict, ts, artist, title)
             if h.ID != most_recent_id:
                 processed_ids.add(h.ID)
             print(f"  {h.Name}: {len(songs)} track(s)")
