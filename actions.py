@@ -833,6 +833,13 @@ def stamp_from_rekordbox_db():
     export_rekordbox.stamp_from_rekordbox_db()
 
 
+def relink_samples(relink=False):
+    """Replace exported rekordbox sample copies with hardlinks to their source."""
+    export_rekordbox.relink_samples(
+        sample_path=export_rekordbox.REKORDBOX_LOCAL_SAMPLE_PATH, relink=relink
+    )
+
+
 def purge_incompatible_samples(delete=False):
     """Remove exported samples DJ hardware can't play so the next rekordbox_xml re-converts them."""
     export_rekordbox.purge_incompatible_samples(
@@ -888,6 +895,7 @@ if __name__ == "__main__":
             update_rekordbox_tags,  # also done as part of rekordbox_xml
             stamp_from_rekordbox_db,
             purge_incompatible_samples,
+            relink_samples,
             print_plays_per_year,
         ]
     )

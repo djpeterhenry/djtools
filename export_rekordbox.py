@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import concurrent.futures
 import datetime
+import filecmp
 import json
 import logging
 import os
@@ -254,6 +255,94 @@ def convert_to_compatible(source, target, stream):
     run_ffmpeg_convert(source, target, ["-c:a", "pcm_s16be", "-ar", str(rate)])
 
 
+def link_or_copy(source, target):
+    """Put an unconverted sample in the export dir, preferring a hardlink.
+
+    A copy here is byte-identical to its source, so a link spends no disk space
+    on a second full audio file.  Falls back to the copy when a link isn't
+    possible: a different volume (EXDEV) or a filesystem without hardlinks.
+    """
+    try:
+        os.link(source, target)
+    except OSError:
+        shutil.copy(source, target)
+
+
+def relink_samples(sample_path, relink):
+    """Replace exported copies with hardlinks to their source, reclaiming space.
+
+    Only touches a target that is byte-identical to the source it came from, so
+    a sample edited on either side is reported and left alone.  Converted
+    samples have no identical source and are skipped.
+    """
+    db_dict = aa.read_db_file()
+    files = aa.get_valid_alc_files(db_dict)
+
+    pairs = []
+    num_linked = 0
+    for f in files:
+        record = db_dict[f]
+        if not aa.use_for_rekordbox(record):
+            continue
+        source = aa.get_sample_unicode(record)
+        if source is None or not os.path.isfile(source):
+            continue
+        _, sample_ext = os.path.splitext(source)
+        target = aa.get_export_sample_path(f, sample_ext, sample_path)
+        if os.path.islink(target) or not os.path.isfile(target):
+            continue
+        target_stat = os.stat(target)
+        source_stat = os.stat(source)
+        if (target_stat.st_dev, target_stat.st_ino) == (
+            source_stat.st_dev,
+            source_stat.st_ino,
+        ):
+            num_linked += 1
+            continue
+        if target_stat.st_dev != source_stat.st_dev:
+            continue
+        if target_stat.st_size != source_stat.st_size:
+            print("Differs in size, skipping: {}".format(os.path.basename(target)))
+            continue
+        pairs.append((source, target, target_stat.st_size))
+
+    def check(pair):
+        source, target, size = pair
+        return pair, filecmp.cmp(source, target, shallow=False)
+
+    num_found = 0
+    num_differ = 0
+    bytes_saved = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        for (source, target, size), identical in pool.map(check, pairs):
+            if not identical:
+                num_differ += 1
+                print(
+                    "Differs in content, skipping: {}".format(os.path.basename(target))
+                )
+                continue
+            num_found += 1
+            bytes_saved += size
+            if relink:
+                # Link beside the target and rename over it, so an interruption
+                # never leaves the export without its sample.
+                temp_target = target + ".relink"
+                os.link(source, temp_target)
+                os.replace(temp_target, target)
+    print(
+        "{} of {} copied sample(s) {}, {} {:.1f} GB.".format(
+            num_found,
+            num_found + num_differ,
+            "relinked" if relink else "would be relinked",
+            "reclaiming" if relink else "which would reclaim",
+            bytes_saved / 1e9,
+        )
+    )
+    print("{} sample(s) already hardlinked.".format(num_linked))
+    if num_found and not relink:
+        print("Re-run with --relink to make the change.")
+
+
 def purge_incompatible_samples(sample_path, delete):
     """Remove exported samples DJ hardware can't play, so the next export redoes them.
 
@@ -349,7 +438,7 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
                 reason = get_incompatible_reason(stream)
                 if reason is None:
                     target = copy_target
-                    shutil.copy(sample, target)
+                    link_or_copy(sample, target)
                 else:
                     target = convert_target
                     print("Converting {}: {}".format(os.path.basename(sample), reason))
