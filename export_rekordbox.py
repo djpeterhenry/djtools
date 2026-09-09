@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import concurrent.futures
 import datetime
 import json
 import logging
@@ -165,6 +166,133 @@ def update_rekordbox_tags():
     aa.write_db_file(db_dict)
 
 
+# Audio specs every CDJ/XDJ generation can play.  Samples outside this get
+# re-encoded on export instead of copied, so a USB never trips rekordbox's "may
+# not be compatible with all DJ hardware" warning.  24-bit is deliberately left
+# alone: only the original CDJ-2000/900 balk at it.
+COMPATIBLE_SAMPLE_RATES = [44100, 48000]
+MAX_MP3_BIT_RATE = 320000
+
+# What anything needing conversion becomes, matching the .m4a/.flac path.
+CONVERT_EXTENSION = ".aiff"
+
+# Where an unsupported rate lands when we resample, keeping the same family.
+RATE_FALLBACK = {88200: 44100, 96000: 48000}
+
+
+def probe_audio_stream(path):
+    """Return ffprobe's first audio stream as a dict, or None if unreadable."""
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=codec_name,sample_rate,bits_per_raw_sample,bits_per_sample,bit_rate",
+        "-of",
+        "json",
+        path,
+    ]
+    try:
+        out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+        return json.loads(out)["streams"][0]
+    except (subprocess.CalledProcessError, ValueError, KeyError, IndexError):
+        return None
+
+
+def get_incompatible_reason(stream):
+    """Why DJ hardware might refuse this stream, or None if it plays everywhere."""
+    if stream is None:
+        # Unreadable: leave it alone rather than mangle it.
+        return None
+    codec = stream.get("codec_name") or ""
+    if codec == "mp3":
+        bit_rate = int(stream.get("bit_rate") or 0)
+        if bit_rate > MAX_MP3_BIT_RATE:
+            return "{} kbps mp3 (max {})".format(
+                bit_rate // 1000, MAX_MP3_BIT_RATE // 1000
+            )
+    elif codec.startswith("pcm_f"):
+        return "{} (no CDJ plays float)".format(codec)
+    elif codec.startswith("pcm_"):
+        bits = int(
+            stream.get("bits_per_raw_sample") or stream.get("bits_per_sample") or 0
+        )
+        if bits > 24:
+            return "{}-bit pcm (max 24)".format(bits)
+    rate = int(stream.get("sample_rate") or 0)
+    if rate not in COMPATIBLE_SAMPLE_RATES:
+        return "{} Hz (needs {})".format(
+            rate, " or ".join(str(r) for r in COMPATIBLE_SAMPLE_RATES)
+        )
+    return None
+
+
+def run_ffmpeg_convert(source, target, codec_args=()):
+    """Convert via a temp file so an interrupted run leaves no partial target."""
+    base, ext = os.path.splitext(target)
+    temp_target = base + ".partial" + ext
+    cmd = ["ffmpeg", "-y", "-i", source, *codec_args, temp_target]
+    try:
+        subprocess.check_call(cmd)
+    except BaseException:
+        if os.path.isfile(temp_target):
+            os.remove(temp_target)
+        raise
+    os.rename(temp_target, target)
+
+
+def convert_to_compatible(source, target, stream):
+    """Re-encode a sample DJ hardware would refuse into 16-bit CONVERT_EXTENSION.
+
+    Only the offending rate is changed, so a 44.1k float file stays at 44.1k.
+    """
+    rate = int(stream.get("sample_rate") or 0)
+    if rate not in COMPATIBLE_SAMPLE_RATES:
+        rate = RATE_FALLBACK.get(rate, 44100)
+    run_ffmpeg_convert(source, target, ["-c:a", "pcm_s16be", "-ar", str(rate)])
+
+
+def purge_incompatible_samples(sample_path, delete):
+    """Remove exported samples DJ hardware can't play, so the next export redoes them.
+
+    export_rekordbox_samples only builds a target that is missing, so deleting the
+    offenders is what makes the compatibility conversion apply retroactively.
+    """
+    files = [
+        os.path.join(sample_path, n)
+        for n in sorted(os.listdir(sample_path))
+        if not n.startswith(".") and os.path.isfile(os.path.join(sample_path, n))
+    ]
+
+    def check(path):
+        return path, get_incompatible_reason(probe_audio_stream(path))
+
+    num_found = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        for path, reason in pool.map(check, files):
+            if reason is None:
+                continue
+            num_found += 1
+            print(
+                "{} {}: {}".format(
+                    "Removing" if delete else "Would remove",
+                    os.path.basename(path),
+                    reason,
+                )
+            )
+            if delete:
+                os.remove(path)
+    print(
+        "{} of {} sample(s) {}.".format(
+            num_found, len(files), "removed" if delete else "would be removed"
+        )
+    )
+    if num_found and not delete:
+        print("Re-run with --delete, then re-export to convert them.")
+
+
 def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy):
     aa.update_db_clips_safe()
     aa.generate_lists()
@@ -189,18 +317,43 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
         _, sample_ext = os.path.splitext(sample)
         # convert
         if sample_ext.lower() in extensions_to_convert:
-            target = aa.get_export_sample_path(f, ".aiff", sample_path)
+            target = aa.get_export_sample_path(f, CONVERT_EXTENSION, sample_path)
             if not os.path.isfile(target):
-                cmd = ["ffmpeg", "-i", sample, target]
-                subprocess.check_call(cmd)
-        # copy
+                # A plain remux keeps the source rate, so a 96k flac would land
+                # as a 96k aiff: check here too, not just on the copy path.
+                stream = probe_audio_stream(sample)
+                reason = get_incompatible_reason(stream)
+                if reason is None:
+                    run_ffmpeg_convert(sample, target)
+                else:
+                    print("Converting {}: {}".format(os.path.basename(sample), reason))
+                    convert_to_compatible(sample, target, stream)
+        # copy, or convert when the specs would upset DJ hardware
         elif always_copy:
-            target = aa.get_export_sample_path(f, sample_ext, sample_path)
+            copy_target = aa.get_export_sample_path(f, sample_ext, sample_path)
+            convert_target = aa.get_export_sample_path(
+                f, CONVERT_EXTENSION, sample_path
+            )
             # At one point had symlinks.  This was a one-time fix:
-            if os.path.islink(target):
-                os.unlink(target)
-            if not os.path.exists(target):
-                shutil.copy(sample, target)
+            if os.path.islink(copy_target):
+                os.unlink(copy_target)
+            # Whether this sample gets copied or converted decides its extension,
+            # so check both names before probing: that keeps an ordinary export a
+            # pure existence check, with no ffprobe cost per track.
+            if os.path.isfile(convert_target):
+                target = convert_target
+            elif os.path.isfile(copy_target):
+                target = copy_target
+            else:
+                stream = probe_audio_stream(sample)
+                reason = get_incompatible_reason(stream)
+                if reason is None:
+                    target = copy_target
+                    shutil.copy(sample, target)
+                else:
+                    target = convert_target
+                    print("Converting {}: {}".format(os.path.basename(sample), reason))
+                    convert_to_compatible(sample, target, stream)
         else:
             # TODO(peter): I haven't tested this path recently since I always_copy
             assert False, "Untested code path"

@@ -833,6 +833,13 @@ def stamp_from_rekordbox_db():
     export_rekordbox.stamp_from_rekordbox_db()
 
 
+def purge_incompatible_samples(delete=False):
+    """Remove exported samples DJ hardware can't play so the next rekordbox_xml re-converts them."""
+    export_rekordbox.purge_incompatible_samples(
+        sample_path=export_rekordbox.REKORDBOX_LOCAL_SAMPLE_PATH, delete=delete
+    )
+
+
 def print_plays_per_year(alc_filename):
     db_dict = aa.read_db_file()
     record = db_dict[alc_filename]
@@ -880,6 +887,7 @@ if __name__ == "__main__":
             demucs,
             update_rekordbox_tags,  # also done as part of rekordbox_xml
             stamp_from_rekordbox_db,
+            purge_incompatible_samples,
             print_plays_per_year,
         ]
     )
