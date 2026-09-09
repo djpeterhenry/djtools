@@ -174,6 +174,21 @@ def update_rekordbox_tags():
 COMPATIBLE_SAMPLE_RATES = [44100, 48000]
 MAX_MP3_BIT_RATE = 320000
 
+# A CDJ picks its parser from the extension, so a file whose real container
+# disagrees with its name is unplayable however good the audio is: mp3 frames
+# wrapped in RIFF/WAVE but named .mp3 are the case seen in practice.
+EXTENSION_CONTAINERS = {
+    ".mp3": "mp3",
+    ".wav": "wav",
+    ".aiff": "aiff",
+    ".aif": "aiff",
+}
+
+# ffprobe reports plain AIFF and AIFF-C alike as the "aiff" container, so the
+# byte-swapped ("sowt") variant only shows up as a little-endian pcm codec.
+# CDJs want canonical big-endian AIFF.
+AIFF_EXTENSIONS = (".aiff", ".aif")
+
 # What anything needing conversion becomes, matching the .m4a/.flac path.
 CONVERT_EXTENSION = ".aiff"
 
@@ -190,24 +205,43 @@ def probe_audio_stream(path):
         "-select_streams",
         "a:0",
         "-show_entries",
-        "stream=codec_name,sample_rate,bits_per_raw_sample,bits_per_sample,bit_rate",
+        "stream=codec_name,sample_rate,bits_per_raw_sample,bits_per_sample,bit_rate"
+        ":format=format_name",
         "-of",
         "json",
         path,
     ]
     try:
         out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
-        return json.loads(out)["streams"][0]
+        probed = json.loads(out)
+        stream = probed["streams"][0]
+        # Folded in beside the stream fields so callers keep passing one dict.
+        stream["format_name"] = probed.get("format", {}).get("format_name", "")
+        return stream
     except (subprocess.CalledProcessError, ValueError, KeyError, IndexError):
         return None
 
 
-def get_incompatible_reason(stream):
-    """Why DJ hardware might refuse this stream, or None if it plays everywhere."""
+def get_incompatible_reason(stream, path):
+    """Why DJ hardware might refuse this file, or None if it plays everywhere.
+
+    `path` is the name the sample will carry on the USB, which decides how a
+    CDJ parses it -- so it is checked against the container ffprobe actually
+    found, not just the audio specs.
+    """
     if stream is None:
         # Unreadable: leave it alone rather than mangle it.
         return None
     codec = stream.get("codec_name") or ""
+    ext = os.path.splitext(path)[1].lower()
+    expected_container = EXTENSION_CONTAINERS.get(ext)
+    if expected_container is not None:
+        # ffprobe can name several containers for one format, e.g. "mov,mp4,m4a".
+        containers = (stream.get("format_name") or "").lower().split(",")
+        if containers != [""] and expected_container not in containers:
+            return "a {} container named {}".format(containers[0], ext)
+    if ext in AIFF_EXTENSIONS and codec.endswith("le"):
+        return "byte-swapped AIFF-C ({}, needs big-endian)".format(codec)
     if codec == "mp3":
         bit_rate = int(stream.get("bit_rate") or 0)
         if bit_rate > MAX_MP3_BIT_RATE:
@@ -356,14 +390,22 @@ def purge_incompatible_samples(sample_path, delete):
     ]
 
     def check(path):
-        return path, get_incompatible_reason(probe_audio_stream(path))
+        return path, get_incompatible_reason(probe_audio_stream(path), path)
 
     num_found = 0
+    same_path = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
         for path, reason in pool.map(check, files):
             if reason is None:
                 continue
             num_found += 1
+            # Everything incompatible comes back as CONVERT_EXTENSION, so a
+            # sample already carrying that extension is rewritten in place.
+            # Rekordbox reads a track's specs once and never re-reads them, and
+            # the exported XML carries no SampleRate/BitDepth to correct it, so
+            # those keep warning on export until re-imported by hand.
+            if os.path.splitext(path)[1].lower() == CONVERT_EXTENSION:
+                same_path.append(path)
             print(
                 "{} {}: {}".format(
                     "Removing" if delete else "Would remove",
@@ -378,6 +420,16 @@ def purge_incompatible_samples(sample_path, delete):
             num_found, len(files), "removed" if delete else "would be removed"
         )
     )
+    if same_path:
+        print(
+            "\n{} sample(s) will be rebuilt at the same path, so rekordbox will"
+            " keep the stale specs it already recorded.  Remove and re-add these"
+            " in rekordbox after the export so it re-analyses them:".format(
+                len(same_path)
+            )
+        )
+        for path in same_path:
+            print("  {}".format(path))
     if num_found and not delete:
         print("Re-run with --delete, then re-export to convert them.")
 
@@ -411,7 +463,10 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
                 # A plain remux keeps the source rate, so a 96k flac would land
                 # as a 96k aiff: check here too, not just on the copy path.
                 stream = probe_audio_stream(sample)
-                reason = get_incompatible_reason(stream)
+                # `stream` describes the source, so vet it under the source's
+                # own name: ffmpeg writes a fresh container for `target`, and
+                # a .m4a/.flac legitimately differs from the .aiff it becomes.
+                reason = get_incompatible_reason(stream, sample)
                 if reason is None:
                     run_ffmpeg_convert(sample, target)
                 else:
@@ -435,7 +490,9 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
                 target = copy_target
             else:
                 stream = probe_audio_stream(sample)
-                reason = get_incompatible_reason(stream)
+                # A copy keeps the source extension, so copy_target is the name
+                # the sample would carry on the USB.
+                reason = get_incompatible_reason(stream, copy_target)
                 if reason is None:
                     target = copy_target
                     link_or_copy(sample, target)

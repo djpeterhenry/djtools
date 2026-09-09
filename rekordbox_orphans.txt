@@ -1,0 +1,32 @@
+# Orphaned rekordbox collection entries: file missing, replaced by .aiff
+# All 14 are in 0 playlists. Safe to delete from the collection.
+# Verified replacement exists for every one.
+
+/Users/peter/Music/PioneerDJ/LocalSamples/Chuckie - Moombah (Afrojack Remix).mp3
+    rekordbox: 32000Hz/16bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Claire - Games (Freeze).wav
+    rekordbox: 44100Hz/32bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Dennis Ferrer - Hey Hey (Acapella) (Freeze).wav
+    rekordbox: 44100Hz/32bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/EmalKay - Fabrication (Original Mix) (Freeze).wav
+    rekordbox: 44100Hz/32bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Kaskade vs. Martin Garrix & Victor Niglio - Turn It Down Animals (Kaskade's Festival Mash Up) (Freeze).wav
+    rekordbox: 44100Hz/32bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Levar Burton & Rickie Lee Jones - Little Fluffy Clouds Interview.mp3
+    rekordbox: 22050Hz/16bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Luis Fonsi, Daddy Yankee, Justin Bieber - Despacito (Remix) (Freeze).wav
+    rekordbox: 44100Hz/32bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Mike Posner - I Took A Pill In Ibiza (SeeB Remix) (Freeze 2).wav
+    rekordbox: 44100Hz/32bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/OutKast - Hey Ya! (Freeze).wav
+    rekordbox: 44100Hz/32bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Rhianna - Where Have U Been (Hills & Loozbone Edit).wav
+    rekordbox: 44100Hz/32bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Ruso - The Word (Extended Mix).wav
+    rekordbox: 48000Hz/32bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Sesame Street - What Is A Computer.mp3
+    rekordbox: 22050Hz/16bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Survivor - Eye Of The Tiger (Haywyre Remix).wav
+    rekordbox: 44100Hz/32bit  playlists=0  replacement_ok=True
+/Users/peter/Music/PioneerDJ/LocalSamples/Wet - You're the Best (Freeze).wav
+    rekordbox: 44100Hz/32bit  playlists=0  replacement_ok=True
