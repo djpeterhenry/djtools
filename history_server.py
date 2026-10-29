@@ -264,7 +264,9 @@ NOW_PLAYING_HTML = """\
     top: %(msg_vertical_pct)d%%;
     left: 50%%;
     transform: translateX(-50%%);
-    max-width: %(msg_max_width_pct)d%%;
+    width: max-content;
+    max-width: %(msg_max_width_pct)dvw;
+    white-space: pre-line;
     text-align: center;
     color: %(msg_color)s;
     font-weight: bold;
@@ -364,7 +366,8 @@ function showMessage(text, displayMs) {
   const el = document.getElementById("message");
   if (!text) { el.style.opacity = "0"; return; }
   if (displayMs === undefined) displayMs = MSG_DISPLAY_SECONDS * 1000;
-  const size = Math.max(MSG_FONT_MIN, Math.round(MSG_FONT_MAX * Math.sqrt(MSG_SCALE_CHARS / Math.max(text.length, MSG_SCALE_CHARS))));
+  const longest = Math.max(...text.split("\\n").map(l => l.length));
+  const size = Math.max(MSG_FONT_MIN, Math.round(MSG_FONT_MAX * Math.sqrt(MSG_SCALE_CHARS / Math.max(longest, MSG_SCALE_CHARS))));
   el.style.fontSize = size + "px";
   el.textContent = text;
   el.style.transition = "opacity 0.3s ease-in";
@@ -670,7 +673,9 @@ class Handler(BaseHTTPRequestHandler):
             body = self.rfile.read(length)
             try:
                 data = json.loads(body)
-                text = data.get("text", "").strip()
+                # "\" in the input starts a new line on the overlay
+                lines = data.get("text", "").split("\\")
+                text = "\n".join(line.strip() for line in lines).strip()
             except (json.JSONDecodeError, AttributeError):
                 self.send_error(400, "Invalid JSON")
                 return
