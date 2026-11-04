@@ -33,14 +33,14 @@ NOW_STALE_MINUTES = 10  # show "Waiting for update" if last track is older than 
 MSG_FONT_MAX = 100       # px, font size for short messages
 MSG_FONT_MIN = 36        # px, minimum font size
 MSG_SCALE_CHARS = 20     # messages longer than this shrink the font
-MSG_DISPLAY_SECONDS = 60 # seconds to show message before fade-out begins
+MSG_DISPLAY_SECONDS = 30 # seconds to show message before fade-out begins
 MSG_FADE_SECONDS = 3     # fade-out duration in seconds
 MSG_VERTICAL_PCT = 30    # % from top of screen (35 = just above centre)
 MSG_COLOR = "white"
 MSG_MAX_WIDTH_PCT = 85   # max width as % of screen width
 
 
-_message_state = {"text": "", "set_at": None}
+_message_state = {"text": "", "set_at": None, "duration": MSG_DISPLAY_SECONDS}
 _suppressed_tail = 0
 _last_history_count = 0
 
@@ -354,7 +354,7 @@ async function pollMessage() {
         showMessage("");
       } else {
         const age = Date.now() - new Date(data.set_at).getTime();
-        const remaining = MSG_DISPLAY_SECONDS * 1000 - age;
+        const remaining = (data.duration || MSG_DISPLAY_SECONDS) * 1000 - age;
         if (remaining > 0) showMessage(data.text, remaining);
       }
     }
@@ -506,9 +506,14 @@ MESSAGE_INPUT_HTML = """\
   }
   h1 { color: #e94560; font-size: 1.2em; margin-bottom: 16px; }
   input[type=text] {
-    width: 100%; box-sizing: border-box;
+    width: 100%%; box-sizing: border-box;
     background: #2a2a3e; color: #eee; border: 1px solid #444;
     padding: 12px; font-size: 1.1em; border-radius: 4px; margin-bottom: 10px;
+  }
+  .duration { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  input[type=number] {
+    width: 90px; background: #2a2a3e; color: #eee; border: 1px solid #444;
+    padding: 10px; font-size: 1em; border-radius: 4px;
   }
   .buttons { display: flex; gap: 10px; }
   button {
@@ -523,31 +528,39 @@ MESSAGE_INPUT_HTML = """\
 <body>
 <h1>Overlay message</h1>
 <input type="text" id="msg" placeholder="Type message..." autofocus>
+<div class="duration">
+  <label for="duration">Show for</label>
+  <input type="number" id="duration" min="1" step="1" value="%(default_seconds)d">
+  <span>seconds</span>
+</div>
 <div class="buttons">
   <button id="send-btn" onclick="send()">Send</button>
   <button id="clear-btn" onclick="clearMsg()">Clear</button>
 </div>
 <p id="status"></p>
 <script>
-document.getElementById("msg").addEventListener("keydown", e => {
-  if (e.key === "Enter") send();
-});
+for (const id of ["msg", "duration"]) {
+  document.getElementById(id).addEventListener("keydown", e => {
+    if (e.key === "Enter") send();
+  });
+}
 async function send() {
   const text = document.getElementById("msg").value.trim();
   if (!text) return;
-  await post(text);
+  const duration = parseInt(document.getElementById("duration").value, 10) || %(default_seconds)d;
+  await post(text, duration);
   document.getElementById("msg").value = "";
-  setStatus("Sent: " + text);
+  setStatus("Sent (" + duration + "s): " + text);
 }
 async function clearMsg() {
   await post("");
   setStatus("Cleared.");
 }
-async function post(text) {
+async function post(text, duration) {
   await fetch("/api/message", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({text}),
+    body: JSON.stringify({text, duration}),
   });
 }
 function setStatus(msg) {
@@ -643,7 +656,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "text/html")
             self.send_no_cache()
             self.end_headers()
-            self.write(MESSAGE_INPUT_HTML.encode())
+            self.write((MESSAGE_INPUT_HTML % {"default_seconds": MSG_DISPLAY_SECONDS}).encode())
         elif self.path == "/":
             page = (HTML % {"poll_ms": POLL_INTERVAL * 1000}).encode()
             self.send_response(200)
@@ -676,11 +689,15 @@ class Handler(BaseHTTPRequestHandler):
                 # "\" in the input starts a new line on the overlay
                 lines = data.get("text", "").split("\\")
                 text = "\n".join(line.strip() for line in lines).strip()
-            except (json.JSONDecodeError, AttributeError):
+                duration = int(data.get("duration") or MSG_DISPLAY_SECONDS)
+                if duration < 1:
+                    raise ValueError
+            except (json.JSONDecodeError, AttributeError, TypeError, ValueError):
                 self.send_error(400, "Invalid JSON")
                 return
             _message_state["text"] = text
             _message_state["set_at"] = datetime.now().isoformat() if text else None
+            _message_state["duration"] = duration
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -709,8 +726,6 @@ if __name__ == "__main__":
     print()
     endpoints = [
         ("/",                 "History page"),
-        ("/suppress-input",   "Suppress history tail"),
-        ("/message-input",    "Send overlay message"),
         ("/now",              "Now-playing overlay (transparent bg)"),
         ("/now-debug",        "Now-playing overlay (black bg)"),
         ("/now-debug-test",   "Now-playing overlay (black bg, test data)"),
@@ -722,6 +737,19 @@ if __name__ == "__main__":
     for path, desc in endpoints:
         url = f"{base}{path}"
         print(f"  {url:<40} {desc}")
+    # Interactive pages printed last and highlighted so they're easy to spot
+    # and Cmd-click. The URL is kept clear of ANSI codes so terminals detect it.
+    controls = [
+        ("SEND MESSAGE",  "/message-input"),
+        ("SUPPRESS TAIL", "/suppress-input"),
+    ]
+    bold_yellow, reset = "\033[1;33m", "\033[0m"
+    print()
+    print(f"{bold_yellow}{'=' * 60}{reset}")
+    for label, path in controls:
+        print(f"{bold_yellow}  >> {label:<14}{reset} {base}{path}")
+    print(f"{bold_yellow}{'=' * 60}{reset}")
+    print()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
