@@ -1,10 +1,4 @@
-from __future__ import print_function
-
-import sys
-if sys.version_info[0] == 3:
-    import tkinter as tk
-else:
-    import Tkinter as tk
+import tkinter as tk
 
 
 class EntryText:
@@ -29,14 +23,10 @@ class EntryText:
         # TODO: callback before set?
         self.stringvar = tk.StringVar(root)
         self.stringvar.set(initial_value)
-        self.stringvar.trace("w", lambda name, index, mode: self.update())
+        self.stringvar.trace_add("write", lambda name, index, mode: self.update())
 
-        if take_focus:
-            takefocus_num = 1
-        else:
-            takefocus_num = 0
         self.entry = tk.Entry(
-            root, textvariable=self.stringvar, width=text_width, takefocus=takefocus_num
+            root, textvariable=self.stringvar, width=text_width, takefocus=int(take_focus)
         )
 
         self.entry.bind("<Escape>", self.key_escape)
@@ -47,14 +37,13 @@ class EntryText:
         self.entry.pack(side=tk.LEFT)
 
     def update(self):
-        print("update")
         self.update_int()
         self.update_fun()
 
     def update_int(self):
         if not self.int_only:
             return
-        parse_int = self.parse_int()
+        parse_int = self.get_int()
 
         # if invalid, set to last
         # otherwise we have a valid int!
@@ -100,13 +89,7 @@ class EntryText:
     def get_int(self):
         try:
             return int(self.stringvar.get())
-        except:
-            return None
-
-    def parse_int(self):
-        try:
-            return int(self.stringvar.get())
-        except:
+        except ValueError:
             return None
 
     def set(self, x):

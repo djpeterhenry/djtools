@@ -1,13 +1,7 @@
-from __future__ import print_function
-
 import os
+import tkinter as tk
 
-import sys
-
-if sys.version_info[0] == 3:
-    import tkinter as tk
-else:
-    import Tkinter as tk
+import ableton_aid as aa
 
 
 class ListsSelector:
@@ -23,28 +17,21 @@ class ListsSelector:
             return
 
         self.string_var = tk.StringVar(root)
-        self.string_var.trace("w", lambda a, b, c: self.update())
+        self.string_var.trace_add("write", lambda a, b, c: self.update())
         self.option_menu = tk.OptionMenu(
             root, self.string_var, *self.update_and_get_names()
         )
         self.option_menu.pack(side=tk.LEFT)
 
         self.disabled_var = tk.IntVar(root)
-        self.disabled_var.trace("w", lambda a, b, c: self.update())
+        self.disabled_var.trace_add("write", lambda a, b, c: self.update())
         disabled_key_button = tk.Checkbutton(
             root, text="*", variable=self.disabled_var, takefocus=0
         )
         disabled_key_button.pack(side=tk.LEFT)
 
     def update_and_get_names(self):
-        files = [os.path.join(self.path, f) for f in os.listdir(self.path)]
-        self.name_to_file = {}
-        for f in files:
-            if not os.path.isfile(f):
-                continue
-            name, ext = os.path.splitext(os.path.basename(f))
-            if ext in (".txt", "") and not name.startswith("."):
-                self.name_to_file[name] = f
+        self.name_to_file = aa.get_list_name_to_file(self.path)
         names_to_list = [""] + sorted(self.name_to_file.keys(), key=lambda x: x.lower())
         return names_to_list
 
@@ -52,11 +39,13 @@ class ListsSelector:
         if self.disabled_var.get():
             self.song_list = None
         else:
-            try:
-                with open(self.name_to_file[self.string_var.get()]) as f:
-                    self.song_list = [song.strip() for song in f.readlines()]
-            except:
+            # the blank "no list" entry has no file
+            list_file = self.name_to_file.get(self.string_var.get())
+            if list_file is None:
                 self.song_list = None
+            else:
+                with open(list_file) as f:
+                    self.song_list = [song.strip() for song in f.readlines()]
         # inform of update
         if self.update_function:
             self.update_function()
@@ -68,16 +57,9 @@ class ListsSelector:
     def get_song_list(self, db_dict):
         if not self.song_list:
             return None
+        # Songs not in the db stay as their raw line
         result = []
         for s in self.song_list:
-            alc_filename = s + ".alc"
-            als_filename = s + ".als"
-            if s in db_dict:
-                result.append(s)
-            elif als_filename in db_dict:
-                result.append(als_filename)
-            elif alc_filename in db_dict:
-                result.append(alc_filename)
-            else:
-                result.append(s)
+            _, filename = aa.get_song_in_db(s, db_dict)
+            result.append(filename or s)
         return result

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3.11
 
-from __future__ import print_function
-
 import ableton_aid as aa
 import export_rekordbox
 import argh
@@ -13,7 +11,6 @@ import re
 import pprint
 import discogs_client
 from urllib.parse import quote_plus
-import typing as T
 import demucs as demucs_py
 import shutil
 from tag import Tag
@@ -518,7 +515,7 @@ def _get_suspicious_discogs_years(db_dict):
         if year > first_year:
             scored.append((year - first_year, first_year, filename))
     scored.sort(reverse=True)
-    return [(gap, first_year, f) for gap, first_year, f in scored]
+    return scored
 
 
 def recheck_release_dates_discogs(n: int = 50, write: bool = False):
@@ -657,7 +654,7 @@ def summarize_years():
 
 
 def release_dates_manual(
-    order_by_date: bool = True, search_terms: T.Optional[T.List[str]] = None
+    order_by_date: bool = True, search_terms: list[str] | None = None
 ):
     """Manually enter release dates for files that don't have one.
 
@@ -845,6 +842,7 @@ def purge_incompatible_samples(delete=False):
 
 
 def print_plays_per_year(alc_filename):
+    """Print how many days per year a song was played."""
     db_dict = aa.read_db_file()
     record = db_dict[alc_filename]
     timestamps = aa.get_ts_list_date_limited(record)

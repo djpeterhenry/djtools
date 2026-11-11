@@ -1,18 +1,11 @@
-from __future__ import print_function
-
-import sys
-
-if sys.version_info[0] == 3:
-    import tkinter as tk
-else:
-    import Tkinter as tk
+import tkinter as tk
 
 
 class Checkbox(object):
     def __init__(self, parent, text, callback=None):
         self.var = tk.IntVar(parent)
         if callback is not None:
-            self.var.trace("w", callback)
+            self.var.trace_add("write", callback)
         self.button = tk.Checkbutton(parent, text=text, variable=self.var, takefocus=0)
         self.button.pack(side=tk.LEFT)
 

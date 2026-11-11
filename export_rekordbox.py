@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import concurrent.futures
 import datetime
 import filecmp
@@ -24,7 +22,6 @@ LISTS_PLAYLISTS = True
 
 REKORDBOX_SAMPLE_PATH = "/Volumes/music/rekordbox_samples"
 REKORDBOX_LOCAL_SAMPLE_PATH = "/Users/peter/Music/PioneerDJ/LocalSamples"
-REKORDBOX_HISTORY_PATH = "/Users/peter/Documents/rekordbox_history"
 REKORDBOX_TAGS_PATH = "/Users/peter/Documents/rekordbox_tags"
 REKORDBOX_PROCESSED_IDS_FILE = "rekordbox_processed_ids.json"
 
@@ -125,10 +122,7 @@ def stamp_from_rekordbox_db():
             songs = sorted(db.get_history_songs(HistoryID=h.ID), key=lambda s: s.TrackNo)
             for s in songs:
                 artist = s.Content.Artist.Name if s.Content.Artist else ""
-                title = s.Content.Title or ""
-                bracket_idx = title.find("[")
-                if bracket_idx >= 0:
-                    title = title[:bracket_idx].strip()
+                title = aa.strip_title_tags(s.Content.Title or "")
                 ts = _history_song_ts(s, day_ts, date_ts, s.TrackNo - 1)
                 aa.stamp_song(db_dict, ts, artist, title)
             if h.ID != most_recent_id:
@@ -139,20 +133,6 @@ def stamp_from_rekordbox_db():
 
     with open(REKORDBOX_PROCESSED_IDS_FILE, "w") as f:
         json.dump(list(processed_ids), f)
-    aa.write_db_file(db_dict)
-
-
-def stamp_from_all_recordbox_history_files():
-    if not os.path.isdir(REKORDBOX_HISTORY_PATH):
-        print(f"REKORDBOX_HISTORY_PATH not found: {REKORDBOX_HISTORY_PATH}")
-        return
-
-    db_dict = aa.read_db_file()
-
-    for fn in os.listdir(REKORDBOX_HISTORY_PATH):
-        history_filepath = os.path.join(REKORDBOX_HISTORY_PATH, fn)
-        aa.update_with_rekordbox_history(db_dict, history_filepath)
-
     aa.write_db_file(db_dict)
 
 
@@ -321,7 +301,7 @@ def relink_samples(sample_path, relink):
         record = db_dict[f]
         if not aa.use_for_rekordbox(record):
             continue
-        source = aa.get_sample_unicode(record)
+        source = aa.get_sample(record)
         if source is None or not os.path.isfile(source):
             continue
         _, sample_ext = os.path.splitext(source)
@@ -437,7 +417,7 @@ def purge_incompatible_samples(sample_path, delete):
         print("Re-run with --delete, then re-export to convert them.")
 
 
-def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy):
+def export_rekordbox_samples(sample_path, sample_key, convert_flac):
     aa.update_db_clips_safe()
     aa.generate_lists()
 
@@ -454,7 +434,7 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
         record = db_dict[f]
         if not aa.use_for_rekordbox(record):
             continue
-        sample = aa.get_sample_unicode(record)
+        sample = aa.get_sample(record)
         if sample is None:
             print("Failed to get sample for {}".format(f))
             continue
@@ -476,7 +456,7 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
                     print("Converting {}: {}".format(os.path.basename(sample), reason))
                     convert_to_compatible(sample, target, stream)
         # copy, or convert when the specs would upset DJ hardware
-        elif always_copy:
+        else:
             copy_target = aa.get_export_sample_path(f, sample_ext, sample_path)
             convert_target = aa.get_export_sample_path(
                 f, CONVERT_EXTENSION, sample_path
@@ -503,10 +483,6 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac, always_copy)
                     target = convert_target
                     print("Converting {}: {}".format(os.path.basename(sample), reason))
                     convert_to_compatible(sample, target, stream)
-        else:
-            # TODO(peter): I haven't tested this path recently since I always_copy
-            assert False, "Untested code path"
-            target = sample
         assert os.path.isfile(target)
         record[sample_key] = target
     aa.write_db_file(db_dict)
@@ -556,10 +532,6 @@ def get_beat_relative_to_marker(ref_marker, seconds):
     return get_beat_for_seconds(
         ref_marker.beat_time, ref_marker.sec_time, seconds, ref_marker.bpm
     )
-
-
-def set_folder_count(et):
-    et.set("Count", str(len(et)))
 
 
 def set_playlist_count(et):
@@ -893,7 +865,6 @@ def export_rekordbox_xml(rekordbox_filename):
         sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
         sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
         convert_flac=True,
-        always_copy=True,
     )
 
     db_dict = aa.read_db_file()
@@ -1202,14 +1173,13 @@ def export_rekordbox_xml(rekordbox_filename):
     et_filter_folder = add_folder(et_version_node, "BPM Filter")
     add_bpm_playlists(et_filter_folder, new_files)
 
-    # Rediscover (last played/edited 1-5 years ago)
+    # Rediscover (last played/edited 1-10 years ago)
     et_rediscover_folder = add_folder(et_version_node, "Rediscover")
     add_rediscover_playlists(et_rediscover_folder)
 
     # Key (only for CDJ)
-    if True:
-        et_filter_folder = add_folder(et_version_node, "Key Filter")
-        add_key_playlists(et_filter_folder)
+    et_filter_folder = add_folder(et_version_node, "Key Filter")
+    add_key_playlists(et_filter_folder)
 
     print("Total playlists: {}".format(adder.playlists_added))
 

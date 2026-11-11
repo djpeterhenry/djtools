@@ -603,68 +603,24 @@ def render_now_playing(now_bg, api_url):
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path in ("/api/history", "/api/history-test"):
-            if self.path == "/api/history-test":
-                data = get_test_history_songs()
-            else:
-                global _suppressed_tail, _last_history_count
-                data = get_latest_history_songs()
-                raw_count = len(data.get("songs", []))
-                if raw_count > _last_history_count:
-                    _suppressed_tail = 0
-                _last_history_count = raw_count
-                if _suppressed_tail > 0 and data.get("songs"):
-                    data = dict(data)
-                    data["songs"] = data["songs"][:-_suppressed_tail]
-            payload = json.dumps(data).encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_no_cache()
-            self.end_headers()
-            self.write(payload)
+        if self.path == "/api/history-test":
+            self.send_json(get_test_history_songs())
+        elif self.path == "/api/history":
+            self.send_json(self.suppressed_history())
         elif self.path == "/api/suppress":
-            payload = json.dumps({"count": _suppressed_tail}).encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_no_cache()
-            self.end_headers()
-            self.write(payload)
+            self.send_json({"count": _suppressed_tail})
         elif self.path == "/api/message":
-            payload = json.dumps(_message_state).encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_no_cache()
-            self.end_headers()
-            self.write(payload)
+            self.send_json(_message_state)
         elif self.path in ("/now", "/now-debug", "/now-debug-test"):
             api_url = "/api/history-test" if self.path == "/now-debug-test" else "/api/history"
             now_bg = "transparent" if self.path == "/now" else "black"
-            page = render_now_playing(now_bg, api_url)
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html")
-            self.send_no_cache()
-            self.end_headers()
-            self.write(page)
-            return
+            self.send_html(render_now_playing(now_bg, api_url))
         elif self.path == "/suppress-input":
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html")
-            self.send_no_cache()
-            self.end_headers()
-            self.write((SUPPRESS_INPUT_HTML % {"stale_minutes": NOW_STALE_MINUTES}).encode())
+            self.send_html(SUPPRESS_INPUT_HTML % {"stale_minutes": NOW_STALE_MINUTES})
         elif self.path == "/message-input":
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html")
-            self.send_no_cache()
-            self.end_headers()
-            self.write((MESSAGE_INPUT_HTML % {"default_seconds": MSG_DISPLAY_SECONDS}).encode())
+            self.send_html(MESSAGE_INPUT_HTML % {"default_seconds": MSG_DISPLAY_SECONDS})
         elif self.path == "/":
-            page = (HTML % {"poll_ms": POLL_INTERVAL * 1000}).encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html")
-            self.send_no_cache()
-            self.end_headers()
-            self.write(page)
+            self.send_html(HTML % {"poll_ms": POLL_INTERVAL * 1000})
         else:
             self.send_error(404, f"Unknown endpoint: {self.path}")
 
@@ -672,16 +628,10 @@ class Handler(BaseHTTPRequestHandler):
         global _suppressed_tail
         if self.path == "/api/suppress":
             _suppressed_tail += 1
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.write(json.dumps({"count": _suppressed_tail}).encode())
+            self.send_json({"count": _suppressed_tail})
         elif self.path == "/api/unsuppress":
             _suppressed_tail = max(0, _suppressed_tail - 1)
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.write(json.dumps({"count": _suppressed_tail}).encode())
+            self.send_json({"count": _suppressed_tail})
         elif self.path == "/api/message":
             length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(length)
@@ -699,20 +649,44 @@ class Handler(BaseHTTPRequestHandler):
             _message_state["text"] = text
             _message_state["set_at"] = datetime.now().isoformat() if text else None
             _message_state["duration"] = duration
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.write(json.dumps({"ok": True}).encode())
+            self.send_json({"ok": True})
         else:
             self.send_error(404, f"Unknown endpoint: {self.path}")
+
+    @staticmethod
+    def suppressed_history():
+        """The latest history minus any suppressed tail.
+
+        A newly played track clears the suppression.
+        """
+        global _suppressed_tail, _last_history_count
+        data = get_latest_history_songs()
+        raw_count = len(data["songs"])
+        if raw_count > _last_history_count:
+            _suppressed_tail = 0
+        _last_history_count = raw_count
+        if _suppressed_tail > 0 and data["songs"]:
+            data = dict(data)
+            data["songs"] = data["songs"][:-_suppressed_tail]
+        return data
+
+    def send_json(self, data):
+        self.send_body(json.dumps(data).encode(), "application/json")
+
+    def send_html(self, page):
+        self.send_body(page if isinstance(page, bytes) else page.encode(), "text/html")
+
+    def send_body(self, body, content_type):
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_no_cache()
+        self.end_headers()
+        self.wfile.write(body)
 
     def send_no_cache(self):
         self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
         self.send_header("Pragma", "no-cache")
         self.send_header("Expires", "0")
-
-    def write(self, data):
-        self.wfile.write(data)
 
     def log_message(self, format, *args):
         pass  # quiet

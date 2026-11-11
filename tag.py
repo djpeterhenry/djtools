@@ -1,4 +1,3 @@
-# from "pip install enum34"
 from enum import Enum
 
 

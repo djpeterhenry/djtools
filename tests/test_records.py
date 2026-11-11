@@ -138,7 +138,6 @@ def test_get_sample():
 
 def test_get_sample_with_none_clip():
     assert aa.get_sample({"clip": None}) is None
-    assert aa.get_sample_unicode({"clip": None}) is None
 
 
 def test_get_existing_rekordbox_sample(tmp_path):

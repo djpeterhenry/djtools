@@ -1,16 +1,8 @@
 #!/usr/bin/env python3.11
 
-from __future__ import print_function
-
 import sys
-
-
-if sys.version_info[0] == 3:
-    import tkinter as tk
-    import tkinter.messagebox as tkm
-else:
-    import Tkinter as tk
-    import tkMessageBox as tkm
+import tkinter as tk
+import tkinter.messagebox as tkm
 
 # My helper UI classes
 from entry_text import EntryText
@@ -20,7 +12,6 @@ from check_box import Checkbox
 
 import os
 import argparse
-import random
 import subprocess
 import time
 
@@ -131,8 +122,8 @@ class App:
 
         self.order_list = self.get_order_list()
         self.order_var = tk.StringVar(frame_top)
-        self.order_var.trace(
-            "w", lambda name, index, mode: self.generate_and_set_from_current_button()
+        self.order_var.trace_add(
+            "write", lambda name, index, mode: self.generate_and_set_from_current_button()
         )
         self.order_var.set(self.order_list[0])
         for s in self.order_list:
@@ -195,7 +186,7 @@ class App:
         self.key_star = Checkbox(frame_edit, "*", just_update)
 
         self.tag_var = tk.StringVar(master)
-        self.tag_var.trace("w", just_update)
+        self.tag_var.trace_add("write", just_update)
         self.tag_list_menu = tk.OptionMenu(frame_edit, self.tag_var, *tag_list)
         self.tag_list_menu.config(width=TAG_WIDTH)
         self.tag_list_menu.pack(side=tk.LEFT)
@@ -382,20 +373,10 @@ class App:
         # create the numbers from the filter
         # currently just need acceptable camelot numbers (ignore major minor)
         cam_filter_numbers = []
-        key_filter_range = 0
         do_key_filter = not self.key_star.get()
-        if do_key_filter and cam_filter and key_filter_range is not None:
+        if do_key_filter and cam_filter:
             cam_filter_num = int(cam_filter[:-1])
             cam_filter_numbers.append(cam_filter_num)
-            # add range
-            for i in range(0, key_filter_range + 1):
-                # python % is always positive
-                cam_filter_numbers.append(
-                    aa.get_relative_camelot_key(cam_filter_num, i)
-                )
-                cam_filter_numbers.append(
-                    aa.get_relative_camelot_key(cam_filter_num, -i)
-                )
             # add variables
             if self.key_1.get():
                 cam_filter_numbers.append(
@@ -639,14 +620,6 @@ class App:
             return None
         return self.active_alc_files[index]
 
-    def get_filename_for_index(self, index):
-        result = None
-        try:
-            result = self.active_alc_files[index]
-        except IndexError:
-            pass
-        return result
-
     def ts_filename(self, filename):
         record = self.db_dict[filename]
         ts = time.time()
@@ -660,13 +633,6 @@ class App:
         # and finally reveal if wanted
         if bool(self.reveal_var.get()):
             self.file_action_reveal(filename)
-
-    def file_action(self):
-        filename = self.get_selected_filename()
-        if not filename:
-            return
-        # switch here
-        self.file_action_copy_ableton(filename)
 
     def add_ts_from_copy(self, filename):
         if filename == self.last_copied_filename:
@@ -821,31 +787,24 @@ class App:
 
     def generate_and_set_from_current_button(self):
         t = time.time()
-        self.list_to_use = self.valid_alc_files
-        # ignore 'name'...it's the default
-        if self.order_var.get() == "bpm":
-            self.list_to_use = self.generate_bpm()
-        elif self.order_var.get() == "date":
-            self.list_to_use = self.generate_date()
-        elif self.order_var.get() == "date+alc":
-            self.list_to_use = self.generate_date_plus_alc()
-        elif self.order_var.get() == "sample":
-            self.list_to_use = self.generate_sample()
-        elif self.order_var.get() == "alc":
-            self.list_to_use = self.generate_alc()
-        elif self.order_var.get() == "random":
-            self.list_to_use = self.generate_random()
-        elif self.order_var.get() == "key":
-            self.list_to_use = self.generate_key()
-        elif self.order_var.get() == "num":
-            self.list_to_use = self.generate_num()
+        generators = {
+            "bpm": self.generate_bpm,
+            "date": self.generate_date,
+            "date+alc": self.generate_date_plus_alc,
+            "sample": self.generate_sample,
+            "alc": self.generate_alc,
+            "random": self.generate_random,
+            "key": self.generate_key,
+            "num": self.generate_num,
+        }
+        # anything else ('name') keeps the default alphabetical order
+        generate = generators.get(self.order_var.get())
+        self.list_to_use = generate() if generate else self.valid_alc_files
         print("[time] generate_and_set_from_current_button:", str(time.time() - t))
         self.update_listbox()
 
     def generate_random(self):
-        files = list(self.valid_alc_files)
-        random.shuffle(files)
-        return files
+        return aa.generate_random(self.valid_alc_files)
 
     def generate_date(self):
         return aa.generate_date(self.valid_alc_files, self.db_dict)

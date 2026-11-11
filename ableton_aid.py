@@ -1,5 +1,4 @@
 # Created on May 14, 2009
-from __future__ import print_function
 
 import sys
 import os
@@ -12,21 +11,12 @@ import time
 import datetime
 from collections import defaultdict
 import json
-import io
 from timing import timing
 from unidecode import unidecode
 
 from tag import Tag
 
 
-try:
-    UNICODE_EXISTS = bool(type(unicode))
-except NameError:
-    from six import u as unicode
-
-
-# DB_FILENAME = "aadb.txt"
-DB_FILENAME = "aadb_unicode.txt"
 DATABASE_JSON = "database.json"
 
 DISCOGS_TOKEN_FILE = os.path.expanduser("~/.config/djtools/discogs_token")
@@ -44,6 +34,7 @@ def get_discogs_token():
         sys.exit(
             "No discogs token: set DISCOGS_TOKEN or put it in " + DISCOGS_TOKEN_FILE
         )
+
 
 ABLETON_EXTENSIONS = [".alc", ".als"]
 SAMPLE_EXTENSIONS = [".mp3", ".m4a", ".wav", ".aiff", ".flac"]
@@ -104,13 +95,6 @@ def project_path_from_alc_filename(alc_filename):
     return os.path.dirname(os.path.dirname(os.path.abspath(alc_filename)))
 
 
-# Make input be raw_input on python2
-try:
-    input = raw_input
-except NameError:
-    pass
-
-
 def get_int(prompt_string):
     ui = input(prompt_string)
     try:
@@ -147,23 +131,6 @@ def get_display_name(filename, record):
     return result
 
 
-@timing
-def read_db_file_pickle():
-    db_dict = None
-    if os.path.exists(DB_FILENAME):
-        db_file = open(DB_FILENAME)
-        try:
-            db_dict = cPickle.load(db_file)
-            # print ("Loaded: " + DB_FILENAME)
-        except:
-            print("Error opening pickle file...")
-            sys.exit(1)
-    else:
-        print("Will create new: " + DB_FILENAME)
-        db_dict = {}
-    return db_dict
-
-
 def rotate_file(filename):
     MAX_BACKUP = 50
 
@@ -182,45 +149,31 @@ def rotate_file(filename):
         dst = "{}.{}".format(filename, x + 1)
         force_move(src, dst)
 
-    # use last value for "src" as the backup target for filename
-    force_move(filename, src)
+    force_move(filename, "{}.1".format(filename))
     assert not os.path.isfile(filename)
 
 
 @timing
-def write_db_file_pickle(db_dict):
-    rotate_file(DB_FILENAME)
-    with open(DB_FILENAME, "w") as db_file:
-        cPickle.dump(db_dict, db_file)
-    print("Wrote: " + DB_FILENAME)
+def read_db_file(filename=DATABASE_JSON):
+    assert os.path.isfile(filename)
+    with open(filename, "r", encoding="utf8") as json_file:
+        return json.load(json_file)
 
 
 @timing
-def write_db_json(db_dict):
-    # Serialize and write beside the db before touching it, so a failure at any
-    # point leaves the current database.json in place.
+def write_db_file(db_dict, rotate=True):
+    """Atomically replace database.json, first rotating it into the backups.
+
+    Serialized and written beside the db before touching it, so a failure at any
+    point leaves the current database.json in place.
+    """
     data = json.dumps(db_dict, ensure_ascii=False)
     tmp = DATABASE_JSON + ".tmp"
-    with io.open(tmp, "w", encoding="utf8") as json_file:
+    with open(tmp, "w", encoding="utf8") as json_file:
         json_file.write(data)
-    rotate_file(DATABASE_JSON)
+    if rotate:
+        rotate_file(DATABASE_JSON)
     os.replace(tmp, DATABASE_JSON)
-
-
-@timing
-def read_db_json(filename=DATABASE_JSON):
-    assert os.path.isfile(filename)
-    with io.open(filename, "r", encoding="utf8") as json_file:
-        db_dict = json.load(json_file)
-    return db_dict
-
-
-def read_db_file(filename=DATABASE_JSON):
-    return read_db_json(filename)
-
-
-def write_db_file(db_dict):
-    write_db_json(db_dict)
 
 
 def get_tags(record):
@@ -513,49 +466,6 @@ def get_key_from_keyfinder_cli(sample_fullpath):
     return result.decode("utf8").strip()
 
 
-def get_key_from_keyfinder_old(sample_fullpath):
-    # This was the old way, leaving here for reference for a while, because this didn't need keyfinder-cli
-    """
-    Sort of. Call the executable with the command line arguments -f filepath to
-    have the key estimate printed to stdout (and/or any errors to stderr).
-    If you also use the switch -w it will try and write to tags.
-    Preferences from the GUI are used to determine the exact operation of the CLI.
-
-    Don't forget that the Mac binary is buried in the .app bundle,
-    so your command line will look something like:
-    ./KeyFinder.app/Contents/MacOS/KeyFinder -f ~/Music/my_track.mp3 [-w]
-    """
-    if sample_fullpath is None:
-        return None
-    keyfinder_app = "/Applications/KeyFinder.app/Contents/MacOS/KeyFinder"
-    command = '"%s" -f "%s"' % (keyfinder_app, sample_fullpath)
-    result = subprocess.check_output(command, shell=True)
-    return result.decode("utf8")
-
-
-# TODO(peter): This function is no longer used anywhere
-def get_clips_from_als(als_filename):
-    xml_root = alc_to_xml(als_filename)
-    audio_clips = xml_root.findall(".//AudioClip")
-    result = []
-    for clip in audio_clips:
-        name = clip.find("Name").attrib["Value"]
-        time = float(clip.attrib["Time"])
-        # only those which actually appear
-        # no because some mixes actually start at 0
-        # if time <= 0: continue
-        result.append((time, name))
-    result.sort()
-    # in sorted list, remove sequential dups
-    unique_result = []
-    previous_name = None
-    for t, n in result:
-        if previous_name is None or n != previous_name:
-            unique_result.append((t, n))
-        previous_name = n
-    return unique_result
-
-
 def generate_camelot_dict():
     camelot_list = [
         "Ab",
@@ -811,31 +721,21 @@ def get_sample(record):
     return clip["sample"]
 
 
+def _generate_ts_pairs(valid_alc_files, db_dict, get_ts):
+    """(ts, file) pairs, newest first (ties broken by reverse filename)."""
+    return sorted(((get_ts(db_dict[f]), f) for f in valid_alc_files), reverse=True)
+
+
 def generate_alc_pairs(valid_alc_files, db_dict):
-    tuples = []
-    for f in valid_alc_files:
-        tuples.append((get_alc_ts(db_dict[f]), f))
-    tuples.sort()
-    tuples.reverse()
-    return tuples
+    return _generate_ts_pairs(valid_alc_files, db_dict, get_alc_ts)
 
 
 def generate_date_pairs(valid_alc_files, db_dict):
-    tuples = []
-    for f in valid_alc_files:
-        tuples.append((get_last_ts(db_dict[f]), f))
-    tuples.sort()
-    tuples.reverse()
-    return tuples
+    return _generate_ts_pairs(valid_alc_files, db_dict, get_last_ts)
 
 
 def generate_date_plus_alc_pairs(valid_alc_files, db_dict):
-    tuples = []
-    for f in valid_alc_files:
-        tuples.append((get_alc_or_last_ts(db_dict[f]), f))
-    tuples.sort()
-    tuples.reverse()
-    return tuples
+    return _generate_ts_pairs(valid_alc_files, db_dict, get_alc_or_last_ts)
 
 
 def generate_num_alc_pairs(valid_alc_files, db_dict, ts_after):
@@ -988,22 +888,15 @@ def get_artist_and_track(filename):
     return (unidecode(artist.strip()), unidecode(track.strip()))
 
 
-def get_sample_unicode(record):
-    return get_sample(record)
-
-
 def get_export_sample_path(f, sample_ext, target_path):
     f_base, _ = os.path.splitext(f)
     return os.path.join(target_path, f_base + sample_ext)
 
 
 def get_existing_rekordbox_sample(record, sample_key):
-    try:
-        sample = record[sample_key]
-        if os.path.isfile(sample):
-            return sample
-    except:
-        pass
+    sample = record.get(sample_key)
+    if sample and os.path.isfile(sample):
+        return sample
     return None
 
 
@@ -1062,42 +955,9 @@ def get_list_from_file(filename, db_dict):
         return display_and_file
 
 
-def update_with_rekordbox_history(db_dict, history_filename):
-    # get date from filename
-    p_filename = re.compile(r"HISTORY (\d+)-(\d+)-(\d+)\.txt")
-    p_filename_paren = re.compile(r"HISTORY (\d+)-(\d+)-(\d+) \((\d+)\)\.txt")
-    m_filename = p_filename.match(os.path.basename(history_filename))
-    m_filename_paren = p_filename_paren.match(os.path.basename(history_filename))
-    if m_filename_paren:
-        year = int(m_filename_paren.group(1))
-        month = int(m_filename_paren.group(2))
-        day = int(m_filename_paren.group(3))
-        paren_num = int(m_filename_paren.group(4))
-    elif m_filename:
-        year = int(m_filename.group(1))
-        month = int(m_filename.group(2))
-        day = int(m_filename.group(3))
-        paren_num = None
-    else:
-        return
-    date_ts = get_ts_for(year, month, day)
-    if paren_num is not None:
-        date_ts += 1000.0 * paren_num
-
-    with io.open(history_filename, encoding="utf-16le") as h:
-        for index, line in enumerate(h.readlines()[1:]):
-            parts = line.split("\t")
-            if len(parts) >= 3:
-                artist = parts[1].strip()
-                title = parts[2].strip()
-                bracket_idx = title.find("[")
-                if bracket_idx >= 0:
-                    title = title[:bracket_idx].strip()
-                # No real play time in the exported text: fall back to
-                # midnight-of-the-day plus track order.
-                stamp_song(db_dict, date_ts + index, artist, title)
-            else:
-                print("{}: failed to match: {}".format(history_filename, line))
+def strip_title_tags(title):
+    """Drop the [#tag] suffixes the rekordbox export appends to track names."""
+    return title.split("[")[0].strip()
 
 
 def stamp_song(db_dict, ts, artist, title):
@@ -1117,7 +977,7 @@ def update_with_rekordbox_tags(db_dict, tags_filepath):
         return
     tag = Tag[tag_str]
 
-    with io.open(tags_filepath, encoding="utf-16le") as f:
+    with open(tags_filepath, encoding="utf-16le") as f:
         # Obtain the track and artist column indices
         header = f.readline().strip().split("\t")
         artist_col = header.index("Artist")
@@ -1126,8 +986,7 @@ def update_with_rekordbox_tags(db_dict, tags_filepath):
         for line in f.readlines():
             columns = line.strip().split("\t")
             artist = columns[artist_col]
-            title = columns[title_col]
-            title = title.split("[")[0].strip()
+            title = strip_title_tags(columns[title_col])
             filename = get_filename_unidecode_matching(artist, title, db_dict)
             if filename is None:
                 print(f"Failure to tag: {artist} - {title}")
@@ -1148,7 +1007,7 @@ def generate_lists(output_path=COLLECTION_FOLDER, push=True):
     files = get_rekordbox_files(db_dict)
 
     def write_files(filename, alc_filenames_to_write):
-        with io.open(
+        with open(
             os.path.join(output_path, filename), "w", encoding="utf-8"
         ) as outfile:
             for f in alc_filenames_to_write:

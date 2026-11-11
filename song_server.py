@@ -14,8 +14,6 @@ Then open http://localhost:8765
 
 import argparse
 import datetime
-import io
-import json
 import os
 import subprocess
 import time
@@ -107,17 +105,10 @@ def known_tags():
 def save_db():
     """Atomically write database.json; rotate a backup at most every few min."""
     now = time.time()
-    if (
-        now - state.last_backup > BACKUP_MIN_INTERVAL_SEC
-        and os.path.exists(aa.DATABASE_JSON)
-    ):
-        aa.rotate_file(aa.DATABASE_JSON)  # moves current -> .1 (current now gone)
+    rotate = now - state.last_backup > BACKUP_MIN_INTERVAL_SEC
+    aa.write_db_file(state.db_dict, rotate=rotate)
+    if rotate:
         state.last_backup = now
-    tmp = aa.DATABASE_JSON + ".tmp"
-    data = json.dumps(state.db_dict, ensure_ascii=False)
-    with io.open(tmp, "w", encoding="utf8") as f:
-        f.write(data)
-    os.replace(tmp, aa.DATABASE_JSON)
 
 
 app = FastAPI()

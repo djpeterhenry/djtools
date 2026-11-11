@@ -290,7 +290,7 @@ def test_export_rekordbox_samples(songs_dir, write_db, tmp_path, monkeypatch):
     monkeypatch.setattr(er, "run_ffmpeg_convert", fake_convert)
     monkeypatch.setattr(er, "convert_to_compatible", fake_convert)
 
-    er.export_rekordbox_samples(str(export), aa.REKORDBOX_LOCAL_SAMPLE_KEY, convert_flac=True, always_copy=True)
+    er.export_rekordbox_samples(str(export), aa.REKORDBOX_LOCAL_SAMPLE_KEY, convert_flac=True)
 
     assert sorted(converted) == [
         ("float.wav", "Float.aiff", True),
@@ -307,7 +307,7 @@ def test_export_rekordbox_samples(songs_dir, write_db, tmp_path, monkeypatch):
     # a second export only checks existence
     converted.clear()
     monkeypatch.setattr(er, "probe_audio_stream", lambda p: pytest.fail("probed again"))
-    er.export_rekordbox_samples(str(export), aa.REKORDBOX_LOCAL_SAMPLE_KEY, convert_flac=True, always_copy=True)
+    er.export_rekordbox_samples(str(export), aa.REKORDBOX_LOCAL_SAMPLE_KEY, convert_flac=True)
     assert converted == []
 
 
