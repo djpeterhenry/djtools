@@ -3,7 +3,7 @@
 import argh
 import subprocess
 
-def demucs(input_filename, output_base_folder, model_name="htdemucs"):
+def demucs(input_filename: str, output_base_folder: str, model_name: str = "htdemucs") -> bool:
     command = [
         "demucs",
         "-d", "cpu",

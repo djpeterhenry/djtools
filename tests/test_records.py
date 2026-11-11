@@ -4,6 +4,7 @@ import pytest
 
 import ableton_aid as aa
 from conftest import DAY, make_record
+from db_types import Record
 
 
 def test_tags():
@@ -20,7 +21,7 @@ def test_tags():
 
 
 def test_add_tag_without_tags_list():
-    record = {"bpm": 120}
+    record: Record = {"bpm": 120}
     aa.add_tag(record, "GOOD")
     assert record["tags"] == ["GOOD"]
 
@@ -29,7 +30,7 @@ def test_add_missing_tags_and_transfer():
     source = make_record(
         bpm=100, key="Am", tags=["vocal", "GOOD"], release_year_manual=1999, ts_list=[1.0]
     )
-    target = {"bpm": 90}
+    target: Record = {"bpm": 90}
     aa.transfer_shared_record_fields(source, target)
     # existing fields win, missing ones are copied, plays are not
     assert target == {
@@ -67,7 +68,7 @@ def test_ts_helpers(fixed_now):
     aa.add_ts(record, fixed_now + 5)
     aa.add_ts(record, fixed_now + 5)
     assert record["ts_list"].count(fixed_now + 5) == 1
-    new = {}
+    new: Record = {}
     aa.add_ts(new, 7.0)
     assert new["ts_list"] == [7.0]
 
@@ -132,7 +133,7 @@ def test_get_date_from_ts():
 
 
 def test_get_sample():
-    assert aa.get_sample({"clip": {"sample": "../x.aiff"}}) == "../x.aiff"
+    assert aa.get_sample(make_record(clip={"sample": "../x.aiff"})) == "../x.aiff"
     assert aa.get_sample({}) is None
 
 
@@ -143,10 +144,9 @@ def test_get_sample_with_none_clip():
 def test_get_existing_rekordbox_sample(tmp_path):
     sample = tmp_path / "s.aiff"
     sample.write_bytes(b"")
-    key = aa.REKORDBOX_LOCAL_SAMPLE_KEY
-    assert aa.get_existing_rekordbox_sample({key: str(sample)}, key) == str(sample)
-    assert aa.get_existing_rekordbox_sample({key: str(tmp_path / "gone")}, key) is None
-    assert aa.get_existing_rekordbox_sample({}, key) is None
+    assert aa.get_existing_rekordbox_sample({"rekordbox_local_sample": str(sample)}) == str(sample)
+    assert aa.get_existing_rekordbox_sample({"rekordbox_local_sample": str(tmp_path / "gone")}) is None
+    assert aa.get_existing_rekordbox_sample({}) is None
 
 
 def test_extension_helpers():

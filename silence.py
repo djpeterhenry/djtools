@@ -6,16 +6,17 @@ import subprocess
 import argh
 
 import ableton_aid as aa
+from db_types import Record
 
 
-def _seconds_label(seconds):
+def _seconds_label(seconds: float) -> str:
     """'5s' for whole numbers, '5.5s' otherwise."""
     if float(seconds).is_integer():
         return "{}s".format(int(seconds))
     return "{}s".format(seconds)
 
 
-def silence(alc_filename, seconds: float = 5.0):
+def silence(alc_filename: str, seconds: float = 5.0) -> None:
     """
     Create a Rekordbox-ready copy of a song with `seconds` of silence prepended
     to the audio and every warp marker shifted forward to compensate.
@@ -61,7 +62,7 @@ def silence(alc_filename, seconds: float = 5.0):
         )
         return
 
-    sample_filepath = os.path.abspath(record["clip"]["sample"])
+    sample_filepath = os.path.abspath(audioclip["sample"])
     if not os.path.isfile(sample_filepath):
         print(f"Sample file {sample_filepath} does not exist.")
         return
@@ -100,7 +101,7 @@ def silence(alc_filename, seconds: float = 5.0):
         return
 
     # Add a record for the new song, carrying over metadata and tags.
-    new_record = {}
+    new_record: Record = {}
     aa.transfer_shared_record_fields(record, new_record)
     db_dict[new_alc_filename] = new_record
     aa.write_db_file(db_dict)

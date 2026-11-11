@@ -16,6 +16,7 @@ import subprocess
 import time
 
 import ableton_aid as aa
+from db_types import Record
 from tag import Tag, REKORDBOX_GENRE_TAGS, REKORDBOX_GENRE_TAG_VALUE_SET
 from timing import timing
 
@@ -34,12 +35,12 @@ class App:
         "(weidner)",
     ]
 
-    def get_order_list(self):
+    def get_order_list(self) -> list[str]:
         # Supported: 'key' 'name'
         # return ['bpm', 'alc', 'sample', 'date', 'date+alc', 'num', 'random']
         return ["date+alc", "num", "alc", "random"]
 
-    def __init__(self, master, include_extra):
+    def __init__(self, master: tk.Tk, include_extra: bool) -> None:
         if os.path.exists(LOCK_FILEPATH):
             raise RuntimeError("Locked: {}".format(LOCK_FILEPATH))
 
@@ -89,7 +90,7 @@ class App:
         frame_top = tk.Frame(master)
         frame_top.pack(side=tk.TOP, fill=tk.X)
 
-        def just_update(a, b, c):
+        def just_update(a: str, b: str, c: str) -> None:
             self.update_listbox()
 
         self.entry_filter = EntryText(
@@ -153,8 +154,8 @@ class App:
         frame_edit.pack(side=tk.TOP, fill=tk.X)
 
         # extra stuff...put it first on line 2
-        self.entry_bpm_edit = None
-        self.entry_key_edit = None
+        self.entry_bpm_edit: EntryText | None = None
+        self.entry_key_edit: EntryText | None = None
 
         if include_extra:
             self.entry_bpm_edit = EntryText(
@@ -280,22 +281,22 @@ class App:
         # stale lock behind.
         open(LOCK_FILEPATH, "a").close()
 
-    def quit_handler(self):
+    def quit_handler(self) -> None:
         try:
             self.save_dialog()
         finally:
             os.remove(LOCK_FILEPATH)
         sys.exit(0)
 
-    def listbox_select(self, ignore):
+    def listbox_select(self, ignore: object) -> None:
         self.listbox_target_string = self.get_selected_string()
         self.listbox_target_filename = self.get_selected_filename()
         self.refresh_edit()
 
-    def refresh_edit(self):
+    def refresh_edit(self) -> None:
         selected_filename = self.get_selected_filename()
-        record = self.db_dict.get(selected_filename, {})
-        new_bpm = record.get("bpm", "")
+        record: Record = self.db_dict.get(selected_filename, {}) if selected_filename else {}
+        new_bpm = str(record.get("bpm", ""))
         new_key = record.get("key", "")
         # only update if UI elements exist
         if self.entry_bpm_edit:
@@ -303,7 +304,7 @@ class App:
         if self.entry_key_edit:
             self.entry_key_edit.stringvar.set(new_key)
 
-    def get_tag_list(self):
+    def get_tag_list(self) -> list[str]:
         result = []
         result.append("")
         result.extend(Tag.list())
@@ -317,7 +318,7 @@ class App:
                     others.add(tag)
         result.extend(sorted(others))
 
-        def exclude(tag):
+        def exclude(tag: str) -> bool:
             for pattern in self.hidden_tag_pattern_list:
                 if pattern in tag:
                     return True
@@ -327,7 +328,7 @@ class App:
         return result
 
     @timing
-    def update_listbox(self):
+    def update_listbox(self) -> None:
 
         try:
             self.listbox
@@ -346,8 +347,8 @@ class App:
         ss_selected = bool(self.tag_ss.get())
 
         # prepare min / max filters
-        min_plays = self.min_amount.get_int()
-        max_plays = self.max_amount.get_int()
+        min_plays = self.min_amount.get_int() or 0
+        max_plays = self.max_amount.get_int() or 0
 
         # prepare key filter
         # split = self.key_filter_string.split()
@@ -424,7 +425,7 @@ class App:
                 filename_pairs_list.append((filename, None))
                 continue
 
-            bpm, tag_list, key = (record["bpm"], aa.get_tags(record), record.get("key", ""))
+            bpm, tag_list, key = (record.get("bpm", 0), aa.get_tags(record), record.get("key", ""))
             play_count = aa.get_ts_date_count(record)
 
             keep = True
@@ -586,21 +587,21 @@ class App:
         self.count_label_var.set(str(len(filename_pairs_list)))
         print("Listbox length:", len(filename_pairs_list))
 
-    def update_bpm_edit(self):
+    def update_bpm_edit(self) -> None:
         filename = self.get_selected_filename()
-        if not filename:
+        if not filename or self.entry_bpm_edit is None:
             return
-        record = self.db_dict[filename]
-        record["bpm"] = self.entry_bpm_edit.get_int()
+        bpm = self.entry_bpm_edit.get_int()
+        if bpm is not None:
+            self.db_dict[filename]["bpm"] = bpm
 
-    def update_key_edit(self):
+    def update_key_edit(self) -> None:
         filename = self.get_selected_filename()
-        if not filename:
+        if not filename or self.entry_key_edit is None:
             return
-        record = self.db_dict[filename]
-        record["key"] = self.entry_key_edit.stringvar.get()
+        self.db_dict[filename]["key"] = self.entry_key_edit.stringvar.get()
 
-    def get_selected_index(self):
+    def get_selected_index(self) -> int | None:
         selected_items = self.listbox.curselection()
         try:
             index = int(selected_items[0])
@@ -608,24 +609,24 @@ class App:
             return None
         return index
 
-    def get_selected_string(self):
+    def get_selected_string(self) -> str | None:
         index = self.get_selected_index()
         if index is None:
             return None
         return self.listbox.get(index)
 
-    def get_selected_filename(self):
+    def get_selected_filename(self) -> str | None:
         index = self.get_selected_index()
         if index is None:
             return None
         return self.active_alc_files[index]
 
-    def ts_filename(self, filename):
+    def ts_filename(self, filename: str) -> None:
         record = self.db_dict[filename]
         ts = time.time()
         aa.add_ts(record, ts)
 
-    def command_copy(self):
+    def command_copy(self) -> None:
         filename = self.get_selected_filename()
         if not filename:
             return
@@ -634,73 +635,67 @@ class App:
         if bool(self.reveal_var.get()):
             self.file_action_reveal(filename)
 
-    def add_ts_from_copy(self, filename):
+    def add_ts_from_copy(self, filename: str) -> None:
         if filename == self.last_copied_filename:
             return
         self.last_copied_filename = filename
         self.ts_filename(filename)
 
-    def file_action_copy_ableton(self, filename):
+    def file_action_copy_ableton(self, filename: str) -> None:
         aa.copy_file_to_clipboard(os.path.abspath(filename))
         self.add_ts_from_copy(filename)
 
-    def file_action_reveal(self, filename):
+    def file_action_reveal(self, filename: str) -> None:
         # sample = aa.get_sample(self.db_dict[filename])
         record = self.db_dict[filename]
-        sample = aa.get_existing_rekordbox_sample(
-            record, sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY
-        )
+        sample = aa.get_existing_rekordbox_sample(record)
         if sample is None:
             return
         aa.reveal_file(sample)
         self.add_ts_from_copy(filename)
 
-    def file_action_play_vlc(self, filename):
+    def file_action_play_vlc(self, filename: str) -> None:
         sample = aa.get_sample(self.db_dict[filename])
         command = ["open", sample]
         subprocess.call(command)
 
     # for use with p shortcut key
-    def command_play_filename(self):
+    def command_play_filename(self) -> None:
         filename = self.get_selected_filename()
         if not filename:
             return
         self.file_action_play_vlc(filename)
 
-    def command_export_list(self):
+    def command_export_list(self) -> None:
         for filename in self.active_alc_files:
             print(filename)
 
-    def command_tag_add(self):
+    def command_tag_add(self) -> None:
         filename = self.get_selected_filename()
         if not filename:
             return
         tag = self.tag_var.get()
         self.add_tag_to_filename(filename=filename, tag=tag)
 
-    def command_tag_remove(self):
+    def command_tag_remove(self) -> None:
         filename = self.get_selected_filename()
         if not filename:
             return
         tag = self.tag_var.get()
         if not tag:
             return
-        record = self.db_dict[filename]
-        try:
-            record["tags"].remove(tag)
-        except ValueError:
-            pass
+        aa.remove_tag(self.db_dict[filename], tag)
         self.update_listbox()
 
-    def save_dialog(self):
+    def save_dialog(self) -> None:
         do_save = tkm.askokcancel("Confirm Save", "Save database?")
         if do_save:
             aa.write_db_file(self.db_dict)
 
-    def command_save(self):
-        return self.save_dialog()
+    def command_save(self) -> None:
+        self.save_dialog()
 
-    def add_tag_to_filename(self, filename, tag, add_timestamp=False):
+    def add_tag_to_filename(self, filename: str, tag: str, add_timestamp: bool = False) -> None:
         if not tag:
             return
         record = self.db_dict[filename]
@@ -710,57 +705,59 @@ class App:
         # some old indexing code
         old_index = self.get_selected_index()
         self.update_listbox()
+        if old_index is None:
+            return
         self.listbox.activate(old_index)
         self.listbox.see(old_index)
         self.listbox.selection_set(old_index)
 
-    def remove_tag_from_filename(self, filename, tag):
+    def remove_tag_from_filename(self, filename: str, tag: str) -> None:
         if not tag:
             return
         record = self.db_dict[filename]
         aa.remove_tag(record, tag)
 
-    def command_g(self):
+    def command_g(self) -> None:
         filename = self.get_selected_filename()
         if not filename:
             return
         tag = Tag.GOOD_TAG.value
         self.add_tag_to_filename(filename=filename, tag=tag, add_timestamp=True)
 
-    def command_b(self):
+    def command_b(self) -> None:
         filename = self.get_selected_filename()
         if not filename:
             return
         self.remove_tag_from_filename(filename=filename, tag=Tag.GOOD_TAG.value)
         self.update_listbox()
 
-    def command_h(self):
+    def command_h(self) -> None:
         filename = self.get_selected_filename()
         if not filename:
             return
         tag = Tag.HIDE_GENRE.value
         self.add_tag_to_filename(filename=filename, tag=tag)
 
-    def command_l(self):
+    def command_l(self) -> None:
         filename = self.get_selected_filename()
         if not filename:
             return
         self.remove_tag_from_filename(filename=filename, tag=Tag.NO_LYRICS.value)
         self.add_tag_to_filename(filename=filename, tag=Tag.LYRICS.value)
 
-    def command_n(self):
+    def command_n(self) -> None:
         filename = self.get_selected_filename()
         if not filename:
             return
         self.remove_tag_from_filename(filename=filename, tag=Tag.LYRICS.value)
         self.add_tag_to_filename(filename=filename, tag=Tag.NO_LYRICS.value)
 
-    def command_clear_min_max(self):
+    def command_clear_min_max(self) -> None:
         print("clear min max")
         self.min_amount.set(0)
         self.max_amount.set(0)
 
-    def command_order_down(self):
+    def command_order_down(self) -> None:
         print("command_order_down")
         var = self.order_var.get()
         which = self.order_list.index(var)
@@ -769,7 +766,7 @@ class App:
             which = len(self.order_list) - 1
         self.order_var.set(self.order_list[which])
 
-    def command_order_up(self):
+    def command_order_up(self) -> None:
         print("command_order_up")
         var = self.order_var.get()
         which = self.order_list.index(var)
@@ -778,14 +775,14 @@ class App:
             which = 0
         self.order_var.set(self.order_list[which])
 
-    def command_clear(self):
+    def command_clear(self) -> None:
         self.command_clear_min_max()
         self.entry_filter.clear()
         self.entry_bpm.clear()
         self.entry_key_filter.clear()
         # TODO CLEAR TAG DROPDOWN
 
-    def generate_and_set_from_current_button(self):
+    def generate_and_set_from_current_button(self) -> None:
         t = time.time()
         generators = {
             "bpm": self.generate_bpm,
@@ -803,30 +800,30 @@ class App:
         print("[time] generate_and_set_from_current_button:", str(time.time() - t))
         self.update_listbox()
 
-    def generate_random(self):
+    def generate_random(self) -> list[str]:
         return aa.generate_random(self.valid_alc_files)
 
-    def generate_date(self):
+    def generate_date(self) -> list[str]:
         return aa.generate_date(self.valid_alc_files, self.db_dict)
 
-    def generate_alc(self):
+    def generate_alc(self) -> list[str]:
         return aa.generate_alc(self.valid_alc_files, self.db_dict)
 
-    def generate_date_plus_alc(self):
+    def generate_date_plus_alc(self) -> list[str]:
         return aa.generate_date_plus_alc(self.valid_alc_files, self.db_dict)
 
-    def generate_sample(self):
+    def generate_sample(self) -> list[str]:
         return aa.generate_sample(self.valid_alc_files, self.db_dict)
 
-    def generate_bpm(self):
+    def generate_bpm(self) -> list[str]:
         bpm_file_tuples = []
         for file in self.valid_alc_files:
             record = self.db_dict[file]
-            bpm_file_tuples.append((record["bpm"], file))
+            bpm_file_tuples.append((record.get("bpm", 0), file))
         bpm_file_tuples.sort()
         return [file for _, file in bpm_file_tuples]
 
-    def generate_key(self):
+    def generate_key(self) -> list[str]:
         key_file_tuples = []
         for file in self.valid_alc_files:
             record = self.db_dict[file]
@@ -840,18 +837,18 @@ class App:
         key_file_tuples.sort()
         return [file for _, file in key_file_tuples]
 
-    def generate_num(self):
+    def generate_num(self) -> list[str]:
         return aa.generate_num(self.valid_alc_files, self.db_dict)
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--always_on_top", "-t", action="store_true")
     parser.add_argument("--include_extra", "-e", action="store_true")
     return parser.parse_args()
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     master = tk.Tk()
     app = App(master, args.include_extra)
     on_top_str = "1" if args.always_on_top else "0"

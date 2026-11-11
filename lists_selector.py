@@ -1,16 +1,20 @@
 import os
 import tkinter as tk
+from collections.abc import Callable, Mapping
 
 import ableton_aid as aa
 
 
 class ListsSelector:
-    def __init__(self, root, path, update_function=None):
+    def __init__(
+        self, root: tk.Misc, path: str, update_function: Callable[[], object] | None = None
+    ) -> None:
         self.path = path
         self.update_function = update_function
 
         # update with file contents:
-        self.song_list = None
+        self.song_list: list[str] | None = None
+        self.name_to_file: dict[str, str] = {}
 
         # safe to early exit contructor here if path isn't valid
         if not os.path.exists(path):
@@ -30,12 +34,12 @@ class ListsSelector:
         )
         disabled_key_button.pack(side=tk.LEFT)
 
-    def update_and_get_names(self):
+    def update_and_get_names(self) -> list[str]:
         self.name_to_file = aa.get_list_name_to_file(self.path)
         names_to_list = [""] + sorted(self.name_to_file.keys(), key=lambda x: x.lower())
         return names_to_list
 
-    def update(self):
+    def update(self) -> None:
         if self.disabled_var.get():
             self.song_list = None
         else:
@@ -54,7 +58,7 @@ class ListsSelector:
             for s in self.song_list:
                 print(s)
 
-    def get_song_list(self, db_dict):
+    def get_song_list(self, db_dict: Mapping[str, object]) -> list[str] | None:
         if not self.song_list:
             return None
         # Songs not in the db stay as their raw line

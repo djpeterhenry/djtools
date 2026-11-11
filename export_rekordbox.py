@@ -9,10 +9,16 @@ import subprocess
 import shutil
 import xml.etree.ElementTree as ET
 import random
-from unidecode import unidecode
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
+from typing import Any
 
 import ableton_aid as aa
+from db_types import ClipInfo, DbDict, Record
 from tag import Tag, REKORDBOX_FILENAME_TAGS, REKORDBOX_PLAYLIST_TAGS
+
+# An ffprobe audio stream, plus the container's format_name
+Stream = dict[str, Any]
 
 logging.getLogger("pyrekordbox.db6.database").setLevel(logging.ERROR)
 
@@ -32,7 +38,7 @@ TOP_PLAY_COUNT_YEARS = [1, 2, 3, 4, 5]
 TOP_PLAY_COUNT_NUM = 500
 
 
-def get_bpm_and_range_list():
+def get_bpm_and_range_list() -> list[tuple[int, int]]:
     # create tuples of (bpm, bpm_range) and sort them
     bpm_and_range = [(0, 0)]
     # low 5
@@ -61,7 +67,7 @@ _p_history_name_paren = re.compile(r"HISTORY (\d+)-(\d+)-(\d+) \((\d+)\)$")
 HISTORY_CREATED_AT_MAX_AGE_SEC = 36 * 60 * 60
 
 
-def _parse_history_date_ts(name):
+def _parse_history_date_ts(name: str) -> tuple[float, float] | None:
     """Return (day_ts, date_ts) for a history name, or None if it doesn't match.
 
     day_ts is midnight of the session's date; date_ts additionally carries the
@@ -79,7 +85,7 @@ def _parse_history_date_ts(name):
     return day_ts, date_ts
 
 
-def _history_song_ts(song, day_ts, date_ts, index):
+def _history_song_ts(song: Any, day_ts: float, date_ts: float, index: int) -> float:
     """The real play time of a history row, else midnight-of-day plus track order.
 
     Rekordbox records created_at (local time) on each history row as the track
@@ -94,7 +100,7 @@ def _history_song_ts(song, day_ts, date_ts, index):
     return date_ts + index
 
 
-def stamp_from_rekordbox_db():
+def stamp_from_rekordbox_db() -> None:
     from pyrekordbox import Rekordbox6Database
 
     if os.path.isfile(REKORDBOX_PROCESSED_IDS_FILE):
@@ -118,7 +124,9 @@ def stamp_from_rekordbox_db():
             return
         print(f"Processing {len(new_histories)} new session(s) ({len(processed_ids)} already done).")
         for h in sorted(new_histories, key=lambda h: h.DateCreated):
-            day_ts, date_ts = _parse_history_date_ts(h.Name)
+            parsed = _parse_history_date_ts(h.Name)
+            assert parsed is not None  # histories were filtered on this
+            day_ts, date_ts = parsed
             songs = sorted(db.get_history_songs(HistoryID=h.ID), key=lambda s: s.TrackNo)
             for s in songs:
                 artist = s.Content.Artist.Name if s.Content.Artist else ""
@@ -136,7 +144,7 @@ def stamp_from_rekordbox_db():
     aa.write_db_file(db_dict)
 
 
-def update_rekordbox_tags():
+def update_rekordbox_tags() -> None:
     if not os.path.isdir(REKORDBOX_TAGS_PATH):
         print(f"REKORDBOX_TAGS_PATH not found: {REKORDBOX_TAGS_PATH}")
         return
@@ -179,7 +187,7 @@ CONVERT_EXTENSION = ".aiff"
 RATE_FALLBACK = {88200: 44100, 96000: 48000}
 
 
-def probe_audio_stream(path):
+def probe_audio_stream(path: str) -> Stream | None:
     """Return ffprobe's first audio stream as a dict, or None if unreadable."""
     cmd = [
         "ffprobe",
@@ -205,7 +213,7 @@ def probe_audio_stream(path):
         return None
 
 
-def get_incompatible_reason(stream, path):
+def get_incompatible_reason(stream: Stream | None, path: str) -> str | None:
     """Why DJ hardware might refuse this file, or None if it plays everywhere.
 
     `path` is the name the sample will carry on the USB, which decides how a
@@ -247,7 +255,7 @@ def get_incompatible_reason(stream, path):
     return None
 
 
-def run_ffmpeg_convert(source, target, codec_args=()):
+def run_ffmpeg_convert(source: str, target: str, codec_args: Sequence[str] = ()) -> None:
     """Convert via a temp file so an interrupted run leaves no partial target."""
     base, ext = os.path.splitext(target)
     temp_target = base + ".partial" + ext
@@ -261,18 +269,18 @@ def run_ffmpeg_convert(source, target, codec_args=()):
     os.rename(temp_target, target)
 
 
-def convert_to_compatible(source, target, stream):
+def convert_to_compatible(source: str, target: str, stream: Stream | None) -> None:
     """Re-encode a sample DJ hardware would refuse into 16-bit CONVERT_EXTENSION.
 
     Only the offending rate is changed, so a 44.1k float file stays at 44.1k.
     """
-    rate = int(stream.get("sample_rate") or 0)
+    rate = int((stream or {}).get("sample_rate") or 0)
     if rate not in COMPATIBLE_SAMPLE_RATES:
         rate = RATE_FALLBACK.get(rate, 44100)
     run_ffmpeg_convert(source, target, ["-c:a", "pcm_s16be", "-ar", str(rate)])
 
 
-def link_or_copy(source, target):
+def link_or_copy(source: str, target: str) -> None:
     """Put an unconverted sample in the export dir, preferring a hardlink.
 
     A copy here is byte-identical to its source, so a link spends no disk space
@@ -285,7 +293,7 @@ def link_or_copy(source, target):
         shutil.copy(source, target)
 
 
-def relink_samples(sample_path, relink):
+def relink_samples(sample_path: str, relink: bool) -> None:
     """Replace exported copies with hardlinks to their source, reclaiming space.
 
     Only touches a target that is byte-identical to the source it came from, so
@@ -323,7 +331,7 @@ def relink_samples(sample_path, relink):
             continue
         pairs.append((source, target, target_stat.st_size))
 
-    def check(pair):
+    def check(pair: tuple[str, str, int]) -> tuple[tuple[str, str, int], bool]:
         source, target, size = pair
         return pair, filecmp.cmp(source, target, shallow=False)
 
@@ -360,7 +368,7 @@ def relink_samples(sample_path, relink):
         print("Re-run with --relink to make the change.")
 
 
-def purge_incompatible_samples(sample_path, delete):
+def purge_incompatible_samples(sample_path: str, delete: bool) -> None:
     """Remove exported samples DJ hardware can't play, so the next export redoes them.
 
     export_rekordbox_samples only builds a target that is missing, so deleting the
@@ -372,7 +380,7 @@ def purge_incompatible_samples(sample_path, delete):
         if not n.startswith(".") and os.path.isfile(os.path.join(sample_path, n))
     ]
 
-    def check(path):
+    def check(path: str) -> tuple[str, str | None]:
         return path, get_incompatible_reason(probe_audio_stream(path), path)
 
     num_found = 0
@@ -417,7 +425,7 @@ def purge_incompatible_samples(sample_path, delete):
         print("Re-run with --delete, then re-export to convert them.")
 
 
-def export_rekordbox_samples(sample_path, sample_key, convert_flac):
+def export_rekordbox_samples(sample_path: str, convert_flac: bool) -> None:
     aa.update_db_clips_safe()
     aa.generate_lists()
 
@@ -484,11 +492,11 @@ def export_rekordbox_samples(sample_path, sample_key, convert_flac):
                     print("Converting {}: {}".format(os.path.basename(sample), reason))
                     convert_to_compatible(sample, target, stream)
         assert os.path.isfile(target)
-        record[sample_key] = target
+        record[aa.REKORDBOX_LOCAL_SAMPLE_KEY] = target
     aa.write_db_file(db_dict)
 
 
-def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
+def add_beat_grid_marker(et_track: ET.Element, sec_time: float, bpm: float, beat_time: float) -> None:
     et_tempo = ET.SubElement(et_track, "TEMPO")
     et_tempo.set("Inizio", str(sec_time))
     et_tempo.set("Bpm", str(bpm))
@@ -500,7 +508,14 @@ def add_beat_grid_marker(et_track, sec_time, bpm, beat_time):
     et_tempo.set("Battito", str(nearest_beat))
 
 
-def add_position_marker(et_track, name, type, num, start_seconds, end_seconds=None):
+def add_position_marker(
+    et_track: ET.Element,
+    name: str,
+    type: int,
+    num: int,
+    start_seconds: float,
+    end_seconds: float | None = None,
+) -> None:
     et_position = ET.SubElement(et_track, "POSITION_MARK")
     et_position.set("Name", name)
     et_position.set("Type", str(type))
@@ -510,35 +525,58 @@ def add_position_marker(et_track, name, type, num, start_seconds, end_seconds=No
     et_position.set("Num", str(num))
 
 
-def get_seconds_for_beat(ref_beat, ref_sec, desired_beat, bpm):
+@dataclass
+class BeatGridMarker:
+    sec_time: float
+    bpm: float
+    beat_time: float
+    memory_note: str | None = None
+
+
+@dataclass
+class Cue:
+    start: float
+    end: float | None  # None for a plain cue, set for a loop
+    loop_on: bool
+    name: str
+
+
+@dataclass
+class BeatGridMarkersResult:
+    beat_grid_markers: list[BeatGridMarker]
+    start_cue: Cue
+    loop_cue: Cue | None
+
+
+def get_seconds_for_beat(ref_beat: float, ref_sec: float, desired_beat: float, bpm: float) -> float:
     beat_diff = desired_beat - ref_beat
     spb = 60.0 / bpm
     return ref_sec + beat_diff * spb
 
 
-def get_beat_for_seconds(ref_beat, ref_sec, desired_seconds, bpm):
+def get_beat_for_seconds(ref_beat: float, ref_sec: float, desired_seconds: float, bpm: float) -> float:
     second_diff = desired_seconds - ref_sec
     bps = bpm / 60.0
     return ref_beat + second_diff * bps
 
 
-def get_seconds_relative_to_marker(ref_marker, beat):
+def get_seconds_relative_to_marker(ref_marker: BeatGridMarker, beat: float) -> float:
     return get_seconds_for_beat(
         ref_marker.beat_time, ref_marker.sec_time, beat, ref_marker.bpm
     )
 
 
-def get_beat_relative_to_marker(ref_marker, seconds):
+def get_beat_relative_to_marker(ref_marker: BeatGridMarker, seconds: float) -> float:
     return get_beat_for_seconds(
         ref_marker.beat_time, ref_marker.sec_time, seconds, ref_marker.bpm
     )
 
 
-def set_playlist_count(et):
+def set_playlist_count(et: ET.Element) -> None:
     et.set("Entries", str(len(et)))
 
 
-def add_folder(et_parent, name):
+def add_folder(et_parent: ET.Element, name: str) -> ET.Element:
     result = ET.SubElement(et_parent, "NODE")
     result.set("Type", "0")
     result.set("Name", name)
@@ -546,8 +584,13 @@ def add_folder(et_parent, name):
 
 
 def get_filtered_files(
-    db_dict, files, bpm=None, bpm_range=None, cam_num_list=None, tags=None
-):
+    db_dict: DbDict,
+    files: Iterable[str],
+    bpm: int | None = None,
+    bpm_range: int = 0,
+    cam_num_list: list[int] | None = None,
+    tags: list[str] | None = None,
+) -> list[str]:
     matching_files = []
     tags = tags or []
     for f in files:
@@ -566,7 +609,7 @@ def get_filtered_files(
         if bpm is not None:
             # Setting bpm_range to 100 for vocals is a quick way to include all vocals regardless of bpm. 
             bpm_range_to_use = 100 if is_vocal else bpm_range
-            if not aa.matches_bpm_filter(bpm, bpm_range_to_use, record["bpm"]):
+            if not aa.matches_bpm_filter(bpm, bpm_range_to_use, record.get("bpm", 0)):
                 continue
         cam_num = aa.get_camelot_num(record.get("key"))
         if cam_num_list is not None and cam_num not in cam_num_list:
@@ -575,7 +618,7 @@ def get_filtered_files(
     return matching_files
 
 
-def matches_active_window(record, min_days, max_days):
+def matches_active_window(record: Record, min_days: float, max_days: float) -> bool:
     # True if last edit/play is older than min_days but within max_days.
     # min_days=365, max_days=365*5 reproduces the "o1 and a5" filename tags.
     active_ts = aa.get_alc_or_last_ts(record)
@@ -584,7 +627,9 @@ def matches_active_window(record, min_days, max_days):
     )
 
 
-def get_top_play_count_files(db_dict, files, years, top_num=TOP_PLAY_COUNT_NUM):
+def get_top_play_count_files(
+    db_dict: DbDict, files: Iterable[str], years: float, top_num: int = TOP_PLAY_COUNT_NUM
+) -> set[str]:
     """The top_num most played files within the last `years` years.
 
     Only plays inside the window count, so a song with none never qualifies and
@@ -603,43 +648,11 @@ def get_top_play_count_files(db_dict, files, years, top_num=TOP_PLAY_COUNT_NUM):
     return set(f for _, _, f in counted[:top_num])
 
 
-class BeatGridMarker(object):
-    def __init__(self, sec_time, bpm, beat_time, memory_note=None):
-        self.sec_time = sec_time
-        self.bpm = bpm
-        self.beat_time = beat_time
-        self.memory_note = memory_note
-
-    def __repr__(self):
-        return "(sec_time: {}, bpm: {}, beat_time: {})".format(
-            self.sec_time, self.bpm, self.beat_time
-        )
-
-    def set_memory_note(self, memory_note):
-        self.memory_note = memory_note
-
-
-class Cue(object):
-    def __init__(self, start, end, loop_on, name):
-        self.start = start
-        self.end = end
-        self.loop_on = loop_on
-        self.name = name
-
-
-class BeatGridMarkersResult(object):
-    def __init__(self, beat_grid_markers, start_cue, loop_cue):
-        self.beat_grid_markers = beat_grid_markers
-        self.start_cue = start_cue
-        self.loop_cue = loop_cue
-
-
-def get_beat_grid_markers(filename, clip):
+def get_beat_grid_markers(filename: str, clip: ClipInfo) -> BeatGridMarkersResult:
     beat_grid_markers = []
 
     warp_markers = clip["warp_markers"]
 
-    first_bpm = None
     for warp_index in range(len(warp_markers) - 1):
         this_marker = warp_markers[warp_index]
         this_beat_time = this_marker["beat_time"]
@@ -648,13 +661,12 @@ def get_beat_grid_markers(filename, clip):
         next_beat_time = next_marker["beat_time"]
         next_sec_time = next_marker["sec_time"]
         bpm = 60 * ((next_beat_time - this_beat_time) / (next_sec_time - this_sec_time))
-        if warp_index == 0:
-            first_bpm = bpm
         beat_grid_markers.append(
             BeatGridMarker(sec_time=this_sec_time, bpm=bpm, beat_time=this_beat_time)
         )
 
     assert beat_grid_markers
+    first_bpm = beat_grid_markers[0].bpm
 
     first_from_warp = beat_grid_markers[0]
 
@@ -669,7 +681,7 @@ def get_beat_grid_markers(filename, clip):
 
     # make sure we have beat grid back to the start if before the first warp marker
     if start_beat < first_from_warp.beat_time:
-        first_from_warp.set_memory_note("Beat 1")
+        first_from_warp.memory_note = "Beat 1"
         beat_grid_markers.append(
             BeatGridMarker(sec_time=start_seconds, bpm=first_bpm, beat_time=start_beat)
         )
@@ -706,22 +718,24 @@ def get_beat_grid_markers(filename, clip):
     return BeatGridMarkersResult(beat_grid_markers, start_cue, loop_cue)
 
 
-class TrackInfo(object):
-    def __init__(self, beat_grid_markers, hot_cues, memory_cues):
+class TrackInfo:
+    def __init__(
+        self, beat_grid_markers: list[BeatGridMarker], hot_cues: list[Cue], memory_cues: list[Cue]
+    ) -> None:
         assert len(beat_grid_markers) > 0
         self.beat_grid_markers = beat_grid_markers
         self.hot_cues = hot_cues
         self.memory_cues = memory_cues
 
     @staticmethod
-    def _add_cue(et_track, counter, cue):
+    def _add_cue(et_track: ET.Element, counter: int, cue: Cue) -> None:
         assert isinstance(cue, Cue)
         if cue.end is None:
             add_position_marker(et_track, cue.name, 0, counter, cue.start)
         else:
             add_position_marker(et_track, cue.name, 4, counter, cue.start, cue.end)
 
-    def add_to_track(self, et_track):
+    def add_to_track(self, et_track: ET.Element) -> None:
         et_track.set("AverageBpm", str(self.beat_grid_markers[0].bpm))
         for b in self.beat_grid_markers:
             add_beat_grid_marker(
@@ -735,8 +749,10 @@ class TrackInfo(object):
             self._add_cue(et_track, -1, cue)
 
 
-def get_track_info(filename, record):
-    clip = record["clip"]
+def get_track_info(filename: str, record: Record) -> TrackInfo:
+    clip = aa.get_clip(record)
+    if clip is None:
+        raise ValueError("no audio clip (missing sample?)")
     bgm_result = get_beat_grid_markers(filename, clip)
     assert len(bgm_result.beat_grid_markers) > 0
 
@@ -761,9 +777,11 @@ def get_track_info(filename, record):
     return TrackInfo(bgm_result.beat_grid_markers, hot_cues, memory_cues)
 
 
-def get_als_track_info(filename, record):
+def get_als_track_info(filename: str, record: Record) -> TrackInfo:
     # A clip whose sample has gone missing is stored as None
-    clips = [c for c in record["clips"] if c is not None]
+    clips = [c for c in record.get("clips", []) if c is not None]
+    if not clips:
+        raise ValueError("no audio clips (missing samples?)")
     first_sample = clips[0]["sample"]
 
     # prune to just those matching the first sample.  For now...
@@ -832,12 +850,14 @@ def get_als_track_info(filename, record):
     return TrackInfo(beat_grid_markers, hot_cues, memory_cues)
 
 
-class PlaylistAdder(object):
-    def __init__(self, file_to_id):
+class PlaylistAdder:
+    def __init__(self, file_to_id: dict[str, int]) -> None:
         self.playlists_added = 0
         self.file_to_id = file_to_id
 
-    def add_playlist_for_files(self, et_parent, name, files, max_num=None):
+    def add_playlist_for_files(
+        self, et_parent: ET.Element, name: str, files: Iterable[str], max_num: int | None = None
+    ) -> None:
         self.playlists_added += 1
         et_list = ET.SubElement(et_parent, "NODE")
         et_list.set("Type", "1")
@@ -857,13 +877,12 @@ class PlaylistAdder(object):
         set_playlist_count(et_list)
 
 
-def export_rekordbox_xml(rekordbox_filename):
+def export_rekordbox_xml(rekordbox_filename: str) -> None:
     stamp_from_rekordbox_db()
     update_rekordbox_tags()
 
     export_rekordbox_samples(
         sample_path=REKORDBOX_LOCAL_SAMPLE_PATH,
-        sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY,
         convert_flac=True,
     )
 
@@ -888,11 +907,19 @@ def export_rekordbox_xml(rekordbox_filename):
 
     for f in files:
         record = db_dict[f]
-        sample = aa.get_existing_rekordbox_sample(
-            record, sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY
-        )
+        sample = aa.get_existing_rekordbox_sample(record)
         if sample is None:
             print("Error getting sample for {}".format(f))
+            continue
+        try:
+            if aa.is_alc_file(f):
+                track_info = get_track_info(filename=f, record=record)
+            elif aa.is_als_file(f):
+                track_info = get_als_track_info(filename=f, record=record)
+            else:
+                raise RuntimeError("wtf: {}".format(f))
+        except ValueError as e:
+            print("Skipping {}: {}".format(f, e))
             continue
 
         et_track = ET.SubElement(et_collection, "TRACK")
@@ -990,13 +1017,6 @@ def export_rekordbox_xml(rekordbox_filename):
         # sample length
         et_track.set("TotalTime", str(60 * 20))
 
-        # get track info and add
-        if aa.is_alc_file(f):
-            track_info = get_track_info(filename=f, record=record)
-        elif aa.is_als_file(f):
-            track_info = get_als_track_info(filename=f, record=record)
-        else:
-            raise RuntimeError("wtf: {}".format(f))
         track_info.add_to_track(et_track)
 
         # finally record this track id
@@ -1009,10 +1029,10 @@ def export_rekordbox_xml(rekordbox_filename):
 
     adder = PlaylistAdder(file_to_id)
 
-    def get_bpm_name(bpm, bpm_range):
+    def get_bpm_name(bpm: int, bpm_range: int) -> str:
         return "{:03d} ({}) BPM".format(bpm, bpm_range)
 
-    def get_key_name(key):
+    def get_key_name(key: int) -> str:
         str_minor, str_major = aa.get_keys_for_camelot_number(key)
         return "{:02d} [{}, {}]".format(key, str_minor, str_major)
 
@@ -1038,7 +1058,9 @@ def export_rekordbox_xml(rekordbox_filename):
             new_files.append(f)
 
     # Was used for CDJ
-    def add_key_playlists(et_filter_folder, bpm=None, bpm_range=None):
+    def add_key_playlists(
+        et_filter_folder: ET.Element, bpm: int | None = None, bpm_range: int = 0
+    ) -> None:
         for key in range(1, 13):
             # (key, key+1)
             keys = [key, aa.get_relative_camelot_key(key, 1)]
@@ -1053,7 +1075,7 @@ def export_rekordbox_xml(rekordbox_filename):
                 et_filter_folder, get_key_name(key), matching_files
             )
 
-    def add_bpm_playlists(et_filter_folder, files):
+    def add_bpm_playlists(et_filter_folder: ET.Element, files: list[str]) -> None:
         bpm_and_range = get_bpm_and_range_list()
         for bpm, bpm_range in bpm_and_range:
             playlist_name = get_bpm_name(bpm, bpm_range)
@@ -1064,7 +1086,7 @@ def export_rekordbox_xml(rekordbox_filename):
                 et_filter_folder, playlist_name, matching_files
             )
 
-    def add_rediscover_playlists(parent):
+    def add_rediscover_playlists(parent: ET.Element) -> None:
         # Tracks last played/edited between 1 and 10 years ago,
         # centered on 120/125/130 BPM +/- 5.
         for bpm in [120, 125, 130, 140]:
@@ -1082,23 +1104,23 @@ def export_rekordbox_xml(rekordbox_filename):
 
     files_with_id_set = set(files_with_id)
 
-    def get_matching_files_from_list(list_file):
+    def get_matching_files_from_list(list_file: str) -> list[str]:
         l = aa.get_list_from_file(list_file, db_dict)
         return [f for _, f in l if f is not None and f in files_with_id_set]
 
     # all
-    def add_all(parent):
+    def add_all(parent: ET.Element) -> None:
         adder.add_playlist_for_files(parent, "All", files_with_id)
 
     # Helper to add a list for a tag
-    def add_playlist_for_tag(parent, tag):
+    def add_playlist_for_tag(parent: ET.Element, tag: Tag) -> None:
         adder.add_playlist_for_files(
             parent,
             tag.value.lower(),
             get_filtered_files(db_dict=db_dict, files=files_with_id, tags=[tag.value]),
         )
 
-    def add_top(parent):
+    def add_top(parent: ET.Element) -> None:
         # Sets (aka hand history)
         adder.add_playlist_for_files(
             parent, "Sets", aa.generate_sets(files=files, db_dict=db_dict), max_num=9999
@@ -1133,7 +1155,7 @@ def export_rekordbox_xml(rekordbox_filename):
             parent, "Active", get_matching_files_from_list(aa.ACTIVE_LIST)
         )
 
-    def add_tag(parent):
+    def add_tag(parent: ET.Element) -> None:
         for tag in REKORDBOX_PLAYLIST_TAGS:
             add_playlist_for_tag(parent, tag)
 
@@ -1146,7 +1168,7 @@ def export_rekordbox_xml(rekordbox_filename):
             if file not in new_files_set:
                 new_files.append(file)
 
-    def add_lists(parent):
+    def add_lists(parent: ET.Element) -> None:
         for list_name, list_file in list_name_to_file:
             matching_files = get_matching_files_from_list(list_file)
             adder.add_playlist_for_files(parent, list_name, matching_files)

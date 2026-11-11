@@ -3,6 +3,7 @@ import os
 import pytest
 
 import ableton_aid as aa
+from db_types import DbDict
 
 SAMPLE = os.path.join("..", "Samples", "Imported", "Artist - Track.aiff")
 
@@ -102,7 +103,7 @@ def test_write_silenced_alc(make_alc, songs_dir):
 def test_update_db_clips(make_alc):
     alc = make_alc("A - B.alc")
     als = make_alc("Set.als", num_clips=2)
-    db = {alc: {}, als: {}}
+    db: DbDict = {alc: {}, als: {}}
     aa.update_db_clips([alc, als], db)
     assert db[alc]["clip"]["sample"].endswith("A - B.aiff")
     assert db[alc]["alc_ts"] == os.path.getmtime(alc)
@@ -111,11 +112,11 @@ def test_update_db_clips(make_alc):
     assert db[als]["als_ts"] == os.path.getmtime(als)
 
     # up to date records are left alone
-    db[alc]["clip"]["marker"] = True
+    db[alc]["clip"]["loop_start"] = 99.0
     aa.update_db_clips([alc], db)
-    assert db[alc]["clip"]["marker"]
+    assert db[alc]["clip"]["loop_start"] == 99.0
     aa.update_db_clips([alc], db, force_alc=True)
-    assert "marker" not in db[alc]["clip"]
+    assert db[alc]["clip"]["loop_start"] == 0.0
 
 
 def test_project_path_from_alc_filename(songs_dir):

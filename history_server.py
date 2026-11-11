@@ -4,6 +4,7 @@
 import json
 import logging
 import re
+from typing import Any
 from datetime import datetime, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pyrekordbox import Rekordbox6Database
@@ -40,12 +41,15 @@ MSG_COLOR = "white"
 MSG_MAX_WIDTH_PCT = 85   # max width as % of screen width
 
 
-_message_state = {"text": "", "set_at": None, "duration": MSG_DISPLAY_SECONDS}
+# {"name": session name, "songs": [song dicts as built below]}
+History = dict[str, Any]
+
+_message_state: dict[str, Any] = {"text": "", "set_at": None, "duration": MSG_DISPLAY_SECONDS}
 _suppressed_tail = 0
 _last_history_count = 0
 
 
-def process_title(raw_title):
+def process_title(raw_title: str) -> tuple[str, bool, str]:
     """Strip tag suffixes and extract vocal info from a raw title."""
     is_vocal = "[#vocal]" in raw_title
     title = raw_title
@@ -59,7 +63,7 @@ def process_title(raw_title):
     return title, is_vocal, vocal_title
 
 
-def get_latest_history_songs():
+def get_latest_history_songs() -> History:
     db = Rekordbox6Database()
     try:
         histories = list(db.get_history())
@@ -91,7 +95,7 @@ def get_latest_history_songs():
     return result
 
 
-def get_test_history_songs():
+def get_test_history_songs() -> History:
     now = datetime.now()
     raw_songs = [
         {
@@ -575,7 +579,7 @@ function setStatus(msg) {
 """
 
 
-def render_now_playing(now_bg, api_url):
+def render_now_playing(now_bg: str, api_url: str) -> bytes:
     return (NOW_PLAYING_HTML % {
         "poll_ms": POLL_INTERVAL * 1000,
         "now_width": NOW_WIDTH,
@@ -602,7 +606,7 @@ def render_now_playing(now_bg, api_url):
 
 
 class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
+    def do_GET(self) -> None:
         if self.path == "/api/history-test":
             self.send_json(get_test_history_songs())
         elif self.path == "/api/history":
@@ -624,7 +628,7 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.send_error(404, f"Unknown endpoint: {self.path}")
 
-    def do_POST(self):
+    def do_POST(self) -> None:
         global _suppressed_tail
         if self.path == "/api/suppress":
             _suppressed_tail += 1
@@ -654,7 +658,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404, f"Unknown endpoint: {self.path}")
 
     @staticmethod
-    def suppressed_history():
+    def suppressed_history() -> History:
         """The latest history minus any suppressed tail.
 
         A newly played track clears the suppression.
@@ -670,25 +674,25 @@ class Handler(BaseHTTPRequestHandler):
             data["songs"] = data["songs"][:-_suppressed_tail]
         return data
 
-    def send_json(self, data):
+    def send_json(self, data: object) -> None:
         self.send_body(json.dumps(data).encode(), "application/json")
 
-    def send_html(self, page):
+    def send_html(self, page: str | bytes) -> None:
         self.send_body(page if isinstance(page, bytes) else page.encode(), "text/html")
 
-    def send_body(self, body, content_type):
+    def send_body(self, body: bytes, content_type: str) -> None:
         self.send_response(200)
         self.send_header("Content-Type", content_type)
         self.send_no_cache()
         self.end_headers()
         self.wfile.write(body)
 
-    def send_no_cache(self):
+    def send_no_cache(self) -> None:
         self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
         self.send_header("Pragma", "no-cache")
         self.send_header("Expires", "0")
 
-    def log_message(self, format, *args):
+    def log_message(self, format: str, *args: Any) -> None:
         pass  # quiet
 
 

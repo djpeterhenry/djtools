@@ -8,9 +8,12 @@ import gzip
 import os
 import time
 
+from typing import Any, cast
+
 import pytest
 
 import ableton_aid as aa
+from db_types import DbDict, Record
 
 # 2024-06-15 12:00 local time: a fixed "now" for anything recency based.
 FIXED_NOW = time.mktime((2024, 6, 15, 12, 0, 0, 0, 0, -1))
@@ -23,10 +26,10 @@ def fixed_now(monkeypatch):
     return FIXED_NOW
 
 
-def make_record(**fields):
-    record = {"bpm": 124, "key": "Am", "tags": []}
+def make_record(**fields: Any) -> Record:
+    record: dict[str, Any] = {"bpm": 124, "key": "Am", "tags": []}
     record.update(fields)
-    return record
+    return cast(Record, record)
 
 
 @pytest.fixture
@@ -123,15 +126,14 @@ def make_alc(songs_dir):
         xml = '<?xml version="1.0" encoding="UTF-8"?><Ableton>{}</Ableton>'.format(
             clip * num_clips
         )
-        with gzip.open(songs_dir / filename, "wb") as f:
-            f.write(xml.encode("utf8"))
+        (songs_dir / filename).write_bytes(gzip.compress(xml.encode("utf8")))
         return filename
 
     return _make
 
 
 @pytest.fixture
-def db_dict(fixed_now):
+def db_dict(fixed_now) -> DbDict:
     """A handful of records covering the shapes seen in the real database."""
     return {
         "A - Old Favorite.alc": make_record(

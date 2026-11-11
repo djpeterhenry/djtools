@@ -51,7 +51,7 @@ class FakeDb:
         self.closed = True
 
 
-def song(track_no, title, artist="Artist", year=2020):
+def song(track_no, title, artist: str | None = "Artist", year=2020):
     content = types.SimpleNamespace(
         Title=title, Artist=types.SimpleNamespace(Name=artist) if artist else None, ReleaseYear=year
     )

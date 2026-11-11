@@ -17,6 +17,7 @@ import datetime
 import os
 import subprocess
 import time
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -24,6 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import ableton_aid as aa
+from db_types import DbDict, Record
 from server_util import kill_existing_server
 from tag import Tag, HIDDEN_TAG_VALUES
 
@@ -42,7 +44,7 @@ BACKUP_MIN_INTERVAL_SEC = 5 * 60
 EPOCH_ORDINAL = datetime.date(1970, 1, 1).toordinal()
 
 
-def play_days(record):
+def play_days(record: Record) -> list[int]:
     """Sorted list of the days (local epoch days) this song was played on."""
     return [
         datetime.date.fromtimestamp(ts).toordinal() - EPOCH_ORDINAL
@@ -51,15 +53,15 @@ def play_days(record):
 
 
 class State:
-    db_dict = {}
-    order = []  # filenames, in a stable base order (alpha)
+    db_dict: DbDict = {}
+    order: list[str] = []  # filenames, in a stable base order (alpha)
     last_backup = 0.0
 
 
 state = State()
 
 
-def song_view(filename):
+def song_view(filename: str) -> dict[str, Any]:
     """Build the JSON view of one song from its db record."""
     record = state.db_dict[filename]
     key = record.get("key", "") or ""
@@ -89,7 +91,7 @@ def song_view(filename):
     }
 
 
-def known_tags():
+def known_tags() -> list[str]:
     """Tags offered in the ui: defined in code, plus any others found in the
     db, sorted -- minus the hidden ones."""
     result = [t for t in Tag.list() if t not in HIDDEN_TAG_VALUES]
@@ -102,7 +104,7 @@ def known_tags():
     return result
 
 
-def save_db():
+def save_db() -> None:
     """Atomically write database.json; rotate a backup at most every few min."""
     now = time.time()
     rotate = now - state.last_backup > BACKUP_MIN_INTERVAL_SEC
@@ -115,12 +117,12 @@ app = FastAPI()
 
 
 @app.get("/")
-def index():
+def index() -> FileResponse:
     return FileResponse(os.path.join(WEB_DIR, "index.html"))
 
 
 @app.get("/api/data")
-def get_data():
+def get_data() -> dict[str, Any]:
     return {
         "songs": [song_view(f) for f in state.order],
         "known_tags": known_tags(),
@@ -135,7 +137,7 @@ class TagEdit(BaseModel):
 
 
 @app.post("/api/tag")
-def edit_tag(edit: TagEdit):
+def edit_tag(edit: TagEdit) -> dict[str, Any]:
     if edit.id not in state.db_dict:
         raise HTTPException(status_code=404, detail="unknown song")
     tag = edit.tag.strip()
@@ -157,13 +159,11 @@ class SongRef(BaseModel):
 
 
 @app.post("/api/reveal")
-def reveal(ref: SongRef):
+def reveal(ref: SongRef) -> dict[str, Any]:
     record = state.db_dict.get(ref.id)
     if record is None:
         raise HTTPException(status_code=404, detail="unknown song")
-    sample = aa.get_existing_rekordbox_sample(
-        record, sample_key=aa.REKORDBOX_LOCAL_SAMPLE_KEY
-    )
+    sample = aa.get_existing_rekordbox_sample(record)
     if not sample:
         raise HTTPException(status_code=404, detail="no sample on disk")
     aa.reveal_file(sample)
@@ -171,7 +171,7 @@ def reveal(ref: SongRef):
 
 
 @app.post("/api/copy")
-def copy_ableton(ref: SongRef):
+def copy_ableton(ref: SongRef) -> dict[str, Any]:
     """Copy the .alc file to the clipboard as a file (for pasting into Ableton)."""
     if ref.id not in state.db_dict:
         raise HTTPException(status_code=404, detail="unknown song")
@@ -183,7 +183,7 @@ def copy_ableton(ref: SongRef):
 
 
 @app.post("/api/play")
-def play(ref: SongRef):
+def play(ref: SongRef) -> dict[str, Any]:
     record = state.db_dict.get(ref.id)
     if record is None:
         raise HTTPException(status_code=404, detail="unknown song")
@@ -195,7 +195,7 @@ def play(ref: SongRef):
 
 
 @app.post("/api/touch")
-def touch(ref: SongRef):
+def touch(ref: SongRef) -> dict[str, Any]:
     """Stamp the song as played right now, so it sorts to the top of 'recent'."""
     record = state.db_dict.get(ref.id)
     if record is None:
@@ -205,7 +205,7 @@ def touch(ref: SongRef):
     return song_view(ref.id)
 
 
-def load(directory):
+def load(directory: str | None) -> None:
     if directory:
         os.chdir(directory)
     if not os.path.exists(aa.DATABASE_JSON):
@@ -220,7 +220,7 @@ def load(directory):
         len(state.db_dict), len(valid), os.getcwd()))
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--dir", help="songs directory containing database.json")
     p.add_argument("--port", type=int, default=8765)
@@ -228,7 +228,7 @@ def parse_args():
     return p.parse_args()
 
 
-def main():
+def main() -> None:
     args = parse_args()
     kill_existing_server(args.port)
     load(args.dir)

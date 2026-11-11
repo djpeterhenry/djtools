@@ -6,7 +6,7 @@ import subprocess
 import time
 
 
-def kill_existing_server(port, wait=1):
+def kill_existing_server(port: int, wait: float = 1) -> list[int]:
     """Kill any other process listening on port, so only one copy ever runs.
 
     The port itself is the lock -- no pidfile to go stale. Returns the pids

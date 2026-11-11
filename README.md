@@ -31,7 +31,10 @@ in `$DISCOGS_TOKEN` or `~/.config/djtools/discogs_token`.
 
 ```sh
 python3.11 -m pytest     # tests (never touch the real library)
+python3.11 -m pyright --pythonpath "$(command -v python3.11)"   # types
 ```
+
+The database record shape is described in `db_types.py`.
 
 `tests/golden/rekordbox.xml` is a snapshot of a full export; after an
 intended change to the export, regenerate it with

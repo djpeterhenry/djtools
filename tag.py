@@ -1,10 +1,11 @@
+import builtins
 from enum import Enum
 
 
 class ListEnum(Enum):
     @classmethod
-    def list(cls):
-        return list(map(lambda c: c.value, cls))
+    def list(cls) -> builtins.list[str]:
+        return [c.value for c in cls]
 
 
 class Tag(ListEnum):

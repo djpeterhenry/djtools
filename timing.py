@@ -1,10 +1,15 @@
+from collections.abc import Callable
 from functools import wraps
 import time
+from typing import ParamSpec, TypeVar
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-def timing(f, show_args=False):
+def timing(f: Callable[P, R], show_args: bool = False) -> Callable[P, R]:
     @wraps(f)
-    def wrap(*args, **kw):
+    def wrap(*args: P.args, **kw: P.kwargs) -> R:
         ts = time.time()
         result = f(*args, **kw)
         te = time.time()

@@ -6,9 +6,12 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
+from typing import cast
+
 import ableton_aid as aa
 import export_rekordbox as er
 from conftest import DAY, make_record
+from db_types import ClipInfo, Record
 
 
 # ---------------------------------------------------------------- history
@@ -290,7 +293,7 @@ def test_export_rekordbox_samples(songs_dir, write_db, tmp_path, monkeypatch):
     monkeypatch.setattr(er, "run_ffmpeg_convert", fake_convert)
     monkeypatch.setattr(er, "convert_to_compatible", fake_convert)
 
-    er.export_rekordbox_samples(str(export), aa.REKORDBOX_LOCAL_SAMPLE_KEY, convert_flac=True)
+    er.export_rekordbox_samples(str(export), convert_flac=True)
 
     assert sorted(converted) == [
         ("float.wav", "Float.aiff", True),
@@ -307,7 +310,7 @@ def test_export_rekordbox_samples(songs_dir, write_db, tmp_path, monkeypatch):
     # a second export only checks existence
     converted.clear()
     monkeypatch.setattr(er, "probe_audio_stream", lambda p: pytest.fail("probed again"))
-    er.export_rekordbox_samples(str(export), aa.REKORDBOX_LOCAL_SAMPLE_KEY, convert_flac=True)
+    er.export_rekordbox_samples(str(export), convert_flac=True)
     assert converted == []
 
 
@@ -331,8 +334,8 @@ def test_beat_seconds_conversion():
     assert er.get_beat_relative_to_marker(marker, 4.0) == 10.0
 
 
-def clip(warp_markers, **loop):
-    result = {
+def clip(warp_markers, **loop) -> ClipInfo:
+    result: dict = {
         "warp_markers": [{"sec_time": s, "beat_time": b} for s, b in warp_markers],
         "loop_start": 0.0,
         "loop_end": 16.0,
@@ -343,7 +346,7 @@ def clip(warp_markers, **loop):
         "sample": "../s.aiff",
     }
     result.update(loop)
-    return result
+    return cast(ClipInfo, result)
 
 
 def summary(markers):
@@ -378,7 +381,7 @@ def test_get_beat_grid_markers_loop_on():
 
 
 def test_get_track_info_and_add_to_track():
-    record = {"clip": clip([(30.0, 32.0), (38.0, 48.0)])}
+    record: Record = {"clip": clip([(30.0, 32.0), (38.0, 48.0)])}
     info = er.get_track_info("f", record)
     assert [c.name for c in info.hot_cues] == ["Start", "Start Loop"]
     assert [c.name for c in info.memory_cues] == ["Start", "Start Loop", "Beat 1"]
@@ -400,7 +403,7 @@ def test_get_track_info_and_add_to_track():
 
 def test_get_als_track_info_shims_before_next_start():
     markers = [(1.0, 0.0), (9.0, 16.0), (41.0, 80.0), (49.0, 96.0)]
-    record = {
+    record: Record = {
         "clips": [
             clip(markers),
             clip(markers, loop_start=64.0, hidden_loop_start=64.0, hidden_loop_end=72.0),
@@ -419,7 +422,7 @@ def test_get_als_track_info_shims_before_next_start():
 
 
 def test_get_als_track_info_skips_missing_clips():
-    record = {"clips": [None, clip([(1.0, 0.0), (9.0, 16.0)])]}
+    record: Record = {"clips": [None, clip([(1.0, 0.0), (9.0, 16.0)])]}
     assert len(er.get_als_track_info("f", record).hot_cues) == 1
 
 
@@ -550,16 +553,17 @@ def test_export_rekordbox_xml(export_env):
     root = ET.parse(out).getroot()
 
     collection = root.find("COLLECTION")
-    tracks = {t.get("Artist"): t for t in collection.findall("TRACK")}
+    tracks = {t.get("Artist", ""): t for t in collection.findall("TRACK")}
     assert collection.get("Entries") == "4"
     assert sorted(tracks) == ["A", "B", "C", "D"]
 
     a = tracks["A"]
-    assert a.get("Name").startswith("Old Favorite ")
+    name = a.get("Name", "")
+    assert name.startswith("Old Favorite ")
     for suffix in ["[#disco]", "[#good]", "[#lyrics]", "[#8=A]", "[#p2]", "[#y98]", "[#t2]", "[#a0]", "[#n3]"]:
-        assert suffix in a.get("Name")
+        assert suffix in name
     # added 1000 days ago: not new within 2 years, still active from the recent play
-    assert "[#n2]" not in a.get("Name") and "[#o0]" not in a.get("Name")
+    assert "[#n2]" not in name and "[#o0]" not in name
     assert a.get("Tonality") == "8A"
     assert a.get("Comments") == "002"
     assert a.get("Year") == "1998"
@@ -590,3 +594,15 @@ def test_export_rekordbox_xml_golden(export_env):
             f.write(actual)
     with open(GOLDEN, encoding="utf-8") as f:
         assert actual == f.read()
+
+
+def test_export_skips_track_without_clip(export_env):
+    db = aa.read_db_file()
+    db["B - New One.alc"]["clip"] = None
+    aa.write_db_file(db)
+    out = export_env / "rekordbox.xml"
+    er.export_rekordbox_xml(str(out))
+    collection = ET.parse(out).getroot().find("COLLECTION")
+    assert collection is not None
+    assert collection.get("Entries") == "3"
+    assert "B" not in [t.get("Artist") for t in collection.findall("TRACK")]

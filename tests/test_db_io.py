@@ -1,12 +1,14 @@
 import json
+from typing import Any, cast
 
 import pytest
 
 import ableton_aid as aa
+from db_types import DbDict
 
 
 def test_round_trip_unicode(songs_dir):
-    db = {"Röyksopp - Éclair.alc": {"bpm": 120, "tags": ["ß"]}}
+    db: DbDict = {"Röyksopp - Éclair.alc": {"bpm": 120, "tags": ["ß"]}}
     aa.write_db_file(db)
     assert aa.read_db_file() == db
     # stored as real utf-8, not \u escapes
@@ -14,12 +16,12 @@ def test_round_trip_unicode(songs_dir):
 
 
 def test_write_rotates_backups(songs_dir):
-    aa.write_db_file({"v": 1})
-    aa.write_db_file({"v": 2})
-    aa.write_db_file({"v": 3})
-    assert aa.read_db_file() == {"v": 3}
-    assert json.loads((songs_dir / "database.json.1").read_text()) == {"v": 2}
-    assert json.loads((songs_dir / "database.json.2").read_text()) == {"v": 1}
+    aa.write_db_file({"a.alc": {"bpm": 1}})
+    aa.write_db_file({"a.alc": {"bpm": 2}})
+    aa.write_db_file({"a.alc": {"bpm": 3}})
+    assert aa.read_db_file() == {"a.alc": {"bpm": 3}}
+    assert json.loads((songs_dir / "database.json.1").read_text()) == {"a.alc": {"bpm": 2}}
+    assert json.loads((songs_dir / "database.json.2").read_text()) == {"a.alc": {"bpm": 1}}
 
 
 def test_rotate_file_caps_at_max(songs_dir):
@@ -34,10 +36,10 @@ def test_rotate_file_caps_at_max(songs_dir):
 
 
 def test_failed_write_keeps_current_db(songs_dir):
-    aa.write_db_file({"v": 1})
+    aa.write_db_file({"a.alc": {"bpm": 1}})
     with pytest.raises(TypeError):
-        aa.write_db_file({"v": {1, 2}})  # sets aren't JSON serializable
-    assert aa.read_db_file() == {"v": 1}
+        aa.write_db_file(cast(Any, {"a.alc": {"tags": {1, 2}}}))  # sets aren't JSON serializable
+    assert aa.read_db_file() == {"a.alc": {"bpm": 1}}
 
 
 def test_get_missing(songs_dir):

@@ -15,9 +15,12 @@ import demucs as demucs_py
 import shutil
 from tag import Tag
 import datetime
+from typing import Any
+
+from db_types import DbDict, Record
 
 
-def add_bpms():
+def add_bpms() -> None:
     """Add BPM values for new files in the database. Input required for each file."""
     db_dict = aa.read_db_file()
     alc_files = aa.get_ableton_files()
@@ -32,13 +35,13 @@ def add_bpms():
             break
 
         # record the result in the database
-        new_record = {"bpm": bpm, "tags": []}
+        new_record: Record = {"bpm": bpm, "tags": []}
         db_dict[filename] = new_record
         print("Inserted: " + str(new_record))
     aa.write_db_file(db_dict)
 
 
-def add_keys():
+def add_keys() -> None:
     """Add musical keys for files in the database by analyzing audio using keyfinder-cli."""
     db_dict = aa.read_db_file()
 
@@ -68,7 +71,7 @@ def add_keys():
     aa.write_db_file(db_dict)
 
 
-def edit_bpm(edit_filename):
+def edit_bpm(edit_filename: str) -> None:
     """Edit BPM value for a specific file."""
     assert os.path.isfile(edit_filename)
     print(edit_filename)
@@ -84,7 +87,7 @@ def edit_bpm(edit_filename):
     aa.write_db_file(db_dict)
 
 
-def rename_tag(tag_old, tag_new):
+def rename_tag(tag_old: str, tag_new: str) -> None:
     """Rename a tag throughout the database."""
     db_dict = aa.read_db_file()
     for _, record in sorted(db_dict.items()):
@@ -94,7 +97,7 @@ def rename_tag(tag_old, tag_new):
     aa.write_db_file(db_dict)
 
 
-def remove_tag(tag_name):
+def remove_tag(tag_name: str) -> None:
     """Remove a tag from all records in the database."""
     db_dict = aa.read_db_file()
     tag_name = tag_name.strip()
@@ -103,7 +106,7 @@ def remove_tag(tag_name):
     aa.write_db_file(db_dict)
 
 
-def list_tags():
+def list_tags() -> None:
     """List all tags and their frequencies used in the database."""
     db_dict = aa.read_db_file()
     files = aa.get_rekordbox_files(db_dict)
@@ -115,14 +118,14 @@ def list_tags():
         print(tag, ":", count)
 
 
-def list_missing():
+def list_missing() -> None:
     """List files that are in the database but no longer exist in the filesystem."""
     missing = aa.get_missing()
     for f in missing:
         print(f)
 
 
-def transfer_missing():
+def transfer_missing() -> None:
     """Interactive tool to handle missing files by transferring their data to similar files or deleting them."""
     db_dict = aa.read_db_file()
     alc_file_set = set(aa.get_ableton_files())
@@ -171,7 +174,7 @@ def transfer_missing():
                 aa.write_db_file(db_dict)
 
 
-def transfer_other(other_db_filename):
+def transfer_other(other_db_filename: str) -> None:
     """Transfer timestamp data from another database file into the current database."""
     db_dict = aa.read_db_file()
     other_db_dict = aa.read_db_file(other_db_filename)
@@ -189,7 +192,7 @@ def transfer_other(other_db_filename):
     aa.write_db_file(db_dict)
 
 
-def transfer_timestamps(source_filename, target_filename):
+def transfer_timestamps(source_filename: str, target_filename: str) -> None:
     """
     Transfer timestamps from one specific file to another in the database.
     I used this to fix Disclosure - You And Me (Westend) because brackets had broken stamping.
@@ -205,21 +208,21 @@ def transfer_timestamps(source_filename, target_filename):
     aa.write_db_file(db_dict)
 
 
-def print_records():
+def print_records() -> None:
     """Print all records in the database."""
     db_dict = aa.read_db_file()
     for filename, record in db_dict.items():
         print(filename + " " + str(record))
 
 
-def print_record(alc_filename):
+def print_record(alc_filename: str) -> None:
     """Print detailed information for a specific file."""
     db_dict = aa.read_db_file()
     record = db_dict[alc_filename]
     pprint.pprint(record)
 
 
-def print_pretty(output_file):
+def print_pretty(output_file: str) -> None:
     """Write database contents to a file in a readable format."""
     db_dict = aa.read_db_file()
     with open(output_file, "w") as f:
@@ -229,7 +232,7 @@ def print_pretty(output_file):
             pprint.pprint(record, f)
 
 
-def summarize_keys():
+def summarize_keys() -> None:
     """Print frequency of musical keys in the database."""
     db_dict = aa.read_db_file()
     alc_file_set = set(aa.get_ableton_files())
@@ -255,30 +258,30 @@ def summarize_keys():
         print("%4s - %3s: %d" % (key, aa.get_camelot_key(key), count))
 
 
-def print_xml(alc_filename):
+def print_xml(alc_filename: str) -> None:
     """Print the XML content of an Ableton Live clip file."""
     assert os.path.isfile(alc_filename)
     print(aa.alc_to_str(alc_filename))
 
 
-def print_audioclip(alc_filename):
+def print_audioclip(alc_filename: str) -> None:
     """Print audio clip information from an Ableton Live clip file."""
     assert os.path.isfile(alc_filename)
     pprint.pprint(aa.get_audioclip_from_alc(alc_filename))
 
 
-def print_audioclips(als_filename):
+def print_audioclips(als_filename: str) -> None:
     """Print all audio clip information from an Ableton Live set file."""
     assert os.path.isfile(als_filename)
     pprint.pprint(aa.get_audioclips_from_als(als_filename))
 
 
-def rekordbox_xml(rekordbox_filename):
+def rekordbox_xml(rekordbox_filename: str) -> None:
     """Export database to Rekordbox XML format."""
     export_rekordbox.export_rekordbox_xml(rekordbox_filename=rekordbox_filename)
 
 
-def test_lists():
+def test_lists() -> None:
     """Test reading track lists from the lists folder."""
     db_dict = aa.read_db_file()
     name_to_file = aa.get_list_name_to_file(aa.LISTS_FOLDER)
@@ -289,16 +292,16 @@ def test_lists():
                 print(display)
 
 
-def cue_to_tracklist(cue_filename, tracklist_filename):
+def cue_to_tracklist(cue_filename: str, tracklist_filename: str) -> None:
     """Convert a cue sheet to a tracklist format."""
 
-    class Track(object):
-        def __init__(self):
-            self.artist = None
-            self.song = None
-            self.index = None
+    class Track:
+        def __init__(self) -> None:
+            self.artist: str | None = None
+            self.song: str | None = None
+            self.index: str | None = None
 
-        def __str__(self):
+        def __str__(self) -> str:
             return "[{}] {} - {}".format(self.index, self.artist, self.song)
 
     tracks = []
@@ -327,12 +330,12 @@ def cue_to_tracklist(cue_filename, tracklist_filename):
             w.write("{}\n".format(str(t)))
 
 
-def generate_lists(output_path):
+def generate_lists(output_path: str) -> None:
     """Generate various sorted track lists and save them to files."""
     aa.generate_lists(output_path)
 
 
-def _simplify_track(track):
+def _simplify_track(track: str) -> str | None:
     """Remove common suffixes like (Original Mix), (Radio Edit), (Acapella), (feat. Artist) from track name."""
     pattern = r"\s*\((Original|Radio|Acapella|feat[^)]*)[^)]*\)"
     if not re.search(pattern, track, re.IGNORECASE):
@@ -346,7 +349,7 @@ def _simplify_track(track):
     return simplified
 
 
-def _record_first_year(record):
+def _record_first_year(record: Record) -> int | None:
     """The year a song first shows up in your own history, or None."""
     stamps = [
         ts for ts in (aa.get_alc_or_last_ts(record), aa.get_alc_ts(record)) if ts
@@ -356,7 +359,7 @@ def _record_first_year(record):
     return datetime.date.fromtimestamp(min(stamps)).year
 
 
-def _as_year(value):
+def _as_year(value: Any) -> int | None:
     """Coerce a discogs year to an int, or None.
 
     The master search payload hands years back as strings while release
@@ -369,7 +372,9 @@ def _as_year(value):
     return year or None
 
 
-def _discogs_earliest_year(d, artist, track, not_after=None):
+def _discogs_earliest_year(
+    d: Any, artist: str, track: str, not_after: int | None = None
+) -> tuple[int | None, list[str] | None]:
     """Search discogs for a track and return (year, labels).
 
     A release is one specific pressing, often a reissue; the master groups
@@ -412,26 +417,26 @@ def _discogs_earliest_year(d, artist, track, not_after=None):
     return (year or master_year), labels
 
 
-def _process_track_metadata(db_dict, filename, record, source_name, retry=False):
-    """Common helper for processing track metadata from different sources.
+def _process_track_metadata(
+    db_dict: DbDict, filename: str, record: Record, retry: bool = False
+) -> tuple[str, str] | tuple[None, None]:
+    """Artist and track to look up on discogs, or (None, None) to skip this file.
 
     Args:
         db_dict: Database dictionary
         filename: Name of file to process
         record: Record from database
-        source_name: Source name (e.g. "discogs")
-        retry: If True, process even if source already has data (unless it has a valid year)
+        retry: If True, process even if discogs already has data (unless it has a valid year)
     """
-    year_key = f"release_year_{source_name}"
     # Skip if we already have info and not in retry mode, or if we have a valid year in retry mode
-    if year_key in record:
-        if not retry or record[year_key] is not None:
+    if "release_year_discogs" in record:
+        if not retry or record["release_year_discogs"] is not None:
             return None, None
 
     artist, track = aa.get_artist_and_track(filename)
     if not artist or not track:
         print(f"Skipping {filename}: Unable to parse artist and track.")
-        record[year_key] = None
+        record["release_year_discogs"] = None
         aa.write_db_file(db_dict)
         return None, None
 
@@ -439,7 +444,7 @@ def _process_track_metadata(db_dict, filename, record, source_name, retry=False)
     return artist, track
 
 
-def release_dates_discogs(n: int = None, retry: bool = False):
+def release_dates_discogs(n: int | None = None, retry: bool = False) -> None:
     """Search for release dates on Discogs for songs ordered by play count.
 
     Args:
@@ -471,10 +476,8 @@ def release_dates_discogs(n: int = None, retry: bool = False):
         record = db_dict[filename]
         print(f"\n{plays} plays: {filename}")
 
-        artist, track = _process_track_metadata(
-            db_dict, filename, record, "discogs", retry=retry
-        )
-        if not artist:  # Skip if we couldn't process metadata
+        artist, track = _process_track_metadata(db_dict, filename, record, retry=retry)
+        if artist is None or track is None:  # Skip if we couldn't process metadata
             continue
 
         try:
@@ -497,7 +500,7 @@ def release_dates_discogs(n: int = None, retry: bool = False):
             print(f"Error searching for {filename}: {e}")
 
 
-def _get_suspicious_discogs_years(db_dict):
+def _get_suspicious_discogs_years(db_dict: DbDict) -> list[tuple[int, int, str]]:
     """Files whose stored discogs year postdates the song's own history.
 
     You can't have played a song before it was released, so these are reissue
@@ -518,7 +521,7 @@ def _get_suspicious_discogs_years(db_dict):
     return scored
 
 
-def recheck_release_dates_discogs(n: int = 50, write: bool = False):
+def recheck_release_dates_discogs(n: int = 50, write: bool = False) -> None:
     """Re-query discogs for songs whose stored year postdates their own history.
 
     Args:
@@ -537,7 +540,7 @@ def recheck_release_dates_discogs(n: int = 50, write: bool = False):
 
     for _gap, first_year, filename in suspicious[:n]:
         record = db_dict[filename]
-        stored = record["release_year_discogs"]
+        stored = record.get("release_year_discogs")
         artist, track = aa.get_artist_and_track(filename)
         if not artist or not track:
             print(f"?  {filename}: unable to parse artist and track")
@@ -589,7 +592,7 @@ def recheck_release_dates_discogs(n: int = 50, write: bool = False):
         print("Dry run -- rerun with --write to save these.")
 
 
-def _get_missing_release_dates(db_dict, order_by_date=False):
+def _get_missing_release_dates(db_dict: DbDict, order_by_date: bool = False) -> list[str]:
     # Get a list of files with no release year or 0 release year.
     files_list = [f for f, record in db_dict.items() if not aa.get_release_year(record)]
     # Only care about rekordbox files
@@ -606,7 +609,7 @@ def _get_missing_release_dates(db_dict, order_by_date=False):
         return [f for _, f in count_tuples]
 
 
-def clear_release_date_none_values():
+def clear_release_date_none_values() -> None:
     """Remove any None values for release date fields in the database."""
     db_dict = aa.read_db_file()
     date_fields = ["release_year_discogs"]
@@ -625,7 +628,7 @@ def clear_release_date_none_values():
         print("No None values found in release date fields")
 
 
-def summarize_years():
+def summarize_years() -> None:
     """Print summary statistics about Discogs release years in the database."""
     db_dict = aa.read_db_file()
 
@@ -655,7 +658,7 @@ def summarize_years():
 
 def release_dates_manual(
     order_by_date: bool = True, search_terms: list[str] | None = None
-):
+) -> None:
     """Manually enter release dates for files that don't have one.
 
     Args:
@@ -702,7 +705,7 @@ def release_dates_manual(
             print("Skipping this file.")
 
 
-def remove_recent_timestamps(minutes: int):
+def remove_recent_timestamps(minutes: int) -> None:
     """Remove timestamps from the database that are within the last 'minutes' minutes."""
     db_dict = aa.read_db_file()
     past_ts = aa.get_past_ts(minutes * 60)
@@ -722,7 +725,7 @@ def remove_recent_timestamps(minutes: int):
     )
 
 
-def demucs(alc_filename):
+def demucs(alc_filename: str) -> None:
     """
     Run demucs on the sample for the specifiec ableton file.
 
@@ -802,7 +805,7 @@ def demucs(alc_filename):
     )
 
     # Copy bpm, key, and release year info (at least) to the new record.
-    new_record = {}
+    new_record: Record = {}
     aa.transfer_shared_record_fields(record, new_record)
     aa.add_missing_tags(new_record, [Tag.VOCAL_TAG.value])
     db_dict[new_alc_filename] = new_record
@@ -811,37 +814,37 @@ def demucs(alc_filename):
     aa.write_db_file(db_dict)
 
 
-def demucs_vocal_sample_path(alc_filename):
+def demucs_vocal_sample_path(alc_filename: str) -> str:
     project_path = aa.project_path_from_alc_filename(alc_filename)
     demucs_samples_path = os.path.join(project_path, aa.DEMUCS_SAMPLES)
     new_sample_filename = os.path.basename(alc_filename) + ".vocals.wav"
     return os.path.join(demucs_samples_path, new_sample_filename)
 
 
-def update_rekordbox_tags():
+def update_rekordbox_tags() -> None:
     export_rekordbox.update_rekordbox_tags()
 
 
-def stamp_from_rekordbox_db():
+def stamp_from_rekordbox_db() -> None:
     """Stamp play timestamps from the Rekordbox database directly, skipping already-processed sessions."""
     export_rekordbox.stamp_from_rekordbox_db()
 
 
-def relink_samples(relink=False):
+def relink_samples(relink: bool = False) -> None:
     """Replace exported rekordbox sample copies with hardlinks to their source."""
     export_rekordbox.relink_samples(
         sample_path=export_rekordbox.REKORDBOX_LOCAL_SAMPLE_PATH, relink=relink
     )
 
 
-def purge_incompatible_samples(delete=False):
+def purge_incompatible_samples(delete: bool = False) -> None:
     """Remove exported samples DJ hardware can't play so the next rekordbox_xml re-converts them."""
     export_rekordbox.purge_incompatible_samples(
         sample_path=export_rekordbox.REKORDBOX_LOCAL_SAMPLE_PATH, delete=delete
     )
 
 
-def print_plays_per_year(alc_filename):
+def print_plays_per_year(alc_filename: str) -> None:
     """Print how many days per year a song was played."""
     db_dict = aa.read_db_file()
     record = db_dict[alc_filename]
