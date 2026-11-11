@@ -187,8 +187,7 @@ def copy_ableton(ref: SongRef):
     path = os.path.abspath(ref.id)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="alc not on disk")
-    cmd = 'osascript -e "set the clipboard to POSIX file \\"%s\\""' % path
-    subprocess.call(cmd, shell=True)
+    aa.copy_file_to_clipboard(path)
     return {"ok": True}
 
 

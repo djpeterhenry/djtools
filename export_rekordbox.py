@@ -111,6 +111,9 @@ def stamp_from_rekordbox_db():
     db = Rekordbox6Database()
     try:
         histories = [h for h in db.get_history() if _parse_history_date_ts(h.Name) is not None]
+        if not histories:
+            print("No history sessions in rekordbox.")
+            return
         most_recent_id = max(histories, key=lambda h: h.DateCreated).ID
         new_histories = [h for h in histories if h.ID not in processed_ids or h.ID == most_recent_id]
         if not new_histories:
@@ -787,11 +790,12 @@ def get_track_info(filename, record):
 
 
 def get_als_track_info(filename, record):
-    first_clip = record["clips"][0]
-    first_sample = first_clip["sample"]
+    # A clip whose sample has gone missing is stored as None
+    clips = [c for c in record["clips"] if c is not None]
+    first_sample = clips[0]["sample"]
 
     # prune to just those matching the first sample.  For now...
-    clips_in_als_order = [c for c in record["clips"] if c["sample"] == first_sample]
+    clips_in_als_order = [c for c in clips if c["sample"] == first_sample]
     # (beat_grid_markers, start_seconds) sorted by start seconds
     bgm_results_in_als_order = [
         get_beat_grid_markers(filename, c) for c in clips_in_als_order
@@ -869,6 +873,8 @@ class PlaylistAdder(object):
         et_list.set("KeyType", "0")
         files_added = 0
         for f in files:
+            if max_num is not None and files_added >= max_num:
+                break
             try:
                 track_id = self.file_to_id[f]
             except KeyError:
@@ -876,8 +882,6 @@ class PlaylistAdder(object):
             et_track = ET.SubElement(et_list, "TRACK")
             et_track.set("Key", str(track_id))
             files_added += 1
-            if max_num is not None and files_added > max_num:
-                break
         set_playlist_count(et_list)
 
 
@@ -947,7 +951,7 @@ def export_rekordbox_xml(rekordbox_filename):
                 suffixes.append("[#n{}]".format(old_index))
 
         # Put camelot key (7A) in the tag
-        cam_key = aa.get_camelot_key(record["key"])
+        cam_key = aa.get_camelot_key(record.get("key"))
         if cam_key is not None:
             et_track.set("Tonality", cam_key)
             # [7=A]
@@ -1105,9 +1109,11 @@ def export_rekordbox_xml(rekordbox_filename):
                 parent, get_bpm_name(bpm, 5), matching_files
             )
 
+    files_with_id_set = set(files_with_id)
+
     def get_matching_files_from_list(list_file):
         l = aa.get_list_from_file(list_file, db_dict)
-        return [f for _, f in l if f is not None and f in files_with_id]
+        return [f for _, f in l if f is not None and f in files_with_id_set]
 
     # all
     def add_all(parent):

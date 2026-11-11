@@ -61,12 +61,14 @@ def process_title(raw_title):
 
 def get_latest_history_songs():
     db = Rekordbox6Database()
-    histories = list(db.get_history())
-    if not histories:
+    try:
+        histories = list(db.get_history())
+        if not histories:
+            return {"name": "", "songs": []}
+        latest = max(histories, key=lambda h: h.DateCreated)
+        songs = list(db.get_history_songs(HistoryID=latest.ID))
+    finally:
         db.close()
-        return []
-    latest = histories[-1]
-    songs = list(db.get_history_songs(HistoryID=latest.ID))
     result = {
         "name": latest.Name,
         "songs": [],
@@ -86,7 +88,6 @@ def get_latest_history_songs():
                 "vocal_title": vocal_title,
             }
         )
-    db.close()
     return result
 
 

@@ -29,7 +29,21 @@ except NameError:
 DB_FILENAME = "aadb_unicode.txt"
 DATABASE_JSON = "database.json"
 
-DISCOGS_API_KEY = "HmnXmNploYjFjezfQWhqzrsJxgnSMioqaqNwHvMo"
+DISCOGS_TOKEN_FILE = os.path.expanduser("~/.config/djtools/discogs_token")
+
+
+def get_discogs_token():
+    """Discogs user token from $DISCOGS_TOKEN, else DISCOGS_TOKEN_FILE."""
+    token = os.environ.get("DISCOGS_TOKEN")
+    if token:
+        return token.strip()
+    try:
+        with open(DISCOGS_TOKEN_FILE) as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        sys.exit(
+            "No discogs token: set DISCOGS_TOKEN or put it in " + DISCOGS_TOKEN_FILE
+        )
 
 ABLETON_EXTENSIONS = [".alc", ".als"]
 SAMPLE_EXTENSIONS = [".mp3", ".m4a", ".wav", ".aiff", ".flac"]
@@ -183,11 +197,14 @@ def write_db_file_pickle(db_dict):
 
 @timing
 def write_db_json(db_dict):
+    # Serialize and write beside the db before touching it, so a failure at any
+    # point leaves the current database.json in place.
+    data = json.dumps(db_dict, ensure_ascii=False)
+    tmp = DATABASE_JSON + ".tmp"
+    with io.open(tmp, "w", encoding="utf8") as json_file:
+        json_file.write(data)
     rotate_file(DATABASE_JSON)
-    with io.open(DATABASE_JSON, "w", encoding="utf8") as json_file:
-        # data = json.dumps(db_dict, ensure_ascii=False, indent=4)
-        data = json.dumps(db_dict, ensure_ascii=False)
-        json_file.write(unicode(data))
+    os.replace(tmp, DATABASE_JSON)
 
 
 @timing
@@ -216,7 +233,7 @@ def has_tag(record, tag):
 
 def add_tag(record, tag):
     if not has_tag(record, tag):
-        record["tags"].append(tag)
+        record.setdefault("tags", []).append(tag)
 
 
 def remove_tag(record, tag):
@@ -318,7 +335,10 @@ def get_xml_clip_info(xml_clip):
 
         # I guess I'll keep the previous behavior of keeping this path relative to the .alc file
         # This means I have to go up one folder using ".." because the sample relative path is to the top level djpeterhenry project
-        return os.path.join("..", xml_fileref.find("RelativePath").get("Value"))
+        xml_relative_path = xml_fileref.find("RelativePath")
+        if xml_relative_path is None or not xml_relative_path.get("Value"):
+            return None
+        return os.path.join("..", xml_relative_path.get("Value"))
 
     sample_filepath_is_new_format = False
     sample_filepath = get_sample_filepath_old()
@@ -326,7 +346,7 @@ def get_xml_clip_info(xml_clip):
         sample_filepath_is_new_format = True
         sample_filepath = get_sample_filepath_new()
 
-    if os.path.exists(sample_filepath):
+    if sample_filepath and os.path.exists(sample_filepath):
         result["sample"] = sample_filepath
         result["sample_ts"] = os.path.getmtime(sample_filepath)
         result["sample_filepath_is_new_format"] = sample_filepath_is_new_format
@@ -468,25 +488,27 @@ def get_key_from_keyfinder_cli(sample_fullpath):
         result = subprocess.check_output(["keyfinder-cli", sample_fullpath])
     except subprocess.CalledProcessError as e:
         print("Error running keyfinder-cli:", e)
-        # Assume this failure was because it wasn't 16-bit PCM.
+        # Assume a return code of 1 was because it wasn't 16-bit PCM.
+        if e.returncode != 1:
+            raise
         # Create a temporary conversion of sample_fullpath and run the process again.
-        if e.returncode == 1:
-            print("Converting to 16-bit PCM for keyfinder-cli...")
-            # Convert to 16-bit PCM
-            temp_sample = sample_fullpath + ".temp.wav"
-            command = [
-                "ffmpeg",
-                "-i",
-                sample_fullpath,
-                "-c:a",
-                "pcm_s16le",
-                temp_sample,
-            ]
+        print("Converting to 16-bit PCM for keyfinder-cli...")
+        temp_sample = sample_fullpath + ".temp.wav"
+        command = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            sample_fullpath,
+            "-c:a",
+            "pcm_s16le",
+            temp_sample,
+        ]
+        try:
             subprocess.check_call(command)
-            # Now try again with the temporary file
             result = subprocess.check_output(["keyfinder-cli", temp_sample])
-            # Clean up the temporary file
-            os.remove(temp_sample)
+        finally:
+            if os.path.exists(temp_sample):
+                os.remove(temp_sample)
 
     return result.decode("utf8").strip()
 
@@ -591,15 +613,19 @@ def generate_camelot_dict():
 # create global
 camelot_dict, reverse_camelot_dict = generate_camelot_dict()
 
-CAMELOT_KEY = re.compile("([0-9][0-9]?)[A|B|a|b]")
+CAMELOT_KEY = re.compile(r"(1[0-2]|[1-9])[ABab]")
 
 
 def normalized_camelot_key(s):
-    if CAMELOT_KEY.match(s):
+    if CAMELOT_KEY.fullmatch(s):
         return s.upper()
+    return None
 
 
 def get_camelot_key(s):
+    # Records added before their key is analyzed have none
+    if not s:
+        return None
     # match direct
     match = normalized_camelot_key(s)
     if match:
@@ -617,6 +643,26 @@ def get_camelot_num(key):
 def reveal_file(filename):
     command = ["open", "-R", filename]
     subprocess.call(command)
+
+
+def copy_file_to_clipboard(path):
+    """Put a file on the clipboard (as a file, for pasting into Ableton).
+
+    The path goes in as an argument rather than spliced into the script, so
+    quotes and other shell characters in song names are harmless.
+    """
+    subprocess.call(
+        [
+            "osascript",
+            "-e",
+            "on run argv",
+            "-e",
+            "set the clipboard to POSIX file (item 1 of argv)",
+            "-e",
+            "end run",
+            path,
+        ]
+    )
 
 
 def get_missing():
@@ -659,10 +705,10 @@ def get_rekordbox_files(db_dict):
 def generate_sample(valid_alc_files, db_dict):
     date_file_tuples = []
     for f in valid_alc_files:
-        record = db_dict[f]
-        if "clip" not in record:
+        clip = get_clip(db_dict[f])
+        if clip is None:
             continue
-        date_file_tuples.append((record["clip"]["sample_ts"], f))
+        date_file_tuples.append((clip["sample_ts"], f))
     date_file_tuples.sort()
     date_file_tuples.reverse()
     return [file for _, file in date_file_tuples]
@@ -750,11 +796,19 @@ def get_date_from_ts(ts):
     return datetime.date.fromtimestamp(ts).strftime("%Y-%m-%d")
 
 
+def get_clip(record):
+    """The record's first audio clip, or None.
+
+    A clip is stored as None when its sample file has gone missing.
+    """
+    return record.get("clip")
+
+
 def get_sample(record):
-    try:
-        return record["clip"]["sample"]
-    except KeyError:
+    clip = get_clip(record)
+    if clip is None:
         return None
+    return clip["sample"]
 
 
 def generate_alc_pairs(valid_alc_files, db_dict):
@@ -935,10 +989,7 @@ def get_artist_and_track(filename):
 
 
 def get_sample_unicode(record):
-    if "clip" not in record:
-        return None
-    sample = record["clip"]["sample"]
-    return sample
+    return get_sample(record)
 
 
 def get_export_sample_path(f, sample_ext, target_path):

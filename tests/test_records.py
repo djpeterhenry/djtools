@@ -19,7 +19,6 @@ def test_tags():
     assert not aa.has_tag({}, "a")
 
 
-@pytest.mark.xfail(strict=True, reason="bug: add_tag KeyErrors on records without tags")
 def test_add_tag_without_tags_list():
     record = {"bpm": 120}
     aa.add_tag(record, "GOOD")
@@ -137,7 +136,6 @@ def test_get_sample():
     assert aa.get_sample({}) is None
 
 
-@pytest.mark.xfail(strict=True, reason="bug: clip is None when its sample went missing")
 def test_get_sample_with_none_clip():
     assert aa.get_sample({"clip": None}) is None
     assert aa.get_sample_unicode({"clip": None}) is None
@@ -186,7 +184,6 @@ def test_get_key_from_keyfinder_cli_converts_on_failure(tmp_path, monkeypatch):
     assert not (tmp_path / "s.flac.temp.wav").exists()
 
 
-@pytest.mark.xfail(strict=True, reason="bug: other keyfinder failures hit an unbound variable")
 def test_get_key_from_keyfinder_cli_other_failure(monkeypatch):
     import subprocess
 
@@ -196,3 +193,15 @@ def test_get_key_from_keyfinder_cli_other_failure(monkeypatch):
     monkeypatch.setattr(subprocess, "check_output", fail)
     with pytest.raises(subprocess.CalledProcessError):
         aa.get_key_from_keyfinder_cli("s.mp3")
+
+
+def test_get_discogs_token(tmp_path, monkeypatch):
+    token_file = tmp_path / "token"
+    monkeypatch.setattr(aa, "DISCOGS_TOKEN_FILE", str(token_file))
+    monkeypatch.setenv("DISCOGS_TOKEN", " from-env\n")
+    assert aa.get_discogs_token() == "from-env"
+    monkeypatch.delenv("DISCOGS_TOKEN")
+    with pytest.raises(SystemExit):
+        aa.get_discogs_token()
+    token_file.write_text("from-file\n")
+    assert aa.get_discogs_token() == "from-file"

@@ -56,16 +56,16 @@ def add_keys():
         if not key or key[-1] == "?":
             print("Need key for: " + filename)
 
-            sample_filepath = os.path.abspath(record["clip"]["sample"])
+            sample = aa.get_sample(record)
+            if sample is None:
+                print("No sample, skipping: " + filename)
+                continue
+            sample_filepath = os.path.abspath(sample)
             assert os.path.isfile(sample_filepath)
 
             new_key = aa.get_key_from_keyfinder_cli(sample_filepath)
             print("new_key: " + new_key)
-            if new_key is None:
-                continue
             record["key"] = new_key
-        else:
-            pass
     # Write the database only once at the end.
     # If you ever need to batch process the whole library again (heaven forbid) then change this.
     aa.write_db_file(db_dict)
@@ -76,18 +76,14 @@ def edit_bpm(edit_filename):
     assert os.path.isfile(edit_filename)
     print(edit_filename)
     db_dict = aa.read_db_file()
-    bpm = None
-    if edit_filename in db_dict:
-        record = db_dict[edit_filename]
-        bpm = record["bpm"]
-    bpm = aa.get_int("BPM [%s]: " % bpm)
+    record = db_dict.get(edit_filename, {"tags": []})
+    bpm = aa.get_int("BPM [%s]: " % record.get("bpm"))
     if bpm is None:
         print("Aborting single edit")
         sys.exit(1)
-    new_record = record
-    new_record["bpm"] = bpm
-    db_dict[edit_filename] = new_record
-    print("Inserted: " + str(new_record))
+    record["bpm"] = bpm
+    db_dict[edit_filename] = record
+    print("Inserted: " + str(record))
     aa.write_db_file(db_dict)
 
 
@@ -95,9 +91,9 @@ def rename_tag(tag_old, tag_new):
     """Rename a tag throughout the database."""
     db_dict = aa.read_db_file()
     for _, record in sorted(db_dict.items()):
-        tags = record["tags"]
-        tags = [x if (x != tag_old) else tag_new for x in tags]
-        record["tags"] = tags
+        tags = [tag_new if x == tag_old else x for x in aa.get_tags(record)]
+        # dict keeps the first of any duplicates, in order
+        record["tags"] = list(dict.fromkeys(tags))
     aa.write_db_file(db_dict)
 
 
@@ -116,9 +112,7 @@ def list_tags():
     files = aa.get_rekordbox_files(db_dict)
     tag_to_count = defaultdict(int)
     for f in files:
-        record = db_dict[f]
-        tags = record["tags"]
-        for tag in tags:
+        for tag in aa.get_tags(db_dict[f]):
             tag_to_count[tag] += 1
     for tag, count in tag_to_count.items():
         print(tag, ":", count)
@@ -153,10 +147,10 @@ def transfer_missing():
                 del db_dict[f]
                 aa.write_db_file(db_dict)
             else:
-                try:
-                    target = close[choice]
-                except KeyError:
+                if not 0 <= choice < len(close):
+                    print("No such choice, skipping")
                     continue
+                target = close[choice]
                 target_record = db_dict.get(target, {})
                 target_ts_list = aa.get_ts_list(target_record)
                 both_ts_list = sorted(list(set(target_ts_list + ts_list)))
@@ -456,7 +450,7 @@ def release_dates_discogs(n: int = None, retry: bool = False):
         retry: If True, only process songs with None for release_year_discogs
     """
     db_dict = aa.read_db_file()
-    d = discogs_client.Client("DJTools/1.0", user_token=aa.DISCOGS_API_KEY)
+    d = discogs_client.Client("DJTools/1.0", user_token=aa.get_discogs_token())
 
     # Get list of files to process, sorted by play count
     process_files = []
@@ -541,7 +535,7 @@ def recheck_release_dates_discogs(n: int = 50, write: bool = False):
         print("DRY RUN -- nothing will be written")
     print("-" * 70)
 
-    d = discogs_client.Client("DJTools/1.0", user_token=aa.DISCOGS_API_KEY)
+    d = discogs_client.Client("DJTools/1.0", user_token=aa.get_discogs_token())
     changed = same = failed = rejected = 0
 
     for _gap, first_year, filename in suspicious[:n]:
@@ -750,6 +744,9 @@ def demucs(alc_filename):
 
     # The input ableton file must have the new format in order for us to write to a new ableton file.
     audioclip = aa.get_audioclip_from_alc(alc_filename)
+    if audioclip is None:
+        print(f"Could not read an audio clip from {alc_filename}.")
+        return
     if not audioclip.get("sample_filepath_is_new_format"):
         print(
             f"Input ableton file {alc_filename} does not have sample_filepath_is_new_format."
@@ -758,7 +755,7 @@ def demucs(alc_filename):
 
     # Use the original sample from the ableton file.
     # You could also use the existing rekordbox sample which might be easier for demucs to handle.
-    sample_filepath = os.path.abspath(record["clip"]["sample"])
+    sample_filepath = os.path.abspath(audioclip["sample"])
     if not os.path.isfile(sample_filepath):
         print(f"Sample file {sample_filepath} does not exist.")
         return

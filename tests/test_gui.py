@@ -271,7 +271,6 @@ def test_app_refuses_second_instance(app, root):
         ableton_gui.App(root, include_extra=False)
 
 
-@pytest.mark.xfail(strict=True, reason="bug: a failed startup leaves the lock behind")
 def test_app_failed_startup_releases_lock(root, gui_env, monkeypatch):
     import ableton_gui
 
@@ -292,7 +291,6 @@ def test_app_bpm_edit_rejects_empty(app):
     assert app.db_dict["B - New One.alc"]["bpm"] == 126
 
 
-@pytest.mark.xfail(strict=True, reason="bug: a record without a key crashes the listing")
 def test_app_record_without_key(app):
     del app.db_dict["B - New One.alc"]["key"]
     app.update_listbox()

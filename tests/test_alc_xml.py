@@ -42,7 +42,6 @@ def test_no_audioclip_gives_none(songs_dir):
     assert aa.get_audioclip_from_alc("empty.alc") is None
 
 
-@pytest.mark.xfail(strict=True, reason="bug: new-format FileRef without a RelativePath value crashes")
 def test_relative_path_without_value_gives_none(make_alc):
     fn = make_alc()
     root = aa.alc_to_xml(fn)

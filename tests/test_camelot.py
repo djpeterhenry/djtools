@@ -35,13 +35,11 @@ def test_get_camelot_key(key, expected):
     assert aa.get_camelot_key(key) == expected
 
 
-@pytest.mark.xfail(strict=True, reason="bug: regex accepts '|' and out-of-range numbers")
 @pytest.mark.parametrize("key", ["1|", "13A", "0A", "8Ax"])
 def test_get_camelot_key_rejects_invalid(key):
     assert aa.get_camelot_key(key) is None
 
 
-@pytest.mark.xfail(strict=True, reason="bug: records without a key crash")
 def test_get_camelot_key_none():
     assert aa.get_camelot_key(None) is None
 

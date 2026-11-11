@@ -97,7 +97,6 @@ def test_stamp_from_rekordbox_db(songs_dir, write_db, db_dict, fake_rekordbox):
         assert f.read() == "[1]"
 
 
-@pytest.mark.xfail(strict=True, reason="bug: max() of no history sessions raises")
 def test_stamp_from_rekordbox_db_without_history(songs_dir, write_db, db_dict, fake_rekordbox):
     write_db(db_dict)
     fake_rekordbox([], {})
@@ -419,7 +418,6 @@ def test_get_als_track_info_shims_before_next_start():
     assert info.memory_cues == []
 
 
-@pytest.mark.xfail(strict=True, reason="bug: a clip whose sample went missing is stored as None")
 def test_get_als_track_info_skips_missing_clips():
     record = {"clips": [None, clip([(1.0, 0.0), (9.0, 16.0)])]}
     assert len(er.get_als_track_info("f", record).hot_cues) == 1
@@ -442,7 +440,6 @@ def test_get_filtered_files(db_dict):
     assert er.get_filtered_files(db_dict, files, cam_num_list=[3, 11]) == ["B - New One.alc", "C - Vocal.alc"]
 
 
-@pytest.mark.xfail(strict=True, reason="bug: records without a key crash")
 def test_get_filtered_files_without_key(db_dict):
     assert er.get_filtered_files(db_dict, ["E - No Key.alc"], cam_num_list=[8]) == []
 
@@ -470,7 +467,6 @@ def test_playlist_adder():
     assert adder.playlists_added == 1
 
 
-@pytest.mark.xfail(strict=True, reason="bug: max_num lets one extra track in")
 def test_playlist_adder_max_num():
     adder = er.PlaylistAdder({"a": 0, "b": 1, "c": 2})
     root = ET.Element("NODE")

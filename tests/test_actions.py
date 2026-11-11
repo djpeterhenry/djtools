@@ -143,7 +143,6 @@ def test_rename_and_remove_tag(write_db):
     assert aa.read_db_file()["a"]["tags"] == ["new"]
 
 
-@pytest.mark.xfail(strict=True, reason="bug: renaming onto an existing tag duplicates it")
 def test_rename_tag_does_not_duplicate(write_db):
     write_db({"a": make_record(tags=["old", "new"])})
     actions.rename_tag("old", "new")
@@ -158,7 +157,6 @@ def test_edit_bpm(songs_dir, write_db, monkeypatch):
     assert aa.read_db_file()["a.alc"]["bpm"] == 128
 
 
-@pytest.mark.xfail(strict=True, reason="bug: editing a file not yet in the db raises NameError")
 def test_edit_bpm_new_file(songs_dir, write_db, monkeypatch):
     (songs_dir / "new.alc").write_text("")
     write_db({})
@@ -187,7 +185,6 @@ def test_add_keys(make_alc, write_db, monkeypatch):
     assert aa.read_db_file()[fn]["key"] == "Am"
 
 
-@pytest.mark.xfail(strict=True, reason="bug: a song whose sample is missing crashes add_keys")
 def test_add_keys_skips_missing_sample(make_alc, write_db, monkeypatch):
     fn = make_alc(create_sample=False)
     write_db({fn: {"bpm": 120, "tags": []}})
@@ -210,7 +207,6 @@ def test_transfer_missing(songs_dir, write_db, monkeypatch):
     assert db["A - Track (Edit).alc"] == {"ts_list": [1.0, 2.0, 3.0], "bpm": 99, "key": "5A", "tags": ["GOOD"]}
 
 
-@pytest.mark.xfail(strict=True, reason="bug: an out of range choice raises IndexError")
 def test_transfer_missing_bad_choice(songs_dir, write_db, monkeypatch):
     (songs_dir / "A - Track (Edit).alc").write_text("")
     write_db({"A - Track.alc": make_record(), "A - Track (Edit).alc": {}})
@@ -255,6 +251,7 @@ def test_release_dates_manual(write_db, monkeypatch):
 
 
 def test_release_dates_discogs(write_db, monkeypatch, fixed_now):
+    monkeypatch.setenv("DISCOGS_TOKEN", "t")
     write_db(
         {
             "A - Played.alc": make_record(ts_list=[fixed_now]),
@@ -271,7 +268,6 @@ def test_release_dates_discogs(write_db, monkeypatch, fixed_now):
     assert "release_year_discogs" not in db["B - Never Played.alc"]
 
 
-@pytest.mark.xfail(strict=True, reason="bug: an alc whose sample is missing raises AttributeError")
 def test_demucs_missing_sample(make_alc, write_db):
     fn = make_alc(create_sample=False)
     write_db({fn: make_record()})

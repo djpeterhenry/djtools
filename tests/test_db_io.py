@@ -33,7 +33,6 @@ def test_rotate_file_caps_at_max(songs_dir):
     assert not (songs_dir / "f.51").exists()
 
 
-@pytest.mark.xfail(strict=True, reason="bug: a failed write leaves no database.json")
 def test_failed_write_keeps_current_db(songs_dir):
     aa.write_db_file({"v": 1})
     with pytest.raises(TypeError):

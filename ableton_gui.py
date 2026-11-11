@@ -51,7 +51,6 @@ class App:
     def __init__(self, master, include_extra):
         if os.path.exists(LOCK_FILEPATH):
             raise RuntimeError("Locked: {}".format(LOCK_FILEPATH))
-        open(LOCK_FILEPATH, "a").close()
 
         ####
         # Constants
@@ -286,9 +285,15 @@ class App:
         # initial update
         self.update_listbox()
 
+        # Only lock once startup has succeeded, so a failed start can't leave a
+        # stale lock behind.
+        open(LOCK_FILEPATH, "a").close()
+
     def quit_handler(self):
-        os.remove(LOCK_FILEPATH)
-        self.save_dialog()
+        try:
+            self.save_dialog()
+        finally:
+            os.remove(LOCK_FILEPATH)
         sys.exit(0)
 
     def listbox_select(self, ignore):
@@ -298,14 +303,9 @@ class App:
 
     def refresh_edit(self):
         selected_filename = self.get_selected_filename()
-        new_bpm = None
-        new_key = None
-        try:
-            record = self.db_dict[selected_filename]
-            new_bpm = record["bpm"]
-            new_key = record["key"]
-        except KeyError:
-            pass
+        record = self.db_dict.get(selected_filename, {})
+        new_bpm = record.get("bpm", "")
+        new_key = record.get("key", "")
         # only update if UI elements exist
         if self.entry_bpm_edit:
             self.entry_bpm_edit.stringvar.set(new_bpm)
@@ -321,7 +321,7 @@ class App:
         # want to sort those from the dictionary
         others = set()
         for record in self.db_dict.values():
-            for tag in record["tags"]:
+            for tag in aa.get_tags(record):
                 if tag not in result:
                     others.add(tag)
         result.extend(sorted(others))
@@ -443,7 +443,7 @@ class App:
                 filename_pairs_list.append((filename, None))
                 continue
 
-            bpm, tag_list, key = (record["bpm"], record["tags"], record["key"])
+            bpm, tag_list, key = (record["bpm"], aa.get_tags(record), record.get("key", ""))
             play_count = aa.get_ts_date_count(record)
 
             keep = True
@@ -675,11 +675,7 @@ class App:
         self.ts_filename(filename)
 
     def file_action_copy_ableton(self, filename):
-        filename_path = os.path.abspath(filename)
-        command = (
-            'osascript -e "set the clipboard to POSIX file \\"%s\\""' % filename_path
-        )
-        subprocess.call(command, shell=True)
+        aa.copy_file_to_clipboard(os.path.abspath(filename))
         self.add_ts_from_copy(filename)
 
     def file_action_reveal(self, filename):

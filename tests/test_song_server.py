@@ -123,7 +123,6 @@ def test_copy(client, songs_dir, monkeypatch):
     assert len(calls) == 1
 
 
-@pytest.mark.xfail(strict=True, reason="bug: the path is pasted into a shell command string")
 def test_copy_passes_path_without_shell(client, db_dict, songs_dir, monkeypatch):
     calls = []
     monkeypatch.setattr(subprocess, "call", lambda cmd, **kw: calls.append((cmd, kw)))

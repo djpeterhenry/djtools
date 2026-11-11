@@ -60,7 +60,10 @@ def song(track_no, title, artist="Artist", year=2020):
 
 def test_get_latest_history_songs(monkeypatch):
     db = FakeDb(
-        [types.SimpleNamespace(ID=1, Name="HISTORY 2024-06-14"), types.SimpleNamespace(ID=2, Name="HISTORY 2024-06-15")],
+        [
+            types.SimpleNamespace(ID=2, Name="HISTORY 2024-06-15", DateCreated=2),
+            types.SimpleNamespace(ID=1, Name="HISTORY 2024-06-14", DateCreated=1),
+        ],
         {2: [song(1, "One   [#disco]"), song(2, "Two   [#vocal]", artist=None)]},
     )
     monkeypatch.setattr(hs, "Rekordbox6Database", lambda: db)
@@ -80,7 +83,6 @@ def test_get_latest_history_songs(monkeypatch):
     assert data["songs"][1]["vocal_title"] == "Two (Vocal)"
 
 
-@pytest.mark.xfail(strict=True, reason="bug: no history returns [] and the handler calls .get on it")
 def test_get_latest_history_songs_empty(monkeypatch):
     monkeypatch.setattr(hs, "Rekordbox6Database", lambda: FakeDb([], {}))
     assert hs.get_latest_history_songs() == {"name": "", "songs": []}
