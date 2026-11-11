@@ -1,0 +1,269 @@
+<DJ_PLAYLISTS>
+  <COLLECTION Entries="4">
+    <TRACK Tonality="11B" Name="Set                                                                                                                     [#a0] [#n0] [#a1] [#n1] [#a2] [#n2] [#a3] [#n3] [#a4] [#n4] [#a5] [#n5] [#11=B] [#11-B][#10-B] [#11+B][#10+B][#12+B] [#p1] [#t1] [#t2] [#t3] [#t4] [#t5]" Artist="D" Location="file://localhost<TMP>/samples/D - Set.aiff" Comments="001" DateAdded="2024-06-12" Album="1654615998" TotalTime="1200" AverageBpm="120.0" TrackID="0">
+      <TEMPO Inizio="1.0" Bpm="120.0" Metro="4/4" Battito="1" />
+      <POSITION_MARK Name="Start" Type="0" Start="1.0" Num="0" />
+      <POSITION_MARK Name="Start" Type="0" Start="17.0" Num="1" />
+    </TRACK>
+    <TRACK Tonality="3B" Name="New One                                                                                                                 [#a0] [#n0] [#a1] [#n1] [#a2] [#n2] [#a3] [#n3] [#a4] [#n4] [#a5] [#n5] [#3=B] [#3-B][#2-B] [#3+B][#2+B][#4+B] [#p1] [#t1] [#t2] [#t3] [#t4] [#t5]" Artist="B" Location="file://localhost<TMP>/samples/B - New One.aiff" Comments="001" DateAdded="2024-06-10" Album="1806341205" TotalTime="1200" AverageBpm="120.0" TrackID="1">
+      <TEMPO Inizio="1.0" Bpm="120.0" Metro="4/4" Battito="1" />
+      <POSITION_MARK Name="Start" Type="0" Start="1.0" Num="0" />
+      <POSITION_MARK Name="Start Loop" Type="4" Start="1.0" End="9.0" Num="1" />
+      <POSITION_MARK Name="Start" Type="0" Start="1.0" Num="-1" />
+      <POSITION_MARK Name="Start Loop" Type="4" Start="1.0" End="9.0" Num="-1" />
+    </TRACK>
+    <TRACK Tonality="11A" Name="Vocal                                                                                                                   [#vocal] [#a0] [#n0] [#a1] [#n1] [#a2] [#n2] [#a3] [#n3] [#a4] [#n4] [#a5] [#n5] [#11=A] [#11-A][#10-A] [#11+A][#10+A][#12+A] [#p0] [#y05]" Artist="C" Location="file://localhost<TMP>/samples/C - Vocal.aiff" Comments="000" Year="2005" DateAdded="2024-06-05" Album="173879092" TotalTime="1200" AverageBpm="120.0" TrackID="2">
+      <TEMPO Inizio="1.0" Bpm="120.0" Metro="4/4" Battito="1" />
+      <POSITION_MARK Name="Start" Type="0" Start="1.0" Num="0" />
+      <POSITION_MARK Name="Start Loop" Type="4" Start="1.0" End="9.0" Num="1" />
+      <POSITION_MARK Name="Start" Type="0" Start="1.0" Num="-1" />
+      <POSITION_MARK Name="Start Loop" Type="4" Start="1.0" End="9.0" Num="-1" />
+    </TRACK>
+    <TRACK Tonality="8A" Name="Old Favorite                                                                                                            [#disco] [#good] [#lyrics] [#a0] [#a1] [#a2] [#a3] [#n3] [#a4] [#n4] [#a5] [#n5] [#8=A] [#8-A][#7-A] [#8+A][#7+A][#9+A] [#p2] [#t1] [#t2] [#t3] [#t4] [#t5] [#y98]" Artist="A" Location="file://localhost<TMP>/samples/A - Old Favorite.aiff" Comments="002" Year="1998" DateAdded="2021-09-19" Album="1112038970" TotalTime="1200" AverageBpm="120.0" TrackID="3">
+      <TEMPO Inizio="1.0" Bpm="120.0" Metro="4/4" Battito="1" />
+      <POSITION_MARK Name="Start" Type="0" Start="1.0" Num="0" />
+      <POSITION_MARK Name="Start Loop" Type="4" Start="1.0" End="9.0" Num="1" />
+      <POSITION_MARK Name="Start" Type="0" Start="1.0" Num="-1" />
+      <POSITION_MARK Name="Start Loop" Type="4" Start="1.0" End="9.0" Num="-1" />
+    </TRACK>
+  </COLLECTION>
+  <PLAYLISTS>
+    <NODE Type="0" Name="ROOT">
+      <NODE Type="0" Name="V01">
+        <NODE Type="0" Name="All">
+          <NODE Type="1" Name="All" KeyType="0" Entries="4">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+            <TRACK Key="3" />
+          </NODE>
+        </NODE>
+        <NODE Type="0" Name="Top">
+          <NODE Type="1" Name="Sets" KeyType="0" Entries="3">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="New" KeyType="0" Entries="4">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="Top" KeyType="0" Entries="4">
+            <TRACK Key="3" />
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="Top (SF)" KeyType="0" Entries="4">
+            <TRACK Key="3" />
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="Top (Last 2 Years)" KeyType="0" Entries="4">
+            <TRACK Key="3" />
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="Top (Last 4 Years)" KeyType="0" Entries="4">
+            <TRACK Key="3" />
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="Top (Last 6 Years)" KeyType="0" Entries="4">
+            <TRACK Key="3" />
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="Active" KeyType="0" Entries="1">
+            <TRACK Key="3" />
+          </NODE>
+        </NODE>
+        <NODE Type="0" Name="Tag">
+          <NODE Type="1" Name="jazz" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="disco" KeyType="0" Entries="1">
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="big_room" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="tech_house" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="afro" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="actual_house" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="progressive" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="acid" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="tropical" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="filter_house" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="rock_house" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="dubstep" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="uk_garage" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="hide_genre" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="castro" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="good" KeyType="0" Entries="1">
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="day_cloverdale" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="night_cloverdale" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="p_nasty" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="crispy_tacos" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="drum_loops" KeyType="0" Entries="0" />
+        </NODE>
+        <NODE Type="0" Name="Lists">
+          <NODE Type="1" Name="warmup" KeyType="0" Entries="2">
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+          </NODE>
+        </NODE>
+        <NODE Type="0" Name="BPM Filter">
+          <NODE Type="1" Name="000 (0) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="080 (5) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="085 (5) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="090 (5) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="095 (5) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="100 (5) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="105 (5) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="110 (5) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="115 (5) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="118 (4) BPM" KeyType="0" Entries="2">
+            <TRACK Key="2" />
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="120 (4) BPM" KeyType="0" Entries="2">
+            <TRACK Key="2" />
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="120 (10) BPM" KeyType="0" Entries="4">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="122 (4) BPM" KeyType="0" Entries="3">
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="124 (4) BPM" KeyType="0" Entries="4">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="125 (10) BPM" KeyType="0" Entries="4">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="126 (4) BPM" KeyType="0" Entries="4">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="128 (4) BPM" KeyType="0" Entries="3">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="130 (4) BPM" KeyType="0" Entries="3">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="130 (10) BPM" KeyType="0" Entries="4">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="132 (4) BPM" KeyType="0" Entries="2">
+            <TRACK Key="0" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="135 (5) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="135 (10) BPM" KeyType="0" Entries="3">
+            <TRACK Key="0" />
+            <TRACK Key="1" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="140 (5) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="140 (10) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="145 (10) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="150 (10) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="155 (10) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="160 (10) BPM" KeyType="0" Entries="1">
+            <TRACK Key="2" />
+          </NODE>
+        </NODE>
+        <NODE Type="0" Name="Rediscover">
+          <NODE Type="1" Name="120 (5) BPM" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="125 (5) BPM" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="130 (5) BPM" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="140 (5) BPM" KeyType="0" Entries="0" />
+        </NODE>
+        <NODE Type="0" Name="Key Filter">
+          <NODE Type="1" Name="01 [Abm, B]" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="02 [Ebm, Gb]" KeyType="0" Entries="1">
+            <TRACK Key="1" />
+          </NODE>
+          <NODE Type="1" Name="03 [Bbm, Db]" KeyType="0" Entries="1">
+            <TRACK Key="1" />
+          </NODE>
+          <NODE Type="1" Name="04 [Fm, Ab]" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="05 [Cm, Eb]" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="06 [Gm, Bb]" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="07 [Dm, F]" KeyType="0" Entries="1">
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="08 [Am, C]" KeyType="0" Entries="1">
+            <TRACK Key="3" />
+          </NODE>
+          <NODE Type="1" Name="09 [Em, G]" KeyType="0" Entries="0" />
+          <NODE Type="1" Name="10 [Bm, D]" KeyType="0" Entries="2">
+            <TRACK Key="0" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="11 [Gbm, A]" KeyType="0" Entries="2">
+            <TRACK Key="0" />
+            <TRACK Key="2" />
+          </NODE>
+          <NODE Type="1" Name="12 [Dbm, E]" KeyType="0" Entries="0" />
+        </NODE>
+      </NODE>
+    </NODE>
+  </PLAYLISTS>
+</DJ_PLAYLISTS>
