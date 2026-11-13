@@ -71,27 +71,28 @@ def get_latest_history_songs() -> History:
             return {"name": "", "songs": []}
         latest = max(histories, key=lambda h: h.DateCreated)
         songs = list(db.get_history_songs(HistoryID=latest.ID))
+        # Content and Artist are lazy-loaded, so read them before closing the session.
+        result = {
+            "name": latest.Name,
+            "songs": [],
+        }
+        for s in songs:
+            c = s.Content
+            title, is_vocal, vocal_title = process_title(c.Title)
+            artist = c.Artist.Name if c.Artist else ""
+            result["songs"].append(
+                {
+                    "track_no": s.TrackNo,
+                    "title": title,
+                    "artist": artist,
+                    "played_at": str(s.created_at),
+                    "year": c.ReleaseYear,
+                    "is_vocal": is_vocal,
+                    "vocal_title": vocal_title,
+                }
+            )
     finally:
         db.close()
-    result = {
-        "name": latest.Name,
-        "songs": [],
-    }
-    for s in songs:
-        c = s.Content
-        title, is_vocal, vocal_title = process_title(c.Title)
-        artist = c.Artist.Name if c.Artist else ""
-        result["songs"].append(
-            {
-                "track_no": s.TrackNo,
-                "title": title,
-                "artist": artist,
-                "played_at": str(s.created_at),
-                "year": c.ReleaseYear,
-                "is_vocal": is_vocal,
-                "vocal_title": vocal_title,
-            }
-        )
     return result
 
 
