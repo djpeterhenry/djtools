@@ -1,0 +1,8 @@
+argh
+fastapi
+numpy
+pydantic
+pyrekordbox
+python3-discogs-client
+unidecode
+uvicorn

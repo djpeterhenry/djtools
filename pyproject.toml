@@ -1,0 +1,46 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = [
+    # third-party deprecations, not ours
+    "ignore:.*CallSpec2.*",
+    "ignore:.*httpx2.*",
+]
+
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+include = ["*.py", "scripts", "tests"]
+exclude = ["**/__pycache__", "song_web"]
+reportMissingTypeStubs = false
+
+# Tests index straight into results they've just checked and use partial
+# records, so the Optional / not-required-key rules are noise there.
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+extraPaths = ["."]
+reportOptionalMemberAccess = false
+reportOptionalSubscript = false
+reportOptionalIterable = false
+reportOptionalOperand = false
+reportTypedDictNotRequiredAccess = false
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = ["song_web", "lyrics_web"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I"]
+ignore = [
+    "E501",  # long lines: the formatter's job, not the linter's
+    "E741",  # `l` for a line is used throughout lyrics.py
+    "B905",  # zip(strict=...) where the lengths are equal by construction
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "ableton_aid", "actions", "check_box", "config", "conftest", "db_types", "demucs", "entry_text",
+    "export_rekordbox", "history_server", "lists_selector", "lyrics", "lyrics_align", "lyrics_server",
+    "server_util", "silence", "song_server", "tag", "timing", "test_*",
+]

@@ -1,0 +1,4 @@
+@file,1,DDJ-1000
+CFXSubParameter,CFXSubParameter,KnobSliderHiRes,B603,,,,,,,,,,Fast;,CFX sub parameter
+FX1-2,FX1-2,KnobSliderHiRes,B60F,,,,,,,,,,,FX1-2 Effect Depth
+FX1-3,FX1-3,KnobSliderHiRes,B607,,,,,,,,,,,FX1-3 Effect Depth

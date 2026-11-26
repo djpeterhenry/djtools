@@ -1,0 +1,14 @@
+@file,1,DDJ-1000
+CFXSubParameter,CFXSubParameter,KnobSliderHiRes,B603,,,,,,,,,,Fast;,CFX sub parameter
+FX1-2,FX1-2,KnobSliderHiRes,B60F,,,,,,,,,,,FX1-2 Effect Depth
+FX1-3,FX1-3,KnobSliderHiRes,B607,,,,,,,,,,,FX1-3 Effect Depth
+NoFunction,,Button,,,,9215,9315,,,,9215,9315,,SLIP Reverse (momentary)
+NoFunction,,Button,,,,9238,9338,,,,9238,9338,,Reverse
+NoFunction,,KnobSlider,966A,,,,,,,,,,,DJP - SAMPLER VOL
+NoFunction,,KnobSlider,966B,,,,,,,,,,,DJP - SAMPLER VOL
+NoFunction,,KnobSlider,B313,,,,,,,,,,,DJP - SAMPLER VOL
+PlayPausePreview,,Button,9015,,,,,9015,,,,,,
+PlayPausePreview,,Button,9115,,,,,9115,,,,,,
+SamplerVolume,,KnobSlider,B609,,,,,,,,,,,DJP - SAMPLER VOL
+SkipPreview,,Button,9038,,,,,9038,,,,,,
+SkipPreview,,Button,9138,,,,,9138,,,,,,

@@ -1,0 +1,738 @@
+#!/usr/bin/env python3.11
+"""Serves the most recent Rekordbox history as a live-updating web page."""
+
+import json
+import logging
+import re
+from datetime import datetime, timedelta
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Any
+
+from pyrekordbox import Rekordbox6Database
+
+from server_util import kill_existing_server
+
+# We know Rekordbox is running; we only read, never commit, so this is safe.
+logging.getLogger("pyrekordbox.db6.database").setLevel(logging.ERROR)
+
+PORT = 8888
+POLL_INTERVAL = 1  # seconds
+TAG_SEPARATOR = "   "  # triple-space delimiter before tag suffixes like [Techno]
+
+# Now Playing page settings
+NOW_WIDTH = 1920
+NOW_HEIGHT = 1080
+NOW_FONT_SIZE = "48px"
+NOW_ARTIST_SIZE = "1.2em"
+NOW_TITLE_SIZE = "1.1em"
+NOW_YEAR_SIZE = "0.9em"
+NOW_LEFT_PAD = 20
+NOW_BOTTOM_PAD = 20
+NOW_VOCAL_GAP = 48  # px between vocal and main track
+NOW_STALE_MINUTES = 10  # show "Waiting for update" if last track is older than this
+
+# Message overlay settings
+MSG_FONT_MAX = 100       # px, font size for short messages
+MSG_FONT_MIN = 36        # px, minimum font size
+MSG_SCALE_CHARS = 20     # messages longer than this shrink the font
+MSG_DISPLAY_SECONDS = 30 # seconds to show message before fade-out begins
+MSG_FADE_SECONDS = 3     # fade-out duration in seconds
+MSG_VERTICAL_PCT = 30    # % from top of screen (35 = just above centre)
+MSG_COLOR = "white"
+MSG_MAX_WIDTH_PCT = 85   # max width as % of screen width
+
+
+# {"name": session name, "songs": [song dicts as built below]}
+History = dict[str, Any]
+
+_message_state: dict[str, Any] = {"text": "", "set_at": None, "duration": MSG_DISPLAY_SECONDS}
+_suppressed_tail = 0
+_last_history_count = 0
+
+
+def process_title(raw_title: str) -> tuple[str, bool, str]:
+    """Strip tag suffixes and extract vocal info from a raw title."""
+    is_vocal = "[#vocal]" in raw_title
+    title = raw_title
+    if TAG_SEPARATOR in title:
+        title = title[: title.index(TAG_SEPARATOR)].strip()
+    # Remove parenthesised blocks starting with "original" or "extended", and "(als)"
+    title = re.sub(r"\s*\((?:(?:original|extended)\b[^)]*|als)\)", "", title, flags=re.IGNORECASE).strip()
+    # Remove trailing "fixed" or a trailing single digit (e.g. "2"); longer numbers are part of the title ("Tay Do 22")
+    title = re.sub(r"\s+(?:fixed|\d)$", "", title, flags=re.IGNORECASE).strip()
+    vocal_title = (title.split("(")[0].strip() or title) + " (Vocal)" if is_vocal else ""
+    return title, is_vocal, vocal_title
+
+
+def get_latest_history_songs() -> History:
+    db = Rekordbox6Database()
+    try:
+        histories = list(db.get_history())
+        if not histories:
+            return {"name": "", "songs": []}
+        latest = max(histories, key=lambda h: h.DateCreated)
+        songs = list(db.get_history_songs(HistoryID=latest.ID))
+        # Content and Artist are lazy-loaded, so read them before closing the session.
+        result = {
+            "name": latest.Name,
+            "songs": [],
+        }
+        for s in songs:
+            c = s.Content
+            title, is_vocal, vocal_title = process_title(c.Title)
+            artist = c.Artist.Name if c.Artist else ""
+            result["songs"].append(
+                {
+                    "track_no": s.TrackNo,
+                    "title": title,
+                    "artist": artist,
+                    "played_at": str(s.created_at),
+                    "year": c.ReleaseYear,
+                    "is_vocal": is_vocal,
+                    "vocal_title": vocal_title,
+                }
+            )
+    finally:
+        db.close()
+    return result
+
+
+def get_test_history_songs() -> History:
+    now = datetime.now()
+    raw_songs = [
+        {
+            "track_no": 1,
+            "raw_title": "Dreaming Of Better Days   [#deep] [#actual_house]",
+            "artist": "Deep House Collective",
+            "played_at": str(now - timedelta(seconds=30)),
+            "year": 2023,
+        },
+        {
+            "track_no": 2,
+            "raw_title": "Midnight Runner (Extended Mix)   [#tech_house]",
+            "artist": "Groove Assembly",
+            "played_at": str(now - timedelta(seconds=20)),
+            "year": 2024,
+        },
+        {
+            "track_no": 3,
+            "raw_title": "Say My Name (Original Mix)   [#actual_house] [#vocal]",
+            "artist": "Luna Vox",
+            "played_at": str(now - timedelta(seconds=10)),
+            "year": 2022,
+        },
+        {
+            "track_no": 4,
+            "raw_title": "Neon Lights (DJ Tool Mix)   [#progressive]",
+            "artist": "Pulse Unit",
+            "played_at": str(now - timedelta(seconds=8)),
+            "year": 2024,
+        },
+        {
+            "track_no": 5,
+            "raw_title": "Sunset (The Original)   [#afro]",
+            "artist": "Sol Rivera",
+            "played_at": str(now - timedelta(seconds=7)),
+            "year": 2021,
+        },
+        {
+            "track_no": 6,
+            "raw_title": "Lost Signal fixed   [#acid]",
+            "artist": "Static Echo",
+            "played_at": str(now - timedelta(seconds=6)),
+            "year": 2023,
+        },
+        {
+            "track_no": 7,
+            "raw_title": "Warehouse Dub 2   [#disco]",
+            "artist": "Depth Charge",
+            "played_at": str(now - timedelta(seconds=4)),
+            "year": 2025,
+        },
+    ]
+    songs = []
+    for s in raw_songs:
+        title, is_vocal, vocal_title = process_title(s["raw_title"])
+        songs.append(
+            {
+                "track_no": s["track_no"],
+                "title": title,
+                "artist": s["artist"],
+                "played_at": s["played_at"],
+                "year": s["year"],
+                "is_vocal": is_vocal,
+                "vocal_title": vocal_title,
+            }
+        )
+    return {
+        "name": "Test Session",
+        "songs": songs,
+    }
+
+
+HTML = """\
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rekordbox History</title>
+<style>
+  body {
+    background: #1a1a2e; color: #eee; font-family: -apple-system, sans-serif;
+    margin: 0; padding: 20px;
+  }
+  h1 { color: #e94560; margin-bottom: 4px; }
+  h2 { color: #999; font-weight: normal; margin-top: 0; }
+  table { border-collapse: collapse; width: 100%%; max-width: 900px; }
+  th { text-align: left; color: #e94560; border-bottom: 2px solid #333; padding: 8px; }
+  td { padding: 8px; border-bottom: 1px solid #2a2a3e; }
+  tr:hover { background: #2a2a3e; }
+  .track-no { color: #666; width: 40px; }
+  .year { color: #888; font-size: 0.9em; }
+  .time { color: #888; font-size: 0.9em; }
+  .new-row { animation: flash 1s ease-out; }
+  @keyframes flash { from { background: #e9456033; } to { background: transparent; } }
+</style>
+</head>
+<body>
+<h1>Rekordbox History</h1>
+<h2 id="history-name"></h2>
+<table>
+  <thead><tr><th>#</th><th>Title</th><th>Artist</th><th>Year</th><th>Played At</th></tr></thead>
+  <tbody id="songs"></tbody>
+</table>
+<script>
+let lastCount = 0;
+async function poll() {
+  try {
+    const resp = await fetch("/api/history");
+    const data = await resp.json();
+    document.getElementById("history-name").textContent = data.name;
+    const tbody = document.getElementById("songs");
+    const newCount = data.songs.length;
+    tbody.innerHTML = "";
+    data.songs.forEach((s, i) => {
+      const tr = document.createElement("tr");
+      if (i >= lastCount && lastCount > 0) tr.className = "new-row";
+      tr.innerHTML =
+        '<td class="track-no">' + s.track_no + "</td>" +
+        "<td>" + esc(s.title) + "</td>" +
+        "<td>" + esc(s.artist) + "</td>" +
+        '<td class="year">' + (s.year || "") + "</td>" +
+        '<td class="time">' + fmtTime(s.played_at) + "</td>";
+      tbody.appendChild(tr);
+    });
+    lastCount = newCount;
+  } catch (e) {
+    console.error(e);
+  }
+}
+function esc(s) {
+  const d = document.createElement("div"); d.textContent = s; return d.innerHTML;
+}
+function fmtTime(s) {
+  if (!s) return "";
+  const d = new Date(s);
+  return d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+}
+poll();
+setInterval(poll, %(poll_ms)d);
+</script>
+</body>
+</html>
+"""
+
+NOW_PLAYING_HTML = """\
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Now Playing</title>
+<style>
+  body {
+    background: %(now_bg)s; color: white; font-family: -apple-system, sans-serif;
+    margin: 0; padding: 0; text-transform: uppercase;
+    width: %(now_width)dpx; height: %(now_height)dpx;
+    font-size: %(now_font_size)s; overflow: hidden;
+  }
+  #now {
+    position: absolute; bottom: %(now_bottom_pad)dpx; left: %(now_left_pad)dpx;
+  }
+  #now { max-width: %(now_width)dpx; }
+  #artist { font-size: %(now_artist_size)s; font-weight: bold; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #title { font-size: %(now_title_size)s; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #year { font-size: %(now_year_size)s; margin: 4px 0; }
+  #vocal { margin-left: 40px; margin-bottom: %(now_vocal_gap)dpx; display: none; }
+  #vocal p { margin: 2px 0; }
+  #vocal-artist { font-size: %(now_artist_size)s; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #vocal-title { font-size: %(now_title_size)s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #message {
+    position: absolute;
+    top: %(msg_vertical_pct)d%%;
+    left: 50%%;
+    transform: translateX(-50%%);
+    width: max-content;
+    max-width: %(msg_max_width_pct)dvw;
+    white-space: pre-line;
+    text-align: center;
+    color: %(msg_color)s;
+    font-weight: bold;
+    opacity: 0;
+    pointer-events: none;
+    line-height: 1.2;
+  }
+  .fade { animation: fadein 0.5s ease-in; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+<div id="message"></div>
+<div id="now">
+  <div id="vocal">
+    <p id="vocal-artist"></p>
+    <p id="vocal-title"></p>
+  </div>
+  <p id="artist"></p>
+  <p id="title"></p>
+  <p id="year"></p>
+</div>
+<script>
+let lastTitle = "";
+let lastVocalTitle = "";
+const STALE_MS = %(now_stale_minutes)d * 60 * 1000;
+async function poll() {
+  try {
+    const resp = await fetch("%(api_url)s");
+    const data = await resp.json();
+    if (!data.songs || !data.songs.length) return;
+    const nonVocals = data.songs.filter(s => !s.is_vocal);
+    if (!nonVocals.length) return;
+    const s = nonVocals[nonVocals.length - 1];
+    const age = Date.now() - new Date(s.played_at).getTime();
+    const stale = age > STALE_MS;
+    const display = stale ? "" : s.title;
+    if (display !== lastTitle) {
+      const el = document.getElementById("now");
+      el.classList.remove("fade");
+      void el.offsetWidth;
+      el.classList.add("fade");
+      document.getElementById("artist").textContent = stale ? "" : s.artist;
+      document.getElementById("title").textContent = stale ? "" : s.title;
+      document.getElementById("year").textContent = stale ? "" : (s.year || "");
+      lastTitle = display;
+    }
+    // Show vocal info if the most recent song overall is a vocal
+    const latest = data.songs[data.songs.length - 1];
+    const vocalEl = document.getElementById("vocal");
+    if (latest.is_vocal && !stale) {
+      document.getElementById("vocal-artist").textContent = latest.artist;
+      document.getElementById("vocal-title").textContent = latest.vocal_title;
+      if (latest.title !== lastVocalTitle) {
+        vocalEl.style.display = "block";
+        vocalEl.classList.remove("fade");
+        void vocalEl.offsetWidth;
+        vocalEl.classList.add("fade");
+        lastVocalTitle = latest.title;
+      }
+    } else {
+      vocalEl.style.display = "none";
+      lastVocalTitle = "";
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+const MSG_FONT_MAX = %(msg_font_max)d;
+const MSG_FONT_MIN = %(msg_font_min)d;
+const MSG_SCALE_CHARS = %(msg_scale_chars)d;
+const MSG_DISPLAY_SECONDS = %(msg_display_seconds)d;
+const MSG_FADE_SECONDS = %(msg_fade_seconds)d;
+let lastMsgSetAt = null;
+let msgFadeTimer = null;
+
+async function pollMessage() {
+  try {
+    const resp = await fetch("/api/message");
+    const data = await resp.json();
+    if (data.set_at !== lastMsgSetAt) {
+      lastMsgSetAt = data.set_at;
+      if (!data.text) {
+        showMessage("");
+      } else {
+        const age = Date.now() - new Date(data.set_at).getTime();
+        const remaining = (data.duration || MSG_DISPLAY_SECONDS) * 1000 - age;
+        if (remaining > 0) showMessage(data.text, remaining);
+      }
+    }
+  } catch(e) {}
+}
+
+function showMessage(text, displayMs) {
+  if (msgFadeTimer) { clearTimeout(msgFadeTimer); msgFadeTimer = null; }
+  const el = document.getElementById("message");
+  if (!text) { el.style.opacity = "0"; return; }
+  if (displayMs === undefined) displayMs = MSG_DISPLAY_SECONDS * 1000;
+  const longest = Math.max(...text.split("\\n").map(l => l.length));
+  const size = Math.max(MSG_FONT_MIN, Math.round(MSG_FONT_MAX * Math.sqrt(MSG_SCALE_CHARS / Math.max(longest, MSG_SCALE_CHARS))));
+  el.style.fontSize = size + "px";
+  el.textContent = text;
+  el.style.transition = "opacity 0.3s ease-in";
+  el.style.opacity = "1";
+  msgFadeTimer = setTimeout(() => {
+    el.style.transition = "opacity " + MSG_FADE_SECONDS + "s ease-out";
+    el.style.opacity = "0";
+  }, displayMs);
+}
+
+poll();
+setInterval(poll, %(poll_ms)d);
+pollMessage();
+setInterval(pollMessage, %(poll_ms)d);
+</script>
+</body>
+</html>
+"""
+
+SUPPRESS_INPUT_HTML = """\
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suppress History</title>
+<style>
+  body {
+    background: #1a1a2e; color: #eee; font-family: -apple-system, sans-serif;
+    margin: 0; padding: 20px; max-width: 480px;
+  }
+  h1 { color: #e94560; font-size: 1.2em; margin-bottom: 16px; }
+  .count { font-size: 2.5em; font-weight: bold; color: #e94560; margin: 4px 0; }
+  .count-label { color: #888; font-size: 0.85em; margin-bottom: 20px; }
+  .last-track {
+    background: #2a2a3e; border-radius: 4px; padding: 12px;
+    margin-bottom: 16px; min-height: 56px;
+  }
+  .track-label { font-size: 0.75em; color: #666; margin-bottom: 6px; text-transform: uppercase; }
+  .track-title { font-size: 1em; font-weight: bold; }
+  .track-artist { font-size: 0.9em; color: #aaa; margin-top: 3px; }
+  .buttons { display: flex; gap: 10px; }
+  button {
+    flex: 1; padding: 14px; font-size: 1em; border: none;
+    border-radius: 4px; cursor: pointer; font-weight: bold;
+  }
+  #suppress-btn { background: #e94560; color: white; }
+  #restore-btn { background: #444; color: #eee; }
+  #restore-btn:disabled { opacity: 0.35; cursor: default; }
+  #status { margin-top: 12px; font-size: 0.85em; color: #888; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<h1>History Suppression</h1>
+<div class="count" id="count">0</div>
+<div class="count-label">tracks suppressed from end</div>
+<div class="last-track">
+  <div class="track-label">Currently showing</div>
+  <div class="track-title" id="last-title">—</div>
+  <div class="track-artist" id="last-artist"></div>
+</div>
+<div class="last-track" id="vocal-block" style="display:none; margin-top: 8px;">
+  <div class="track-label">+ Vocal</div>
+  <div class="track-title" id="vocal-title"></div>
+  <div class="track-artist" id="vocal-artist"></div>
+</div>
+<div class="buttons">
+  <button id="suppress-btn" onclick="act('suppress')">Suppress Last</button>
+  <button id="restore-btn" onclick="act('unsuppress')" disabled>Restore</button>
+</div>
+<p id="status"></p>
+<script>
+async function refresh() {
+  try {
+    const [histResp, suppResp] = await Promise.all([
+      fetch("/api/history"),
+      fetch("/api/suppress"),
+    ]);
+    const hist = await histResp.json();
+    const supp = await suppResp.json();
+    document.getElementById("count").textContent = supp.count;
+    document.getElementById("restore-btn").disabled = supp.count === 0;
+    const songs = hist.songs || [];
+    const nonVocals = songs.filter(s => !s.is_vocal);
+    const last = nonVocals[nonVocals.length - 1];
+    const latest = songs[songs.length - 1];
+    const stale = last && (Date.now() - new Date(last.played_at).getTime()) > %(stale_minutes)d * 60 * 1000;
+    if (last && !stale) {
+      document.getElementById("last-title").textContent = last.title;
+      document.getElementById("last-artist").textContent = last.artist;
+    } else if (stale) {
+      document.getElementById("last-title").textContent = "(nothing — too old to show)";
+      document.getElementById("last-artist").textContent = "";
+    } else {
+      document.getElementById("last-title").textContent = supp.count > 0 ? "(all suppressed)" : "(no tracks)";
+      document.getElementById("last-artist").textContent = "";
+    }
+    const vocalBlock = document.getElementById("vocal-block");
+    if (latest && latest.is_vocal && !stale) {
+      document.getElementById("vocal-title").textContent = latest.vocal_title || latest.title;
+      document.getElementById("vocal-artist").textContent = latest.artist;
+      vocalBlock.style.display = "block";
+    } else {
+      vocalBlock.style.display = "none";
+    }
+  } catch(e) { console.error(e); }
+}
+async function act(endpoint) {
+  await fetch("/api/" + endpoint, { method: "POST" });
+  setStatus(endpoint === "suppress" ? "Suppressed." : "Restored.");
+  refresh();
+}
+function setStatus(msg) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ""; }, 2000);
+}
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>
+"""
+
+MESSAGE_INPUT_HTML = """\
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Send Message</title>
+<style>
+  body {
+    background: #1a1a2e; color: #eee; font-family: -apple-system, sans-serif;
+    margin: 0; padding: 20px; max-width: 480px;
+  }
+  h1 { color: #e94560; font-size: 1.2em; margin-bottom: 16px; }
+  input[type=text] {
+    width: 100%%; box-sizing: border-box;
+    background: #2a2a3e; color: #eee; border: 1px solid #444;
+    padding: 12px; font-size: 1.1em; border-radius: 4px; margin-bottom: 10px;
+  }
+  .duration { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  input[type=number] {
+    width: 90px; background: #2a2a3e; color: #eee; border: 1px solid #444;
+    padding: 10px; font-size: 1em; border-radius: 4px;
+  }
+  .buttons { display: flex; gap: 10px; }
+  button {
+    flex: 1; padding: 12px; font-size: 1em; border: none;
+    border-radius: 4px; cursor: pointer; font-weight: bold;
+  }
+  #send-btn { background: #e94560; color: white; }
+  #clear-btn { background: #444; color: #eee; }
+  #status { margin-top: 12px; font-size: 0.85em; color: #888; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<h1>Overlay message</h1>
+<input type="text" id="msg" placeholder="Type message..." autofocus>
+<div class="duration">
+  <label for="duration">Show for</label>
+  <input type="number" id="duration" min="1" step="1" value="%(default_seconds)d">
+  <span>seconds</span>
+</div>
+<div class="buttons">
+  <button id="send-btn" onclick="send()">Send</button>
+  <button id="clear-btn" onclick="clearMsg()">Clear</button>
+</div>
+<p id="status"></p>
+<script>
+for (const id of ["msg", "duration"]) {
+  document.getElementById(id).addEventListener("keydown", e => {
+    if (e.key === "Enter") send();
+  });
+}
+async function send() {
+  const text = document.getElementById("msg").value.trim();
+  if (!text) return;
+  const duration = parseInt(document.getElementById("duration").value, 10) || %(default_seconds)d;
+  await post(text, duration);
+  document.getElementById("msg").value = "";
+  setStatus("Sent (" + duration + "s): " + text);
+}
+async function clearMsg() {
+  await post("");
+  setStatus("Cleared.");
+}
+async function post(text, duration) {
+  await fetch("/api/message", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({text, duration}),
+  });
+}
+function setStatus(msg) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ""; }, 3000);
+}
+</script>
+</body>
+</html>
+"""
+
+
+def render_now_playing(now_bg: str, api_url: str) -> bytes:
+    return (NOW_PLAYING_HTML % {
+        "poll_ms": POLL_INTERVAL * 1000,
+        "now_width": NOW_WIDTH,
+        "now_height": NOW_HEIGHT,
+        "now_font_size": NOW_FONT_SIZE,
+        "now_bg": now_bg,
+        "now_artist_size": NOW_ARTIST_SIZE,
+        "now_title_size": NOW_TITLE_SIZE,
+        "now_year_size": NOW_YEAR_SIZE,
+        "now_left_pad": NOW_LEFT_PAD,
+        "now_bottom_pad": NOW_BOTTOM_PAD,
+        "now_vocal_gap": NOW_VOCAL_GAP,
+        "now_stale_minutes": NOW_STALE_MINUTES,
+        "api_url": api_url,
+        "msg_font_max": MSG_FONT_MAX,
+        "msg_font_min": MSG_FONT_MIN,
+        "msg_scale_chars": MSG_SCALE_CHARS,
+        "msg_display_seconds": MSG_DISPLAY_SECONDS,
+        "msg_fade_seconds": MSG_FADE_SECONDS,
+        "msg_vertical_pct": MSG_VERTICAL_PCT,
+        "msg_color": MSG_COLOR,
+        "msg_max_width_pct": MSG_MAX_WIDTH_PCT,
+    }).encode()
+
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        if self.path == "/api/history-test":
+            self.send_json(get_test_history_songs())
+        elif self.path == "/api/history":
+            self.send_json(self.suppressed_history())
+        elif self.path == "/api/suppress":
+            self.send_json({"count": _suppressed_tail})
+        elif self.path == "/api/message":
+            self.send_json(_message_state)
+        elif self.path in ("/now", "/now-debug", "/now-debug-test"):
+            api_url = "/api/history-test" if self.path == "/now-debug-test" else "/api/history"
+            now_bg = "transparent" if self.path == "/now" else "black"
+            self.send_html(render_now_playing(now_bg, api_url))
+        elif self.path == "/suppress-input":
+            self.send_html(SUPPRESS_INPUT_HTML % {"stale_minutes": NOW_STALE_MINUTES})
+        elif self.path == "/message-input":
+            self.send_html(MESSAGE_INPUT_HTML % {"default_seconds": MSG_DISPLAY_SECONDS})
+        elif self.path == "/":
+            self.send_html(HTML % {"poll_ms": POLL_INTERVAL * 1000})
+        else:
+            self.send_error(404, f"Unknown endpoint: {self.path}")
+
+    def do_POST(self) -> None:
+        global _suppressed_tail
+        if self.path == "/api/suppress":
+            _suppressed_tail += 1
+            self.send_json({"count": _suppressed_tail})
+        elif self.path == "/api/unsuppress":
+            _suppressed_tail = max(0, _suppressed_tail - 1)
+            self.send_json({"count": _suppressed_tail})
+        elif self.path == "/api/message":
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length)
+            try:
+                data = json.loads(body)
+                # "\" in the input starts a new line on the overlay
+                lines = data.get("text", "").split("\\")
+                text = "\n".join(line.strip() for line in lines).strip()
+                duration = int(data.get("duration") or MSG_DISPLAY_SECONDS)
+                if duration < 1:
+                    raise ValueError
+            except (json.JSONDecodeError, AttributeError, TypeError, ValueError):
+                self.send_error(400, "Invalid JSON")
+                return
+            _message_state["text"] = text
+            _message_state["set_at"] = datetime.now().isoformat() if text else None
+            _message_state["duration"] = duration
+            self.send_json({"ok": True})
+        else:
+            self.send_error(404, f"Unknown endpoint: {self.path}")
+
+    @staticmethod
+    def suppressed_history() -> History:
+        """The latest history minus any suppressed tail.
+
+        A newly played track clears the suppression.
+        """
+        global _suppressed_tail, _last_history_count
+        data = get_latest_history_songs()
+        raw_count = len(data["songs"])
+        if raw_count > _last_history_count:
+            _suppressed_tail = 0
+        _last_history_count = raw_count
+        if _suppressed_tail > 0 and data["songs"]:
+            data = dict(data)
+            data["songs"] = data["songs"][:-_suppressed_tail]
+        return data
+
+    def send_json(self, data: object) -> None:
+        self.send_body(json.dumps(data).encode(), "application/json")
+
+    def send_html(self, page: str | bytes) -> None:
+        self.send_body(page if isinstance(page, bytes) else page.encode(), "text/html")
+
+    def send_body(self, body: bytes, content_type: str) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_no_cache()
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_no_cache(self) -> None:
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+
+    def log_message(self, format: str, *args: Any) -> None:
+        pass  # quiet
+
+
+if __name__ == "__main__":
+    kill_existing_server(PORT)
+    server = HTTPServer(("", PORT), Handler)
+    base = f"http://localhost:{PORT}"
+    print(f"Serving Rekordbox history at {base}")
+    print(f"Polling every {POLL_INTERVAL}s. Ctrl+C to stop.")
+    print()
+    endpoints = [
+        ("/",                 "History page"),
+        ("/now",              "Now-playing overlay (transparent bg)"),
+        ("/now-debug",        "Now-playing overlay (black bg)"),
+        ("/now-debug-test",   "Now-playing overlay (black bg, test data)"),
+        ("/api/history",      "JSON API"),
+        ("/api/history-test", "JSON API (test data)"),
+        ("/api/message",      "Message API (GET/POST)"),
+    ]
+    print("Endpoints:")
+    for path, desc in endpoints:
+        url = f"{base}{path}"
+        print(f"  {url:<40} {desc}")
+    # Interactive pages printed last and highlighted so they're easy to spot
+    # and Cmd-click. The URL is kept clear of ANSI codes so terminals detect it.
+    controls = [
+        ("SEND MESSAGE",  "/message-input"),
+        ("SUPPRESS TAIL", "/suppress-input"),
+    ]
+    bold_yellow, reset = "\033[1;33m", "\033[0m"
+    print()
+    print(f"{bold_yellow}{'=' * 60}{reset}")
+    for label, path in controls:
+        print(f"{bold_yellow}  >> {label:<14}{reset} {base}{path}")
+    print(f"{bold_yellow}{'=' * 60}{reset}")
+    print()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopped.")
+        server.server_close()

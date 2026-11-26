@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lyrics</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg:#0e0e13; --panel:#17171f; --line:#262632; --text:#ddd; --dim:#8a8a99; --accent:#6cf; --warn:#e9a23b; --bad:#e5534b; --ok:#57ab5a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 -apple-system, Helvetica, sans-serif; display:flex; height:100vh; overflow:hidden; }
+  button, select, input, textarea { font:inherit; color:inherit; background:#22222d; border:1px solid #33333f; border-radius:6px; padding:4px 9px; }
+  button { cursor:pointer; } button:hover { border-color:#555566; } button.on { background:#1d3b4d; border-color:var(--accent); }
+  button:disabled { opacity:.45; cursor:default; }
+  input:focus, textarea:focus { outline:1px solid var(--accent); }
+  #side { width:300px; background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; }
+  #side header { padding:12px; display:flex; gap:8px; border-bottom:1px solid var(--line); }
+  #side header input { flex:1; min-width:0; }
+  #songs { overflow:auto; flex:1; }
+  .song { padding:8px 12px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .song:hover { background:#1d1d27; } .song.cur { background:#1d3b4d; }
+  .song .t { font-weight:600; } .song .a { color:var(--dim); font-size:12px; }
+  .badge { font-size:11px; padding:1px 6px; border-radius:8px; margin-left:6px; vertical-align:1px; }
+  .b-rev { background:#203b24; color:#8fd694; } .b-whisper { background:#4a1d1b; color:#f08b84; } .b-other { background:#3a2f4d; color:#c9b2f0; }
+  #source { width:100%; font-size:12px; color:var(--dim); margin-top:-2px; }
+  #source.whisper { color:var(--bad); } #source .other { color:#c9b2f0; } .b-stale { background:#4a3413; color:#f0bd6a; } .b-missing { background:#4a1d1b; color:#f08b84; }
+  #main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  #top { padding:10px 14px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; border-bottom:1px solid var(--line); }
+  #top h2 { margin:0 10px 0 0; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:40vw; }
+  #top .sep { width:1px; height:22px; background:var(--line); margin:0 4px; }
+  #save { color:var(--dim); font-size:12px; min-width:70px; }
+  #banner { display:none; padding:8px 14px; background:#4a3413; color:#f0d09a; }
+  #karaoke { height:150px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px; background:#08080b; border-bottom:1px solid var(--line); padding:0 20px; text-align:center; }
+  #karaoke .row { font:600 30px/1.2 -apple-system, Helvetica, sans-serif; min-height:36px; }
+  #karaoke .row.next { opacity:.45; font-size:24px; }
+  .kw { position:relative; display:inline-block; margin:0 .13em; color:rgba(255,255,255,.38); }
+  .kw::after { content:attr(data-t); position:absolute; left:0; top:0; color:#fff; width:var(--p,0%); overflow:hidden; white-space:nowrap; }
+  #tl { position:relative; height:230px; border-bottom:1px solid var(--line); }
+  #tl canvas { width:100%; height:100%; display:block; cursor:crosshair; }
+  #transport { display:flex; gap:8px; align-items:center; padding:6px 14px; border-bottom:1px solid var(--line); color:var(--dim); font-size:12px; }
+  #time { font-variant-numeric:tabular-nums; color:var(--text); min-width:120px; }
+  #lines { flex:1; overflow:auto; padding:6px 0 40px; }
+  .ln { display:flex; gap:8px; align-items:center; padding:3px 14px; border-left:3px solid transparent; }
+  .ln.sel { background:#1a2733; border-left-color:var(--accent); } .ln.now .tm { color:var(--accent); }
+  .ln .tm { width:62px; color:var(--dim); font-variant-numeric:tabular-nums; font-size:12px; cursor:pointer; }
+  .ln input { flex:1; min-width:0; background:transparent; border-color:transparent; }
+  .ln input:hover { border-color:#33333f; } .ln.dirty input { border-color:var(--warn); }
+  .ln .note { color:var(--warn); font-size:11px; max-width:170px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ln .low { color:var(--bad); font-size:11px; }
+  .ln.ed { border-left-color:var(--warn); } .ln.ed.sel { border-left-color:var(--accent); }
+  .ln .ed { color:var(--warn); font-size:11px; white-space:nowrap; } .b-ed { background:#4a3a1b; color:#f0c674; }
+  .ln button { padding:1px 7px; font-size:12px; }
+  #help { color:var(--dim); font-size:12px; padding:6px 14px; border-top:1px solid var(--line); }
+  kbd { background:#26263a; border-radius:4px; padding:0 5px; font-size:11px; }
+  dialog { background:var(--panel); color:var(--text); border:1px solid #444; border-radius:10px; width:min(900px, 92vw); max-height:88vh; padding:16px; }
+  dialog::backdrop { background:rgba(0,0,0,.6); }
+  #addResults { max-height:180px; overflow:auto; margin:8px 0; border:1px solid var(--line); border-radius:6px; }
+  #addResults div, #lrcList div { padding:5px 9px; cursor:pointer; border-bottom:1px solid var(--line); }
+  #addResults div:hover, #lrcList div:hover { background:#1d1d27; } #addResults div.cur, #lrcList div.cur { background:#1d3b4d; }
+  #lrcList { max-height:150px; overflow:auto; border:1px solid var(--line); border-radius:6px; margin:6px 0; }
+  #lrcText { width:100%; height:220px; resize:vertical; font-size:13px; }
+  #jobLog { white-space:pre-wrap; font:12px ui-monospace, Menlo, monospace; color:var(--dim); max-height:200px; overflow:auto; background:#0b0b0f; padding:8px; border-radius:6px; display:none; }
+  .muted { color:var(--dim); font-size:12px; }
+  .grow { flex:1; }
+</style>
+</head>
+<body>
+<div id="side">
+  <header><input id="filter" placeholder="Filter songs"><button id="addBtn" title="Lyrics for another song">+ Add</button></header>
+  <div id="songs"></div>
+</div>
+<div id="main">
+  <div id="top">
+    <h2 id="title">Choose a song</h2>
+    <button id="reviewed" title="These lyrics are checked (reforce shows unreviewed ones too)">Mark reviewed</button>
+    <span class="sep"></span>
+    <label class="muted" title="Shifts every word (ms; + = later). For an offset the whole song shares.">Offset <input id="offset" type="number" step="10" style="width:80px"> ms</label>
+    <span class="sep"></span>
+    <button id="undo" title="Undo (⌘Z)">↶</button><button id="redo" title="Redo (⇧⌘Z)">↷</button>
+    <span id="save"></span>
+    <span class="grow"></span>
+    <button id="refBtn" title="The reference lyrics: change them and redo the song">Lyrics text…</button>
+    <button id="delBtn" title="Delete these lyrics">Delete</button>
+    <div id="source"></div>
+  </div>
+  <div id="banner"></div>
+  <div id="karaoke"><div class="row" id="k0"></div><div class="row next" id="k1"></div></div>
+  <div id="transport">
+    <button id="play" title="Space">▶</button>
+    <span id="time">0:00.00</span>
+    <select id="speed" title="Playback speed (pitch kept)"><option value="1">1×</option><option value="0.75">0.75×</option><option value="0.5">0.5×</option></select>
+    <button id="vocals" title="Play the separated vocals (V)">Vocals only</button>
+    <button id="follow" class="on" title="Keep the playhead in view (F)">Follow</button>
+    <button id="loop" title="Loop the selected line (L)">Loop line</button>
+    <span class="grow"></span>
+    <span>wheel: zoom · shift+wheel: scroll · drag a word's edge / body · drag a line bar to move the line</span>
+  </div>
+  <div id="tl"><canvas id="cv"></canvas></div>
+  <div id="lines"></div>
+  <div id="help">
+    <kbd>Space</kbd> play · <kbd>Enter</kbd> play line · <kbd>↑</kbd><kbd>↓</kbd> line · <kbd>←</kbd><kbd>→</kbd> word ·
+    <kbd>T</kbd> tap: the selected word starts now, then the next word · <kbd>[</kbd><kbd>]</kbd> nudge 10 ms (<kbd>⇧</kbd> 50) ·
+    <kbd>R</kbd> re-align line · <kbd>⌫</kbd> delete line · <kbd>⌘Z</kbd> undo · edit a line's text + <kbd>Enter</kbd>: re-aligned
+  </div>
+</div>
+
+<dialog id="addDlg">
+  <h3 style="margin-top:0">Add lyrics</h3>
+  <input id="addQ" placeholder="Search the library" style="width:100%">
+  <div id="addResults"></div>
+  <div id="addStep2" style="display:none">
+    <div><b id="addSong"></b> <span class="muted" id="addInfo"></span></div>
+    <div class="muted" style="margin-top:8px">Reference lyrics (LRCLIB; pick one, edit freely, or paste your own):</div>
+    <div id="lrcList"></div>
+    <textarea id="lrcText" placeholder="One line per line. Empty: Whisper's own text."></textarea>
+    <div style="display:flex; gap:10px; align-items:center; margin-top:8px">
+      <label><input type="checkbox" id="addSep"> separate the vocals first (Demucs)</label>
+      <span class="grow"></span>
+      <button id="addGo">Align</button>
+    </div>
+  </div>
+  <div id="jobLog"></div>
+  <div style="text-align:right; margin-top:10px"><button id="addClose">Close</button></div>
+</dialog>
+
+<dialog id="refDlg">
+  <h3 style="margin-top:0">Reference lyrics</h3>
+  <p class="muted">The text lines were matched against. Change it and <b>Redo song</b> to align the whole song again from it (your edits to the timing are replaced). For a single line, edit that line instead.</p>
+  <textarea id="refText" style="width:100%; height:340px"></textarea>
+  <div style="display:flex; gap:10px; margin-top:8px"><span class="grow"></span><button id="refSave">Save text only</button><button id="refRedo">Redo song</button><button id="refClose">Close</button></div>
+  <div id="refLog" class="muted"></div>
+</dialog>
+
+<audio id="au" preload="auto"></audio>
+
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const au = $('#au'), cv = $('#cv'), ctx = cv.getContext('2d');
+let songs = [], cur = null;          // cur: { file, s (sidecar), peaks, rate }
+let sel = { line: -1, word: -1 };
+let view = { t0: 0, span: 10 };       // timeline window (seconds, sample time)
+let undoStack = [], redoStack = [];
+let saveTimer = null, saving = false, dirty = false;
+let drag = null;
+
+const fmt = (t) => { t = Math.max(0, t); const m = Math.floor(t / 60); return m + ':' + (t - m * 60).toFixed(2).padStart(5, '0'); };
+const off = () => (cur ? cur.s.offset || 0 : 0);
+const lines = () => (cur ? cur.s.lines : []);
+const api = async (url, opts = {}) => {
+  const r = await fetch(url, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
+  if (!r.ok) { let d = r.statusText; try { d = (await r.json()).detail || d; } catch (e) {} throw new Error(d); }
+  return r.json();
+};
+
+// ---------------------------------------------------------------- song list
+async function loadSongs() {
+  songs = await api('/api/songs');
+  renderSongs();
+}
+function renderSongs() {
+  const q = $('#filter').value.toLowerCase();
+  const box = $('#songs');
+  box.innerHTML = '';
+  for (const s of songs) {
+    if (q && !(s.artist + ' ' + s.title).toLowerCase().includes(q)) continue;
+    const d = document.createElement('div');
+    d.className = 'song' + (cur && cur.file === s.file ? ' cur' : '');
+    const src = s.source || {};
+    const badge = (s.status !== 'ok' ? `<span class="badge b-${s.status}">${s.status}</span>` : s.reviewed ? '<span class="badge b-rev">reviewed</span>' : '')
+      + (src.kind === 'whisper' ? '<span class="badge b-whisper" title="No lyrics found: Whisper\'s own hearing">Whisper</span>'
+        : src.kind === 'manual' ? '<span class="badge b-other" title="Lyrics typed or pasted here">typed</span>'
+        : src.other_version ? '<span class="badge b-other" title="LRCLIB matched another version of the song">other version</span>' : '')
+      + (s.edited ? `<span class="badge b-ed" title="Lines you changed (automatic rebuilds keep them)">${s.edited} edited</span>` : '');
+    d.innerHTML = `<div class="t"></div><div class="a"></div>`;
+    d.querySelector('.t').textContent = s.title; d.querySelector('.t').insertAdjacentHTML('beforeend', badge);
+    d.querySelector('.a').textContent = s.artist + ' · ' + s.lines + ' lines';
+    d.onclick = () => openSong(s.file);
+    box.appendChild(d);
+  }
+}
+$('#filter').oninput = renderSongs;
+
+async function openSong(file) {
+  if (dirty) await saveNow();
+  const s = await api('/api/lyrics/' + encodeURIComponent(file));
+  cur = { file, s, peaks: [], rate: 100 };
+  undoStack = []; redoStack = [];
+  sel = { line: lines().length ? 0 : -1, word: -1 };
+  $('#title').textContent = s.artist + ' – ' + s.title;
+  $('#offset').value = Math.round((s.offset || 0) * 1000);
+  showSource();
+  $('#vocals').disabled = !s.has_vocals;
+  $('#vocals').classList.remove('on');
+  setAudio(false);
+  const b = $('#banner');
+  b.style.display = s.status === 'ok' ? 'none' : 'block';
+  b.textContent = s.status === 'stale'
+    ? 'The sample changed since these lyrics were timed (re-exported?). Run: python3.11 lyrics.py realign "' + s.song + '"'
+    : s.status === 'missing' ? 'The sample is gone: ' + s.sample : '';
+  view = { t0: Math.max(0, (lines()[0] ? lines()[0].t0 : 0) - 1), span: 10 };
+  renderAll();
+  renderSongs();
+  history.replaceState(null, '', '#' + encodeURIComponent(file));
+}
+function showSource() {
+  const i = cur.s.source_info || {}, el = $('#source');
+  el.className = i.kind === 'whisper' ? 'whisper' : '';
+  el.textContent = 'Text source: ' + (i.label || 'unknown');
+  if (i.other_version) el.insertAdjacentHTML('beforeend', ' <span class="other">· another version of the song: its words may differ</span>');
+}
+au.onerror = () => {   // say so instead of a silent play button
+  const b = $('#banner'); b.style.display = 'block';
+  b.textContent = 'The audio does not play here: ' + (au.error ? (au.error.message || 'error ' + au.error.code) : 'unknown error');
+};
+async function setAudio(vocals) {
+  const t = au.currentTime, playing = !au.paused;
+  au.src = '/api/audio/' + encodeURIComponent(cur.file) + '?play=2' + (vocals ? '&vocals=1' : '');   // play=2: browser-playable (FLAC for AIFF); not an old cached copy
+  au.playbackRate = +$('#speed').value;
+  au.preservesPitch = true;
+  if (t) au.currentTime = t;
+  if (playing) au.play();
+  const p = await api('/api/peaks/' + encodeURIComponent(cur.file) + (vocals ? '?vocals=1' : ''));
+  cur.peaks = p.peaks; cur.rate = p.rate;
+}
+
+// ---------------------------------------------------------------- editing model
+function snapshot() { return JSON.stringify({ lines: cur.s.lines, offset: cur.s.offset, reviewed: cur.s.reviewed }); }
+function restore(j) { const o = JSON.parse(j); cur.s.lines = o.lines; cur.s.offset = o.offset; cur.s.reviewed = o.reviewed; }
+function change(fn) {           // every edit: undo point, apply, save soon
+  if (!cur) return;
+  undoStack.push(snapshot()); if (undoStack.length > 300) undoStack.shift();
+  redoStack = [];
+  fn();
+  fixLine(sel.line);
+  touched();
+}
+function touched() { dirty = true; renderAll(); scheduleSave(); }
+function undo() { if (!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); clampSel(); touched(); }
+function redo() { if (!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); clampSel(); touched(); }
+function clampSel() {
+  const L = lines();
+  if (sel.line >= L.length) sel.line = L.length - 1;
+  if (sel.line >= 0 && sel.word >= L[sel.line].words.length) sel.word = -1;
+}
+function fixLine(i) {           // a line's span and text follow its words
+  const l = lines()[i]; if (!l || !l.words.length) return;
+  l.words.sort((a, b) => a.t0 - b.t0);
+  l.t0 = l.words[0].t0; l.t1 = l.words[l.words.length - 1].t1;
+  l.text = l.words.map((w) => w.text).join(' ');
+}
+function allWords() {           // flat [lineIndex, wordIndex] in time order
+  const out = [];
+  lines().forEach((l, i) => l.words.forEach((w, j) => out.push([i, j])));
+  return out;
+}
+function neighbors(i, j) {      // the words before / after (across lines)
+  const flat = allWords();
+  const k = flat.findIndex(([a, b]) => a === i && b === j);
+  const W = ([a, b]) => lines()[a].words[b];
+  return { prev: k > 0 ? W(flat[k - 1]) : null, next: k >= 0 && k + 1 < flat.length ? W(flat[k + 1]) : null };
+}
+function setWord(i, j, t0, t1) {  // clamped between neighbors, min 30 ms
+  const w = lines()[i].words[j], { prev, next } = neighbors(i, j);
+  const lo = prev ? prev.t1 : 0, hi = next ? next.t0 : 1e9;
+  t0 = Math.max(lo, t0); t1 = Math.min(hi, t1);
+  if (t1 - t0 < 0.03) { if (t0 + 0.03 <= hi) t1 = t0 + 0.03; else t0 = t1 - 0.03; }
+  w.t0 = +t0.toFixed(3); w.t1 = +t1.toFixed(3);
+}
+function nudge(dt) {
+  if (sel.line < 0) return;
+  change(() => {
+    const l = lines()[sel.line];
+    if (sel.word >= 0) { const w = l.words[sel.word]; setWord(sel.line, sel.word, w.t0 + dt, w.t1 + dt); }
+    else moveLine(sel.line, dt);
+  });
+}
+function moveLine(i, dt) {
+  const L = lines(), l = L[i];
+  const lo = i > 0 ? L[i - 1].t1 : 0, hi = i + 1 < L.length ? L[i + 1].t0 : 1e9;
+  dt = Math.max(lo - l.t0, Math.min(hi - l.t1, dt));
+  for (const w of l.words) { w.t0 = +(w.t0 + dt).toFixed(3); w.t1 = +(w.t1 + dt).toFixed(3); }
+}
+function tap() {                // the selected word starts now; select the next one
+  if (sel.line < 0) return;
+  if (sel.word < 0) sel.word = 0;
+  const t = au.currentTime - off() - 0.0;
+  change(() => {
+    const l = lines()[sel.line], w = l.words[sel.word];
+    const len = Math.max(0.08, w.t1 - w.t0);
+    const { prev } = neighbors(sel.line, sel.word);
+    if (prev && prev.t1 > t) prev.t1 = +Math.max(prev.t0 + 0.03, t).toFixed(3);
+    w.t0 = +t.toFixed(3);
+    const { next } = neighbors(sel.line, sel.word);
+    w.t1 = +Math.min(next ? next.t0 : t + len, t + len).toFixed(3);
+    if (w.t1 - w.t0 < 0.03) w.t1 = +(w.t0 + 0.03).toFixed(3);
+    if (prev) { const k = lines().findIndex((L) => L.words.includes(prev)); fixLine(k); }
+  });
+  const flat = allWords(), k = flat.findIndex(([a, b]) => a === sel.line && b === sel.word);
+  if (k + 1 < flat.length) { sel.line = flat[k + 1][0]; sel.word = flat[k + 1][1]; }
+  renderAll();
+}
+function window_(i) {           // where line i may be re-timed
+  const L = lines(), l = L[i];
+  let a = Math.max(0, l.t0 - 1), b = l.t1 + 1;
+  if (i > 0) a = Math.max(a, L[i - 1].t1 - 0.05);
+  if (i + 1 < L.length) b = Math.min(b, L[i + 1].t0 + 0.05);
+  if (b - a < 0.3) { a = l.t0 - 0.15; b = l.t1 + 0.15; }
+  return [a, b];
+}
+async function realign(i, text) {
+  const l = lines()[i]; if (!l) return;
+  text = (text != null ? text : l.text).trim();
+  if (!text) return deleteLine(i);
+  const [a, b] = l._win || window_(i);
+  setSave('aligning…');
+  try {
+    const got = await api('/api/realign/' + encodeURIComponent(cur.file), { method: 'POST', body: JSON.stringify({ text, a, b }) });
+    // Timed by hand now: the automatic choice's note no longer applies.
+    change(() => { Object.assign(l, got); delete l._win; delete l.note; });
+  } catch (e) { setSave('align failed: ' + e.message); }
+}
+function deleteLine(i) {
+  change(() => { lines().splice(i, 1); });
+  clampSel(); renderAll();
+}
+function insertAfter(i) {
+  const L = lines(), a = i >= 0 ? L[i].t1 : 0, b = i + 1 < L.length ? L[i + 1].t0 : a + 6;
+  const text = prompt('Text of the new line (timed between ' + fmt(a) + ' and ' + fmt(b) + '):');
+  if (!text || !text.trim()) return;
+  const words = text.trim().split(/\s+/), step = (b - a) / words.length;
+  change(() => {
+    L.splice(i + 1, 0, { t0: a, t1: b, text: text.trim(), words: words.map((w, k) => ({ t0: a + k * step, t1: a + (k + 1) * step, text: w, score: 0 })) });
+  });
+  lines()[i + 1]._win = [Math.max(0, a - 0.2), b + 0.2];
+  sel = { line: i + 1, word: -1 };
+  realign(i + 1, text);
+}
+
+// ---------------------------------------------------------------- saving
+function setSave(t) { $('#save').textContent = t; }
+function scheduleSave() { setSave('unsaved'); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 700); }
+async function saveNow() {
+  clearTimeout(saveTimer);
+  if (!cur || !dirty || saving) return;
+  saving = true; dirty = false; setSave('saving…');
+  try {
+    const body = { lines: cur.s.lines.map(({ _win, ...l }) => l), offset: cur.s.offset || 0, reviewed: !!cur.s.reviewed, base_modified: cur.s.modified };
+    const r = await api('/api/lyrics/' + encodeURIComponent(cur.file), { method: 'PUT', body: JSON.stringify(body) });
+    cur.s.modified = r.modified;
+    setSave('saved');
+    syncEdited(r.lines);
+    const e = songs.find((s) => s.file === cur.file);
+    if (e) { e.reviewed = !!cur.s.reviewed; e.lines = cur.s.lines.length; e.edited = cur.s.lines.filter((l) => l.edited).length; renderSongs(); }
+  } catch (e) { dirty = true; setSave('NOT saved: ' + e.message); }
+  saving = false;
+  if (dirty) scheduleSave();
+}
+// the server decides which lines are a person's (changed text or timing); copy its marks onto
+// the lines here that are still the same (later edits may already be waiting to save)
+function syncEdited(saved) {
+  if (!dirty && saved.length === cur.s.lines.length) { cur.s.lines = saved; renderLines(); return; }   // nothing newer: take the server's
+  let changed = false;
+  for (const l of cur.s.lines) {
+    const s = saved.find((x) => x.text === l.text && x.words.length === l.words.length
+      && x.words.every((w, k) => Math.abs(w.t0 - l.words[k].t0) < 0.03 && Math.abs(w.t1 - l.words[k].t1) < 0.03));
+    if (s && !!s.edited !== !!l.edited) { if (s.edited) l.edited = true; else delete l.edited; changed = true; }
+  }
+  if (changed) renderLines();
+}
+addEventListener('beforeunload', (e) => { if (dirty) { saveNow(); e.preventDefault(); } });
+
+// ---------------------------------------------------------------- rendering
+function renderAll() { renderLines(); renderTop(); }
+function renderTop() {
+  const rv = !!(cur && cur.s.reviewed);
+  $('#reviewed').classList.toggle('on', rv);
+  $('#reviewed').textContent = rv ? '✓ Reviewed' : 'Mark reviewed';
+  $('#undo').disabled = !undoStack.length; $('#redo').disabled = !redoStack.length;
+}
+function renderLines() {
+  const box = $('#lines');
+  const focused = document.activeElement && document.activeElement.dataset.i;
+  box.innerHTML = '';
+  lines().forEach((l, i) => {
+    const d = document.createElement('div');
+    d.className = 'ln' + (i === sel.line ? ' sel' : '') + (l.edited ? ' ed' : '');
+    d.dataset.i = i;
+    const low = l.words.filter((w) => (w.score || 0) < 0.15).length;
+    d.innerHTML = `<span class="tm" title="Play from here">${fmt(l.t0 + off())}</span><input spellcheck="false">` +
+      (l.edited ? '<span class="ed" title="You changed this line: automatic rebuilds keep it as it is">✎ edited</span>' : '') +
+      (l.note ? `<span class="note"></span>` : '') + (low ? `<span class="low" title="words the aligner was unsure of">${low} unsure</span>` : '') +
+      `<button title="Re-align this line (R)">⟳</button><button title="New line after this one">+</button><button title="Delete line (⌫)">✕</button>`;
+    const inp = d.querySelector('input');
+    inp.value = l.text; inp.dataset.i = i;
+    if (l.note) d.querySelector('.note').textContent = l.note, d.querySelector('.note').title = l.note;
+    inp.onfocus = () => { sel = { line: i, word: -1 }; markSel(); };
+    inp.oninput = () => d.classList.toggle('dirty', inp.value.trim() !== l.text);
+    inp.onkeydown = (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); inp.blur(); if (inp.value.trim() !== l.text) realign(i, inp.value); }
+      if (e.key === 'Escape') { inp.value = l.text; d.classList.remove('dirty'); inp.blur(); }
+    };
+    d.querySelector('.tm').onclick = () => { sel = { line: i, word: -1 }; seek(l.t0 + off() - 0.5); play(); markSel(); };
+    const [bRe, bIns, bDel] = d.querySelectorAll('button');
+    bRe.onclick = () => realign(i, inp.value);
+    bIns.onclick = () => insertAfter(i);
+    bDel.onclick = () => deleteLine(i);
+    box.appendChild(d);
+  });
+  if (focused != null) { const el = box.querySelector(`input[data-i="${focused}"]`); if (el) el.focus(); }
+}
+function markSel() {
+  document.querySelectorAll('.ln').forEach((d) => d.classList.toggle('sel', +d.dataset.i === sel.line));
+  const el = document.querySelector('.ln.sel'); if (el) el.scrollIntoView({ block: 'nearest' });
+}
+function karaoke(t) {           // t: sample time (as reforce: song position minus the offset)
+  const L = lines();
+  let i = L.findIndex((l) => t < l.t1 + 0.4);
+  if (i < 0) i = L.length;
+  const row = (el, l, fill) => {
+    const key = l ? l.text + '|' + l.t0 : '';
+    if (el.dataset.key !== key) {
+      el.dataset.key = key; el.innerHTML = '';
+      if (l) for (const w of l.words) { const s = document.createElement('span'); s.className = 'kw'; s.textContent = w.text; s.dataset.t = w.text; s._w = w; el.appendChild(s); }
+    }
+    for (const s of el.children) {
+      const w = s._w, p = !fill || t <= w.t0 ? 0 : t >= w.t1 ? 100 : (100 * (t - w.t0)) / (w.t1 - w.t0);
+      s.style.setProperty('--p', p + '%');
+    }
+  };
+  const show = L[i] && t > L[i].t0 - 3;
+  row($('#k0'), show ? L[i] : null, true);
+  row($('#k1'), show ? L[i + 1] : null, false);
+  document.querySelectorAll('.ln').forEach((d) => d.classList.toggle('now', +d.dataset.i === i && show));
+}
+
+function draw() {
+  const dpr = devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#0b0b0f'; ctx.fillRect(0, 0, W, H);
+  if (!cur) return;
+  const o = off(), X = (t) => ((t - view.t0) / view.span) * W;   // t: display time (sample + offset)
+  const waveH = 130, lineY = 136, wordY = 162, wordH = 56;
+  // grid
+  ctx.fillStyle = '#555'; ctx.font = '10px system-ui, -apple-system, sans-serif';
+  const step = view.span > 30 ? 5 : view.span > 12 ? 2 : view.span > 4 ? 1 : 0.5;
+  for (let t = Math.ceil(view.t0 / step) * step; t < view.t0 + view.span; t += step) {
+    const x = X(t); ctx.fillStyle = '#1c1c26'; ctx.fillRect(x, 0, 1, H); ctx.fillStyle = '#666'; ctx.fillText(fmt(t), x + 3, 10);
+  }
+  // waveform (audio time = display time: the offset moves the words, not the audio)
+  if (cur.peaks.length) {
+    ctx.fillStyle = '#3a5a75';
+    for (let x = 0; x < W; x++) {
+      const a = Math.floor((view.t0 + (x / W) * view.span) * cur.rate), b = Math.max(a + 1, Math.floor((view.t0 + ((x + 1) / W) * view.span) * cur.rate));
+      let m = 0; for (let k = Math.max(0, a); k < Math.min(cur.peaks.length, b); k++) m = Math.max(m, cur.peaks[k]);
+      const h = (m / 255) * (waveH - 16);
+      ctx.fillRect(x, 14 + (waveH - 16) / 2 - h / 2, 1, Math.max(1, h));
+    }
+  }
+  // lines and words
+  lines().forEach((l, i) => {
+    const x0 = X(l.t0 + o), x1 = X(l.t1 + o);
+    if (x1 < 0 || x0 > W) return;
+    ctx.fillStyle = i === sel.line ? '#2f6f99' : '#2a2a3a';
+    ctx.fillRect(x0, lineY, Math.max(2, x1 - x0), 18);
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, lineY, x1 - x0, 18); ctx.clip();
+    ctx.fillStyle = '#ccd'; ctx.font = '11px system-ui, -apple-system, sans-serif'; ctx.fillText(l.text, x0 + 4, lineY + 13); ctx.restore();
+    l.words.forEach((w, j) => {
+      const a = X(w.t0 + o), b = X(w.t1 + o);
+      const isSel = i === sel.line && j === sel.word;
+      const sc = w.score == null ? 1 : w.score;
+      ctx.fillStyle = isSel ? '#2f6f99' : sc < 0.15 ? '#4a2524' : i === sel.line ? '#26384a' : '#20202c';
+      ctx.fillRect(a, wordY, Math.max(2, b - a - 1), wordH);
+      ctx.fillStyle = isSel ? '#9fdcff' : '#4a4a60'; ctx.fillRect(a, wordY, 2, wordH);
+      ctx.save(); ctx.beginPath(); ctx.rect(a, wordY, Math.max(2, b - a - 1), wordH); ctx.clip();
+      ctx.fillStyle = '#eee'; ctx.font = '13px system-ui, -apple-system, sans-serif'; ctx.fillText(w.text, a + 5, wordY + 22);
+      ctx.fillStyle = '#777'; ctx.font = '10px system-ui, -apple-system, sans-serif'; ctx.fillText(((w.t1 - w.t0) * 1000).toFixed(0) + ' ms', a + 5, wordY + 40);
+      ctx.restore();
+      if (isSel) { ctx.strokeStyle = '#6cf'; ctx.strokeRect(a + 0.5, wordY + 0.5, Math.max(2, b - a - 2), wordH - 1); }
+    });
+  });
+  // playhead
+  const px = X(au.currentTime);
+  ctx.fillStyle = '#ff5c5c'; ctx.fillRect(px, 0, 1.5, H);
+}
+
+function frame() {
+  if (cur) {
+    const t = au.currentTime;
+    if (!au.paused && $('#follow').classList.contains('on') && (t < view.t0 || t > view.t0 + view.span * 0.8)) view.t0 = Math.max(0, t - view.span * 0.2);
+    if (!au.paused && $('#loop').classList.contains('on') && sel.line >= 0) {
+      const l = lines()[sel.line]; if (l && t > l.t1 + off() + 0.3) seek(l.t0 + off() - 0.4);
+    }
+    $('#time').textContent = fmt(t) + (au.playbackRate !== 1 ? '  (' + au.playbackRate + '×)' : '');
+    karaoke(t - off());
+    draw();
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---------------------------------------------------------------- transport
+function play() { au.play(); $('#play').textContent = '❚❚'; }
+function pause() { au.pause(); $('#play').textContent = '▶'; }
+function seek(t) {
+  au.currentTime = Math.max(0, t);
+  if (t < view.t0 || t > view.t0 + view.span) view.t0 = Math.max(0, t - view.span * 0.2);
+}
+$('#play').onclick = () => (au.paused ? play() : pause());
+au.onpause = () => ($('#play').textContent = '▶'); au.onplay = () => ($('#play').textContent = '❚❚');
+$('#speed').onchange = () => (au.playbackRate = +$('#speed').value);
+$('#vocals').onclick = () => { const on = !$('#vocals').classList.contains('on'); $('#vocals').classList.toggle('on', on); setAudio(on); };
+$('#follow').onclick = () => $('#follow').classList.toggle('on');
+$('#loop').onclick = () => $('#loop').classList.toggle('on');
+$('#reviewed').onclick = () => cur && change(() => { cur.s.reviewed = !cur.s.reviewed; });
+$('#offset').onchange = () => cur && change(() => { cur.s.offset = (+$('#offset').value || 0) / 1000; });
+$('#undo').onclick = undo; $('#redo').onclick = redo;
+
+// ---------------------------------------------------------------- timeline mouse
+function hit(x, y) {
+  const W = cv.clientWidth, o = off(), X = (t) => ((t - view.t0) / view.span) * W;
+  if (y >= 162) {
+    for (let i = 0; i < lines().length; i++) for (let j = 0; j < lines()[i].words.length; j++) {
+      const w = lines()[i].words[j], a = X(w.t0 + o), b = X(w.t1 + o);
+      if (x >= a - 4 && x <= b + 4) {
+        const part = x < a + 6 ? 'start' : x > b - 6 ? 'end' : 'body';
+        return { kind: 'word', i, j, part };
+      }
+    }
+  } else if (y >= 136 && y < 156) {
+    for (let i = 0; i < lines().length; i++) { const l = lines()[i]; if (x >= X(l.t0 + o) && x <= X(l.t1 + o)) return { kind: 'line', i }; }
+  }
+  return { kind: 'wave' };
+}
+cv.addEventListener('mousedown', (e) => {
+  if (!cur) return;
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  const t = view.t0 + (x / r.width) * view.span;
+  const h = hit(x, y);
+  if (h.kind === 'wave') { seek(t); drag = { kind: 'scrub' }; return; }
+  if (h.kind === 'line') { sel = { line: h.i, word: -1 }; markSel(); undoStack.push(snapshot()); redoStack = []; drag = { kind: 'line', i: h.i, t, moved: 0 }; return; }
+  sel = { line: h.i, word: h.j }; markSel();
+  const w = lines()[h.i].words[h.j];
+  undoStack.push(snapshot()); redoStack = [];
+  drag = { kind: 'word', i: h.i, j: h.j, part: h.part, t, w0: w.t0, w1: w.t1, moved: 0 };
+});
+addEventListener('mousemove', (e) => {
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  if (!drag) { if (cur && y >= 0 && y < r.height) { const h = hit(x, y); cv.style.cursor = h.kind === 'word' ? (h.part === 'body' ? 'grab' : 'ew-resize') : h.kind === 'line' ? 'move' : 'crosshair'; } return; }
+  const t = view.t0 + (x / r.width) * view.span;
+  if (drag.kind === 'scrub') { seek(t); return; }
+  const dt = t - drag.t;
+  drag.moved = Math.max(drag.moved, Math.abs(dt));
+  if (drag.kind === 'line') { moveLine(drag.i, dt); drag.t = t; fixLine(drag.i); return; }
+  if (drag.part === 'start') setWord(drag.i, drag.j, drag.w0 + dt, drag.w1);
+  else if (drag.part === 'end') setWord(drag.i, drag.j, drag.w0, drag.w1 + dt);
+  else setWord(drag.i, drag.j, drag.w0 + dt, drag.w1 + dt);
+  fixLine(drag.i);
+});
+addEventListener('mouseup', () => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.kind === 'scrub') return;
+  if (d.moved < 0.003) { undoStack.pop(); if (d.kind === 'word') seek(lines()[d.i].words[d.j].t0 + off() - 0.25); renderAll(); return; }
+  touched();
+});
+cv.addEventListener('dblclick', () => { if (sel.line >= 0) { const inp = document.querySelector(`.ln input[data-i="${sel.line}"]`); if (inp) inp.focus(); } });
+cv.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
+  if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+    view.t0 = Math.max(0, view.t0 + ((e.shiftKey ? e.deltaY : e.deltaX) / r.width) * view.span);
+    $('#follow').classList.remove('on');
+  } else {
+    const at = view.t0 + x * view.span;
+    view.span = Math.min(300, Math.max(1, view.span * Math.exp(e.deltaY * 0.002)));
+    view.t0 = Math.max(0, at - x * view.span);
+  }
+}, { passive: false });
+
+// ---------------------------------------------------------------- keys
+addEventListener('keydown', (e) => {
+  const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.querySelector('dialog[open]');
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (typing || !cur || e.metaKey || e.ctrlKey || e.altKey) return;
+  const L = lines();
+  const k = e.key;
+  if (k === ' ') { e.preventDefault(); au.paused ? play() : pause(); }
+  else if (k === 'Enter' && sel.line >= 0) { e.preventDefault(); seek(L[sel.line].t0 + off() - 0.5); play(); }
+  else if (k === 'ArrowDown' || k === 'ArrowUp') {
+    e.preventDefault();
+    sel = { line: Math.max(0, Math.min(L.length - 1, sel.line + (k === 'ArrowDown' ? 1 : -1))), word: -1 };
+    const l = L[sel.line]; if (l && au.paused) seek(l.t0 + off() - 0.3);
+    if (l && (l.t0 + off() < view.t0 || l.t1 + off() > view.t0 + view.span)) view.t0 = Math.max(0, l.t0 + off() - 1);
+    markSel();
+  } else if (k === 'ArrowRight' || k === 'ArrowLeft') {
+    e.preventDefault();
+    const flat = allWords(); if (!flat.length) return;
+    let idx = flat.findIndex(([a, b]) => a === sel.line && b === sel.word);
+    if (idx < 0) idx = flat.findIndex(([a]) => a === sel.line) - (k === 'ArrowRight' ? 1 : 0);
+    idx = Math.max(0, Math.min(flat.length - 1, idx + (k === 'ArrowRight' ? 1 : -1)));
+    sel = { line: flat[idx][0], word: flat[idx][1] };
+    const w = L[sel.line].words[sel.word];
+    if (au.paused) seek(w.t0 + off());
+    if (w.t0 + off() < view.t0 || w.t1 + off() > view.t0 + view.span) view.t0 = Math.max(0, w.t0 + off() - 1);
+    markSel();
+  } else if (k === '[' || k === '{') nudge(k === '{' ? -0.05 : -0.01);
+  else if (k === ']' || k === '}') nudge(k === '}' ? 0.05 : 0.01);
+  else if (k === 't' || k === 'T') tap();
+  else if (k === 'r' || k === 'R') { if (sel.line >= 0) realign(sel.line); }
+  else if (k === 'Backspace' || k === 'Delete') { if (sel.line >= 0) { e.preventDefault(); deleteLine(sel.line); } }
+  else if (k === 'v' || k === 'V') $('#vocals').click();
+  else if (k === 'f' || k === 'F') $('#follow').click();
+  else if (k === 'l' || k === 'L') $('#loop').click();
+  else return;
+  renderTop();
+});
+
+// ---------------------------------------------------------------- delete / reference
+$('#delBtn').onclick = async () => {
+  if (!cur || !confirm('Delete the lyrics of ' + cur.s.title + '?')) return;
+  await api('/api/lyrics/' + encodeURIComponent(cur.file), { method: 'DELETE' });
+  cur = null; dirty = false; $('#title').textContent = 'Choose a song'; $('#lines').innerHTML = ''; au.removeAttribute('src');
+  loadSongs();
+};
+$('#refBtn').onclick = () => { if (!cur) return; $('#refText').value = cur.s.reference || ''; $('#refLog').textContent = ''; $('#refDlg').showModal(); };
+$('#refClose').onclick = () => $('#refDlg').close();
+$('#refSave').onclick = async () => {
+  cur.s.reference = $('#refText').value; dirty = true;
+  const body = { lines: cur.s.lines, offset: cur.s.offset || 0, reviewed: !!cur.s.reviewed, reference: cur.s.reference, base_modified: cur.s.modified };
+  const r = await api('/api/lyrics/' + encodeURIComponent(cur.file), { method: 'PUT', body: JSON.stringify(body) });
+  cur.s.modified = r.modified; dirty = false; $('#refDlg').close();
+  if (r.source_info) { cur.s.source_info = r.source_info; showSource(); loadSongs(); }
+};
+$('#refRedo').onclick = async () => {
+  if (!confirm('Align the whole song again from this text? Your timing edits are replaced.')) return;
+  const text = $('#refText').value.trim();
+  const was = (cur.s.source || {}).lyrics || '';   // the same LRCLIB text again keeps its source
+  const src = !text ? 'none' : was.startsWith('lrclib:') && text === (cur.s.reference || '').trim() ? was : 'manual';
+  await runJob({ song: cur.s.song, reference: text || null, source: src, separate: !!(cur.s.source || {}).separated, replace: true },
+    (m) => ($('#refLog').textContent = m));
+  $('#refDlg').close();
+};
+
+// ---------------------------------------------------------------- adding
+let addSong = null, addTimer = null;
+$('#addBtn').onclick = () => { $('#addDlg').showModal(); $('#addQ').focus(); $('#jobLog').style.display = 'none'; };
+$('#addClose').onclick = () => $('#addDlg').close();
+$('#addQ').oninput = () => { clearTimeout(addTimer); addTimer = setTimeout(searchSongs, 200); };
+async function searchSongs() {
+  const res = await api('/api/search?q=' + encodeURIComponent($('#addQ').value));
+  const box = $('#addResults'); box.innerHTML = '';
+  for (const r of res) {
+    const d = document.createElement('div');
+    d.textContent = r.song.replace(/\.(alc|als)$/, '') + (r.has_lyrics ? '  — has lyrics' : '') + (r.has_sample ? '' : '  — not exported');
+    if (!r.has_sample) d.style.opacity = 0.5;
+    d.onclick = () => { if (r.has_sample) chooseSong(r, d); };
+    box.appendChild(d);
+  }
+}
+async function chooseSong(r, el) {
+  document.querySelectorAll('#addResults div').forEach((d) => d.classList.remove('cur')); el.classList.add('cur');
+  addSong = r;
+  $('#addStep2').style.display = 'block';
+  $('#addSong').textContent = r.song.replace(/\.(alc|als)$/, '');
+  $('#addInfo').textContent = r.has_lyrics ? '(replaces its lyrics)' : '';
+  $('#addSep').checked = !r.vocal_only;
+  $('#lrcText').value = ''; $('#lrcList').innerHTML = '<div class="muted">Looking up LRCLIB…</div>';
+  const lr = await api('/api/lrclib?song=' + encodeURIComponent(r.song));
+  const box = $('#lrcList'); box.innerHTML = '';
+  if (!lr.results.length) box.innerHTML = `<div class="muted">Nothing on LRCLIB for “${lr.artist} – ${lr.title}”. Paste lyrics, or leave empty for Whisper's own text.</div>`;
+  lr.results.forEach((x, k) => {
+    const d = document.createElement('div');
+    const first = x.text.split('\n').find((s) => s.trim()) || '';
+    d.textContent = `${x.artist} – ${x.track}${x.album ? ' (' + x.album + ')' : ''} · ${Math.round(x.duration)} s${x.synced ? ' · synced' : ''} · “${first}”`;
+    d.onclick = () => { box.querySelectorAll('div').forEach((q) => q.classList.remove('cur')); d.classList.add('cur'); $('#lrcText').value = x.text; addSong.source = 'lrclib:' + x.id; addSong.lrcText = x.text; };
+    box.appendChild(d);
+    if (k === 0) d.click();
+  });
+}
+$('#addGo').onclick = async () => {
+  if (!addSong) return;
+  const text = $('#lrcText').value.trim();
+  const picked = addSong.source && addSong.source.startsWith('lrclib') && text === (addSong.lrcText || '').trim();
+  const src = text ? (picked ? addSong.source : 'manual') : 'none';   // edited LRCLIB text counts as typed
+  const file = await runJob({ song: addSong.song, reference: text || null, source: src, separate: $('#addSep').checked, replace: addSong.has_lyrics },
+    (m) => { const l = $('#jobLog'); l.style.display = 'block'; l.textContent = m; l.scrollTop = 1e9; });
+  if (file) { $('#addDlg').close(); }
+};
+async function runJob(req, show) {
+  $('#addGo').disabled = true; $('#refRedo').disabled = true;
+  try {
+    let j = await api('/api/add', { method: 'POST', body: JSON.stringify(req) });
+    while (j.state === 'running') { show(j.log.join('\n') || 'working…'); await new Promise((r) => setTimeout(r, 700)); j = await api('/api/jobs/' + j.id); }
+    show(j.log.join('\n'));
+    if (j.state === 'done') { await loadSongs(); dirty = false; await openSong(j.file); return j.file; }
+  } catch (e) { show('Failed: ' + e.message); }
+  finally { $('#addGo').disabled = false; $('#refRedo').disabled = false; }
+  return null;
+}
+
+// ---------------------------------------------------------------- start
+(async () => {
+  await loadSongs();
+  const want = decodeURIComponent(location.hash.slice(1));
+  if (want && songs.some((s) => s.file === want)) openSong(want);
+  else if (songs.length) openSong(songs[0].file);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
