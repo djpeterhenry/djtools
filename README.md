@@ -9,6 +9,10 @@ This is the maintainer's own toolkit, shared as is: it fits one way of working
 rather than offering options for every other. Run everything from the songs folder
 (where `database.json` lives) with `python3.11`.
 
+Its lyrics and library feed [reforce](https://github.com/djpeterhenry/reforce), the
+maintainer's music visualizer: reforce shows the lyrics made here as karaoke over
+the visuals, in time with the rekordbox deck you hear.
+
 | Script | What it does |
 | --- | --- |
 | `actions.py` | CLI for database chores: `add-bpms`, `add-keys`, `rekordbox-xml`, release-date lookup, tag edits, … (`actions.py --help`) |
