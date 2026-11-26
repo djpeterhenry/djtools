@@ -281,6 +281,16 @@ def test_add_keys(make_alc, write_db, monkeypatch):
     assert aa.read_db_file()[fn]["key"] == "Am"
 
 
+def test_add_bpms_and_keys(make_alc, write_db, monkeypatch):
+    fn = make_alc()
+    write_db({})
+    monkeypatch.setattr(aa, "get_key_from_keyfinder_cli", lambda path: "Am")
+    actions.add_bpms_and_keys()
+    record = aa.read_db_file()[fn]
+    assert record["bpm"] == 120
+    assert record["key"] == "Am"
+
+
 def test_add_keys_skips_missing_sample(make_alc, write_db, monkeypatch):
     fn = make_alc(create_sample=False)
     write_db({fn: {"bpm": 120, "tags": []}})

@@ -15,7 +15,7 @@ the visuals, in time with the rekordbox deck you hear.
 
 | Script | What it does |
 | --- | --- |
-| `actions.py` | CLI for database chores: `add-bpms`, `add-keys`, `rekordbox-xml`, release-date lookup, tag edits, … (`actions.py --help`) |
+| `actions.py` | CLI for database chores: `add-bpms`, `add-keys` (both: `add-bpms-and-keys`), `rekordbox-xml`, release-date lookup, tag edits, … (`actions.py --help`) |
 | `ableton_gui.py` | Tk browser: filter by bpm/key/tag/list, copy a clip to paste into Ableton |
 | `song_server.py` | Web version of the browser (`--dir <songs folder>`, then http://localhost:8765) |
 | `history_server.py` | Live rekordbox history + now-playing overlay at http://localhost:8888 (also launched by `History Server.app`) |
@@ -60,6 +60,7 @@ cd MyProject/Songs
 echo '{}' > database.json                         # a new, empty library
 python3.11 ~/djtools/actions.py add-bpms           # bpms of new clips, from their warp markers
 python3.11 ~/djtools/actions.py add-keys           # keys by keyfinder-cli
+python3.11 ~/djtools/actions.py add-bpms-and-keys  # or both at once
 python3.11 ~/djtools/actions.py rekordbox-xml ~/rekordbox.xml
 ```
 

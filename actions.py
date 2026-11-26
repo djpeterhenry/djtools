@@ -140,6 +140,12 @@ def add_keys() -> None:
     aa.write_db_file(db_dict)
 
 
+def add_bpms_and_keys() -> None:
+    """add-bpms, then add-keys: the usual steps for new clips."""
+    add_bpms()
+    add_keys()
+
+
 def edit_bpm(edit_filename: str) -> None:
     """Edit BPM value for a specific file."""
     assert os.path.isfile(edit_filename)
@@ -934,6 +940,7 @@ if __name__ == "__main__":
             add_bpms,
             check_bpms,
             add_keys,
+            add_bpms_and_keys,
             edit_bpm,
             rename_tag,
             remove_tag,
