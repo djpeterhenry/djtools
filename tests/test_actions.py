@@ -167,16 +167,110 @@ def test_edit_bpm_new_file(songs_dir, write_db, monkeypatch):
     assert aa.read_db_file()["new.alc"]["bpm"] == 128
 
 
-def test_add_bpms(songs_dir, write_db, monkeypatch):
-    for name in ["a.alc", "b.alc", "c.alc"]:
-        (songs_dir / name).write_text("")
-    write_db({"a.alc": make_record()})
-    answers = iter([111, None])
-    monkeypatch.setattr(aa, "get_int", lambda prompt: next(answers))
+def _answers(monkeypatch, *answers):
+    """Feed input() these answers in turn, recording each prompt."""
+    prompts = []
+    it = iter(answers)
+
+    def fake_input(prompt):
+        prompts.append(prompt)
+        return next(it)
+
+    monkeypatch.setattr("builtins.input", fake_input)
+    return prompts
+
+
+# 64 beats at 120 bpm, then 64 at 128
+TEMPO_CHANGE = ((0.0, 0.0), (32.0, 64.0), (62.0, 128.0))
+
+
+def test_add_bpms_steady_clip_needs_no_input(make_alc, write_db, monkeypatch):
+    old = make_alc("A - Old.alc")
+    new = make_alc("B - New.alc", warp_markers=((0.0, 0.0), (8.0, 16.5)))  # 123.75 bpm
+    write_db({old: make_record(bpm=99)})
+    _answers(monkeypatch)  # any prompt would raise StopIteration
     actions.add_bpms()
     db = aa.read_db_file()
-    assert db["b.alc"] == {"bpm": 111, "tags": []}
-    assert "c.alc" not in db
+    assert db[old]["bpm"] == 99
+    assert db[new]["bpm"] == 124
+    assert db[new]["tags"] == []
+    assert db[new]["clip"]["sample"].endswith("B - New.aiff")
+
+
+def test_add_bpms_rounds_halves_down(make_alc, write_db, monkeypatch):
+    fn = make_alc(warp_markers=((0.0, 0.0), (60.0, 86.5)), loop={"loop_end": 86.5})
+    write_db({})
+    actions.add_bpms()
+    assert aa.read_db_file()[fn]["bpm"] == 86
+
+
+def test_add_bpms_asks_about_tempo_changes(make_alc, write_db, monkeypatch, capsys):
+    fn = make_alc(warp_markers=TEMPO_CHANGE, loop={"loop_end": 128.0})
+    write_db({})
+    prompts = _answers(monkeypatch, "122")
+    actions.add_bpms()
+    assert "tempo changes: 120.0 > 128.0" in capsys.readouterr().out
+    assert prompts == ["BPM [124] (s: skip, q: stop and save): "]
+    assert aa.read_db_file()[fn]["bpm"] == 122
+
+
+def test_add_bpms_enter_takes_suggestion_for_unwarped(make_alc, write_db, monkeypatch, capsys):
+    fn = make_alc(is_warped=False)
+    write_db({})
+    _answers(monkeypatch, "")
+    actions.add_bpms()
+    assert "unwarped" in capsys.readouterr().out
+    assert aa.read_db_file()[fn]["bpm"] == 120
+
+
+def test_add_bpms_reasks_bad_input(make_alc, write_db, monkeypatch):
+    fn = make_alc(is_warped=False)
+    write_db({})
+    _answers(monkeypatch, "fast", "0", "100")
+    actions.add_bpms()
+    assert aa.read_db_file()[fn]["bpm"] == 100
+
+
+def test_add_bpms_skip_and_stop(make_alc, songs_dir, write_db, monkeypatch):
+    skipped = make_alc("A - Skip.alc", is_warped=False)
+    no_sample = make_alc("B - No Sample.alc", create_sample=False)
+    steady = make_alc("C - Steady.alc")
+    stopped = make_alc("D - Stop.alc", is_warped=False)
+    after = make_alc("E - After.alc")
+    write_db({})
+    # no sample means no suggestion, so Enter skips it
+    _answers(monkeypatch, "s", "", "q")
+    actions.add_bpms()
+    db = aa.read_db_file()
+    assert list(db) == [steady]
+    assert skipped not in db and no_sample not in db and stopped not in db and after not in db
+
+
+def test_check_bpms(make_alc, write_db, capsys, fixed_now):
+    right = make_alc("A - Right.alc")
+    wrong = make_alc("B - Wrong.alc")
+    unwarped = make_alc("C - Unwarped.alc", is_warped=False)
+    changes = make_alc("D - Changes.alc", warp_markers=TEMPO_CHANGE, loop={"loop_end": 128.0})
+    close = make_alc("E - Close.alc", warp_markers=((0.0, 0.0), (60.0, 86.5)), loop={"loop_end": 86.5})
+    db = {
+        f: make_record(bpm=bpm)
+        for f, bpm in [(right, 120), (wrong, 118), (unwarped, 90), (changes, 125), (close, 87)]
+    }
+    db[wrong]["ts_list"] = [fixed_now - 10 * DAY, fixed_now - DAY, fixed_now - 5 * DAY]
+    path = write_db(db)
+    before = path.read_text()
+
+    def listed(**kwargs):
+        capsys.readouterr()
+        actions.check_bpms(**kwargs)
+        return [line for line in capsys.readouterr().out.splitlines() if line.endswith(".alc")]
+
+    last = aa.get_date_from_ts(fixed_now - DAY)
+    wrong_line = "   118      120  120.00  %-11s  B - Wrong.alc" % last
+    # 87 for 86.5 is within the default tolerance
+    assert listed() == [wrong_line]
+    assert listed(tolerance=0) == [wrong_line, "    87       86   86.50  never        E - Close.alc"]
+    assert path.read_text() == before
 
 
 def test_add_keys(make_alc, write_db, monkeypatch):

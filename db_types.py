@@ -4,7 +4,7 @@ database.json maps each Ableton file (relative to the songs folder, e.g.
 "Artist - Track.alc") to a Record.
 """
 
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 
 class WarpMarker(TypedDict):
@@ -25,6 +25,8 @@ class ClipInfo(TypedDict):
     sample: str  # relative to the songs folder
     sample_ts: float
     sample_filepath_is_new_format: bool
+    # Ableton's Warp switch; clips cached before this was read lack it (treat as warped)
+    is_warped: NotRequired[bool]
 
 
 class Record(TypedDict, total=False):

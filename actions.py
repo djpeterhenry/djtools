@@ -8,7 +8,7 @@ import re
 import shutil
 import sys
 from collections import defaultdict
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote_plus
 
 import argh
@@ -21,25 +21,93 @@ from db_types import DbDict, Record
 from tag import Tag
 
 
+def describe_tempo(tempo: aa.ClipTempo | None) -> str:
+    """Why add-bpms asks about a clip, for its prompt."""
+    if tempo is None:
+        return "no tempo from warp markers"
+    if not tempo.is_warped:
+        return "unwarped, warp markers say %.2f" % tempo.bpm
+    sections = " > ".join("%.1f" % bpm for bpm in tempo.section_bpms)
+    return "tempo changes: %s (average %.2f)" % (sections, tempo.bpm)
+
+
+def ask_bpm(suggestion: int | None) -> int | str:
+    """A bpm, "skip" or "stop".  Enter takes the suggestion (or skips without one)."""
+    hint = " [%d]" % suggestion if suggestion is not None else ""
+    while True:
+        answer = input("BPM%s (s: skip, q: stop and save): " % hint).strip().lower()
+        if answer == "q":
+            return "stop"
+        if answer == "s" or (not answer and suggestion is None):
+            return "skip"
+        if not answer:
+            return cast(int, suggestion)
+        if answer.isdigit() and int(answer) > 0:
+            return int(answer)
+        print("Enter a whole number, s or q")
+
+
 def add_bpms() -> None:
-    """Add BPM values for new files in the database. Input required for each file."""
+    """Add new Ableton files to the database, with bpms from their warp markers.
+
+    A warped clip at one tempo is added without asking; an unwarped clip, one
+    whose tempo changes, or one without a sample asks for its bpm.
+    """
     db_dict = aa.read_db_file()
-    alc_files = aa.get_ableton_files()
-    for filename in alc_files:
+    added = []
+    for filename in aa.get_ableton_files():
         if filename in db_dict:
             continue
-
-        print(filename)
-        bpm = aa.get_int("BPM: ")
-        if bpm is None:
-            print("Stopping and saving...")
-            break
-
-        # record the result in the database
-        new_record: Record = {"bpm": bpm, "tags": []}
-        db_dict[filename] = new_record
-        print("Inserted: " + str(new_record))
+        clip = aa.get_audioclip_from_alc(filename)
+        tempo = aa.get_clip_tempo(clip) if clip else None
+        if tempo and tempo.is_steady:
+            bpm = aa.round_bpm(tempo.bpm)
+            print("%4d  %s" % (bpm, filename))
+        else:
+            print()
+            print(filename)
+            print("  " + ("no clip, or its sample is missing" if clip is None else describe_tempo(tempo)))
+            answer = ask_bpm(aa.round_bpm(tempo.bpm) if tempo else None)
+            if answer == "stop":
+                print("Stopping and saving...")
+                break
+            if answer == "skip":
+                continue
+            bpm = cast(int, answer)
+        db_dict[filename] = {"bpm": bpm, "tags": []}
+        added.append(filename)
+    # Cache the new clips now, as other commands would on their next run
+    aa.update_db_clips(added, db_dict)
     aa.write_db_file(db_dict)
+    print("Added %d" % len(added))
+
+
+def check_bpms(tolerance: float = 1.0) -> None:
+    """List songs whose bpm differs from what their warp markers say (changes nothing).
+
+    A bpm within tolerance of the markers' exact tempo isn't listed, so 87 for
+    86.5 is left out; --tolerance 0 lists every song that doesn't match.  Only
+    warped clips at one tempo are compared, so bpms you chose for unwarped
+    clips or tempo changes aren't listed.
+    """
+    db_dict = aa.read_db_file()
+    print("stored  markers   exact  last played  file")
+    for filename in aa.get_valid_alc_files(db_dict):
+        record = db_dict[filename]
+        bpm = record.get("bpm")
+        # Read the clip fresh: cached clips can be stale or predate is_warped
+        clip = aa.get_audioclip_from_alc(filename)
+        tempo = aa.get_clip_tempo(clip) if clip else None
+        if not bpm or not tempo or not tempo.is_steady:
+            continue
+        if aa.round_bpm(tempo.bpm) == bpm or abs(bpm - tempo.bpm) < tolerance:
+            continue
+        plays = aa.get_ts_list(record)
+        last_played = aa.get_date_from_ts(max(plays)) if plays else "never"
+        print(
+            "%6d  %7d  %6.2f  %-11s  %s"
+            % (bpm, aa.round_bpm(tempo.bpm), tempo.bpm, last_played, filename)
+        )
 
 
 def add_keys() -> None:
@@ -864,6 +932,7 @@ if __name__ == "__main__":
     parser.add_commands(
         [
             add_bpms,
+            check_bpms,
             add_keys,
             edit_bpm,
             rename_tag,

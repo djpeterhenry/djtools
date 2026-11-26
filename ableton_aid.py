@@ -3,6 +3,7 @@
 import datetime
 import gzip
 import json
+import math
 import os
 import random
 import re
@@ -12,6 +13,7 @@ import time
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass
 from typing import Any, Final
 
 from unidecode import unidecode
@@ -317,6 +319,7 @@ def get_xml_clip_info(xml_clip: ET.Element) -> ClipInfo | None:
 
     if not sample_filepath or not os.path.exists(sample_filepath):
         return None
+    xml_is_warped = xml_clip.find("IsWarped")
     return {
         "warp_markers": warp_markers,
         "loop_start": float(_value(xml_loop, "LoopStart")),
@@ -328,6 +331,7 @@ def get_xml_clip_info(xml_clip: ET.Element) -> ClipInfo | None:
         "sample": sample_filepath,
         "sample_ts": os.path.getmtime(sample_filepath),
         "sample_filepath_is_new_format": sample_filepath_is_new_format,
+        "is_warped": xml_is_warped is None or xml_is_warped.get("Value") != "false",
     }
 
 
@@ -838,6 +842,82 @@ def matches_bpm_filter(filter_bpm: float, bpm_range: float, bpm: float) -> bool:
         if sub_bpm >= filter_bpm - bpm_range and sub_bpm <= filter_bpm + bpm_range:
             return True
     return False
+
+
+# Tempo changes are judged over stretches of at least this many beats, so the
+# beat-to-beat jitter of a hand-warped live recording averages out.
+TEMPO_SECTION_BEATS: Final = 32
+# Sections whose tempos differ by more than this many bpm need a person to pick the bpm.
+STEADY_BPM_SPREAD: Final = 2.0
+
+
+@dataclass
+class ClipTempo:
+    bpm: float  # beats per minute over the played part of the clip
+    section_bpms: list[float]  # tempo of each stretch of TEMPO_SECTION_BEATS or more, in order
+    is_warped: bool
+
+    @property
+    def is_steady(self) -> bool:
+        """Warped, at one tempo throughout: safe to take round_bpm(bpm) without asking."""
+        spread = max(self.section_bpms) - min(self.section_bpms)
+        return self.is_warped and spread <= STEADY_BPM_SPREAD
+
+
+def round_bpm(bpm: float) -> int:
+    """Nearest whole bpm, with exact halves rounding down (86.5 -> 86)."""
+    # round(.., 6) first so float noise like 86.50000001 still counts as a half
+    return math.ceil(round(bpm, 6) - 0.5)
+
+
+def _tempo_spans(
+    markers: list[WarpMarker], start: float, end: float, min_beats: float
+) -> list[tuple[float, float]]:
+    """(beats, bpm) of each run of markers spanning min_beats or more (the last may be
+    shorter), clipped to the beats from start to end.  Before the first marker and
+    after the last, Ableton keeps the outer tempo, so the outer runs extend forever."""
+    spans = []
+    i = 0
+    while i < len(markers) - 1:
+        j = i + 1
+        while j < len(markers) - 1 and markers[j]["beat_time"] - markers[i]["beat_time"] < min_beats:
+            j += 1
+        a, b = markers[i], markers[j]
+        bpm = 60 * (b["beat_time"] - a["beat_time"]) / (b["sec_time"] - a["sec_time"])
+        span_start = -math.inf if i == 0 else a["beat_time"]
+        span_end = math.inf if j == len(markers) - 1 else b["beat_time"]
+        beats = min(span_end, end) - max(span_start, start)
+        if beats > 0:
+            spans.append((beats, bpm))
+        i = j
+    return spans
+
+
+def get_clip_tempo(clip: ClipInfo) -> ClipTempo | None:
+    """The clip's tempo from its warp markers, between its start and its end (or loop end).
+
+    None when the markers give no tempo.
+    """
+    markers: list[WarpMarker] = []
+    for m in clip["warp_markers"]:
+        # skip any marker that doesn't move forward in both beats and seconds
+        if not markers or (
+            m["beat_time"] > markers[-1]["beat_time"] and m["sec_time"] > markers[-1]["sec_time"]
+        ):
+            markers.append(m)
+    if len(markers) < 2:
+        return None
+
+    start = clip["loop_start"] + clip["start_relative"]
+    end = clip["loop_end"]
+    if end <= start:
+        start, end = markers[0]["beat_time"], markers[-1]["beat_time"]
+    segments = _tempo_spans(markers, start, end, 0)
+    return ClipTempo(
+        bpm=sum(beats for beats, _ in segments) / sum(beats / bpm for beats, bpm in segments),
+        section_bpms=[bpm for _, bpm in _tempo_spans(markers, start, end, TEMPO_SECTION_BEATS)],
+        is_warped=clip.get("is_warped", True),
+    )
 
 
 def update_db_clips(

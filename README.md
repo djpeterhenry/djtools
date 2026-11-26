@@ -58,10 +58,16 @@ MyProject/
 ```sh
 cd MyProject/Songs
 echo '{}' > database.json                         # a new, empty library
-python3.11 ~/djtools/actions.py add-bpms           # asks each new clip's bpm (empty line: stop and save)
+python3.11 ~/djtools/actions.py add-bpms           # bpms of new clips, from their warp markers
 python3.11 ~/djtools/actions.py add-keys           # keys by keyfinder-cli
 python3.11 ~/djtools/actions.py rekordbox-xml ~/rekordbox.xml
 ```
+
+`add-bpms` reads each new clip's tempo from its warp markers and rounds it
+(halves round down). It asks only about clips that are unwarped, change tempo
+by more than 2 bpm, or have no sample; Enter takes the suggested bpm.
+`check-bpms` lists songs whose bpm no longer matches their warp markers, e.g.
+after re-warping, without changing anything; fix them with `edit-bpm`.
 
 `rekordbox-xml` links or copies each song's sample into the sample folder
 (below), converting what DJ hardware can't play, and writes the XML; in rekordbox,

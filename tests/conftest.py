@@ -59,7 +59,7 @@ def songs_dir(tmp_path, monkeypatch):
     return songs
 
 
-def _clip_xml(name, warp_markers, loop, sample_name, new_format, project):
+def _clip_xml(name, warp_markers, loop, sample_name, new_format, project, is_warped=True):
     markers = "".join(
         '<WarpMarker SecTime="{}" BeatTime="{}" />'.format(sec, beat)
         for sec, beat in warp_markers
@@ -83,6 +83,7 @@ def _clip_xml(name, warp_markers, loop, sample_name, new_format, project):
         '<AudioClip Time="0">'
         '<Name Value="{name}" />'
         "<WarpMarkers>{markers}</WarpMarkers>"
+        '<IsWarped Value="{is_warped}" />'
         "<Loop>"
         '<LoopStart Value="{loop_start}" />'
         '<LoopEnd Value="{loop_end}" />'
@@ -100,6 +101,7 @@ def _clip_xml(name, warp_markers, loop, sample_name, new_format, project):
     ).format(
         name=name,
         markers=markers,
+        is_warped="true" if is_warped else "false",
         fileref=fileref,
         loop_on="true" if loop.get("loop_on") else "false",
         loop_start=loop.get("loop_start", 0.0),
@@ -126,6 +128,7 @@ def make_alc(songs_dir):
         new_format=True,
         create_sample=True,
         num_clips=1,
+        is_warped=True,
     ):
         sample_name = sample_name or os.path.splitext(filename)[0] + ".aiff"
         if create_sample:
@@ -137,6 +140,7 @@ def make_alc(songs_dir):
             sample_name,
             new_format,
             project,
+            is_warped,
         )
         xml = '<?xml version="1.0" encoding="UTF-8"?><Ableton>{}</Ableton>'.format(
             clip * num_clips
