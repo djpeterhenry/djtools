@@ -16,6 +16,56 @@ def _seconds_label(seconds: float) -> str:
     return "{}s".format(seconds)
 
 
+# Where Ableton keeps its decodes of compressed samples (mp3, m4a, ...).
+ABLETON_DECODING_CACHE = os.path.expanduser("~/Library/Caches/Ableton/Cache/Decoding")
+
+# Formats Ableton plays directly, sample for sample as ffmpeg decodes them.
+PCM_EXTENSIONS = (".wav", ".aif", ".aiff")
+
+
+def _sample_count(path: str) -> int | None:
+    """Length of the first audio stream in samples, from ffprobe."""
+    try:
+        out = subprocess.check_output(
+            [
+                "ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries",
+                "stream=duration_ts", "-of", "csv=p=0", path,
+            ]
+        )
+        return int(out.decode("utf8").strip())
+    except (subprocess.CalledProcessError, ValueError):
+        return None
+
+
+def _ableton_audio(alc_filename: str, sample_filepath: str) -> str | None:
+    """
+    The audio as Ableton sees it, so that warp marker times (SecTime) line up.
+
+    PCM files are used as they are.  Compressed files are not: ffmpeg and Ableton
+    decode an mp3 to different starts (ffmpeg trims the encoder delay, Ableton
+    keeps it and adds a frame for the LAME header), so the warp markers would land
+    tens of milliseconds late.  Use Ableton's own decode from its cache instead,
+    checked against the clip's DefaultDuration so a stale or same-named file is
+    never picked up.
+    """
+    if os.path.splitext(sample_filepath)[1].lower() in PCM_EXTENSIONS:
+        return sample_filepath
+
+    xml_duration = aa.alc_to_xml(alc_filename).find(".//AudioClip/SampleRef/DefaultDuration")
+    expected = None if xml_duration is None else int(float(xml_duration.get("Value", "0")))
+    name = os.path.splitext(os.path.basename(sample_filepath))[0] + ".wav"
+    cached = os.path.join(ABLETON_DECODING_CACHE, name)
+    if expected and os.path.isfile(cached) and _sample_count(cached) == expected:
+        return cached
+
+    print(
+        f"{os.path.basename(sample_filepath)} is compressed, and Ableton's decode of it "
+        f"({cached}) is missing or doesn't match the clip's length ({expected} samples).\n"
+        f"Open {alc_filename} in Ableton once so it decodes the file, then run this again."
+    )
+    return None
+
+
 def silence(alc_filename: str, seconds: float = 5.0) -> None:
     """
     Create a Rekordbox-ready copy of a song with `seconds` of silence prepended
@@ -67,6 +117,13 @@ def silence(alc_filename: str, seconds: float = 5.0) -> None:
         print(f"Sample file {sample_filepath} does not exist.")
         return
 
+    # Prepend the silence to the audio Ableton actually plays.
+    source_filepath = _ableton_audio(alc_filename, sample_filepath)
+    if source_filepath is None:
+        return
+    if source_filepath != sample_filepath:
+        print(f"Using Ableton's decode: {source_filepath}")
+
     label = _seconds_label(seconds)
 
     # New audio file next to the original sample, always .aiff.
@@ -79,7 +136,7 @@ def silence(alc_filename: str, seconds: float = 5.0) -> None:
         "ffmpeg",
         "-y",
         "-i",
-        sample_filepath,
+        source_filepath,
         "-af",
         f"adelay={delay_ms}:all=1",
         new_sample_path,

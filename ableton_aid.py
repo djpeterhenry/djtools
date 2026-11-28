@@ -432,6 +432,11 @@ def write_silenced_alc(
         new_sec_time = float(_attr(marker, "SecTime")) + sec_offset
         marker.set("SecTime", repr(new_sec_time))
 
+    # Transients (user-edited or Ableton's) are also positions in the file, in seconds.
+    for onset in xml_clip.findall("Onsets/UserOnsets/OnsetEvent"):
+        new_time = float(_attr(onset, "Time")) + sec_offset
+        onset.set("Time", repr(new_time))
+
     # Best-effort: keep DefaultDuration (in samples) consistent with the longer
     # file.  Rekordbox ignores this and Ableton tolerates a mismatch, but it's
     # cheap to keep honest.
